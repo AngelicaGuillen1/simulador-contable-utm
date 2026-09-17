@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Cierre Contable Guiado - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-lock text-primary me-2"></i>Cierre Contable del Período</h3>
+    <p class="text-muted small mb-0">Procedimiento guiado de 7 fases para la cancelación de cuentas nominales y determinación del resultado neto</p>
+  </div>
+  <div>
+    <span class="badge {% if periodo.estado == 'CERRADO' %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
+      Estado del Período: {{ periodo.estado }}
+    </span>
+  </div>
+</div>
+
+<!-- 7 Steps Visual Process Bar -->
+<div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+  <h6 class="fw-bold text-muted text-uppercase mb-3" style="font-size: 0.78rem;">Flujo Secuencial del Cierre Contable</h6>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">1</span>
+      <div class="small fw-bold">Revisión Saldos</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">2</span>
+      <div class="small fw-bold">Ajustes</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">3</span>
+      <div class="small fw-bold">Balance Ajustado</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">4</span>
+      <div class="small fw-bold">Cierre Ingresos</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">5</span>
+      <div class="small fw-bold">Cierre Gastos</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-primary rounded-circle mb-1">6</span>
+      <div class="small fw-bold">Resultado Neto</div>
+    </div>
+    <i class="bi bi-arrow-right text-muted d-none d-md-block"></i>
+    <div class="text-center p-2 rounded-3 bg-light border flex-grow-1">
+      <span class="badge bg-success rounded-circle mb-1">7</span>
+      <div class="small fw-bold">Bloqueo Período</div>
+    </div>
+  </div>
+</div>
+
+<!-- Closing Summary and Action Card -->
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+      <h5 class="fw-bold mb-3"><i class="bi bi-calculator me-2 text-primary"></i>Resumen de Cuentas a Cancelar</h5>
+      
+      <div class="list-group list-group-flush mb-3">
+        <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+          <div>
+            <div class="fw-bold text-dark">Total Ingresos Operacionales (Ventas + Servicios)</div>
+            <small class="text-muted">Se debitarán las cuentas 4.1.01 y 4.1.02 contra Resultado del Ejercicio</small>
+          </div>
+          <span class="fw-bold text-success fs-5">${{ "{:,.2f}".format(income.total_ingresos_operacionales) }}</span>
+        </div>
+
+        <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+          <div>
+            <div class="fw-bold text-dark">Total Costos y Gastos Operacionales</div>
+            <small class="text-muted">Se acreditarán las cuentas de costo (5) y gastos administrativos/ventas (6)</small>
+          </div>
+          <span class="fw-bold text-danger fs-5">${{ "{:,.2f}".format(income.costo_ventas + income.total_gastos_operacionales + income.gastos_financieros) }}</span>
+        </div>
+
+        <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-light rounded-3 p-3 mt-2">
+          <div>
+            <div class="fw-bold text-primary fs-5">Resultado Neto a Transferir al Patrimonio</div>
+            <small class="text-muted">Se acreditará a la cuenta 3.3.02 (Utilidad del Ejercicio Actual)</small>
+          </div>
+          <span class="display-6 fw-bold {% if income.utilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+            ${{ "{:,.2f}".format(income.utilidad_neta) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-light d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="fw-bold mb-2"><i class="bi bi-shield-lock-fill text-warning me-2"></i>Ejecutar Cierre Definitivo</h5>
+        <p class="text-muted small">
+          Al confirmar el cierre contable:
+        </p>
+        <ul class="small text-muted ps-3 mb-4">
+          <li>Se generará automáticamente el asiento de cancelación de cuentas de ingresos.</li>
+          <li>Se generará el asiento de cancelación de costos y gastos.</li>
+          <li>El saldo neto se traspasará al Patrimonio.</li>
+          <li>El período quedará en estado <strong>CERRADO</strong> impidiendo modificaciones posteriores.</li>
+        </ul>
+      </div>
+
+      {% if periodo.estado == 'ABIERTO' %}
+      <form method="POST" action="{{ url_for('accounting.closing') }}" onsubmit="return confirm('¿Confirmas el cierre del período contable? Se cancelarán las cuentas de resultados y se bloqueará el período.');">
+        <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-3 shadow">
+          <i class="bi bi-lock-fill me-1"></i> Ejecutar Cierre Contable del Período
+        </button>
+      </form>
+      {% else %}
+      <div class="alert alert-secondary text-center mb-0">
+        <i class="bi bi-lock-fill text-danger fs-3 d-block mb-1"></i>
+        <strong>Período Cerrado</strong>
+        <div class="small text-muted">Las cuentas nominales ya han sido liquidadas y transferidas al patrimonio.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

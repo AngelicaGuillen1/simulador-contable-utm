@@ -1,0 +1,737 @@
+{% extends "base.html" %}
+{% block title %}Clientes - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# ================= Agregados calculados con las variables del contrato ================= #}
+{% set ns = namespace(total_saldo=0.0, total_limite=0.0, total_disponible=0.0, activos=0, inactivos=0, con_saldo=0, excedidos=0) %}
+{% for c in clientes %}
+  {% set saldo_c = c.saldo_pendiente or 0 %}
+  {% set limite_c = c.limite_credito or 0 %}
+  {% set ns.total_saldo = ns.total_saldo + saldo_c %}
+  {% set ns.total_limite = ns.total_limite + limite_c %}
+  {% set ns.total_disponible = ns.total_disponible + (limite_c - saldo_c) %}
+  {% if c.activo %}
+    {% set ns.activos = ns.activos + 1 %}
+  {% else %}
+    {% set ns.inactivos = ns.inactivos + 1 %}
+  {% endif %}
+  {% if saldo_c > 0 %}
+    {% set ns.con_saldo = ns.con_saldo + 1 %}
+  {% endif %}
+  {% if limite_c > 0 and saldo_c > limite_c %}
+    {% set ns.excedidos = ns.excedidos + 1 %}
+  {% endif %}
+{% endfor %}
+
+<!-- Encabezado del módulo -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-people text-primary me-2"></i>Cartera de Clientes</h3>
+    <p class="text-muted small mb-0">
+      Registro de clientes de <em>Comercial y Servicios Nueva Esperanza S.A.</em> con control de cupo, plazo y saldo de cartera.
+      Fecha de trabajo de la simulación: <span class="fw-semibold text-dark">{{ hoy|default('—', true) }}</span>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-primary">
+      <i class="bi bi-receipt me-1"></i> Cuentas por Cobrar
+    </a>
+    <a href="{{ url_for('sales.create_sale') }}" class="btn btn-outline-success">
+      <i class="bi bi-cart-plus me-1"></i> Facturar Venta
+    </a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoCliente">
+      <i class="bi bi-person-plus me-1"></i> Nuevo Cliente
+    </button>
+  </div>
+</div>
+
+<!-- Indicadores de cartera -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="kpi-label">Clientes Registrados</div>
+        <div class="kpi-value">{{ clientes|length }}</div>
+        <div class="small text-muted">
+          <span class="text-success fw-semibold">{{ ns.activos }} activos</span> ·
+          <span class="text-secondary fw-semibold">{{ ns.inactivos }} inactivos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-cash-coin"></i></div>
+      <div>
+        <div class="kpi-label">Saldo Pendiente de Cobro</div>
+        <div class="kpi-value text-danger">$ {{ "{:,.2f}".format(ns.total_saldo) }}</div>
+        <div class="small text-muted">{{ ns.con_saldo }} cliente(s) con saldo en cartera</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></div>
+      <div>
+        <div class="kpi-label">Cupo de Crédito Otorgado</div>
+        <div class="kpi-value">$ {{ "{:,.2f}".format(ns.total_limite) }}</div>
+        <div class="small text-muted">Disponible: <span class="fw-semibold">$ {{ "{:,.2f}".format(ns.total_disponible) }}</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon {% if ns.excedidos > 0 %}bg-warning-subtle text-warning{% else %}bg-light text-secondary{% endif %}">
+        <i class="bi bi-exclamation-triangle"></i>
+      </div>
+      <div>
+        <div class="kpi-label">Cupo Excedido</div>
+        <div class="kpi-value {% if ns.excedidos > 0 %}text-warning{% endif %}">{{ ns.excedidos }}</div>
+        <div class="small text-muted">Cliente(s) sobre el límite autorizado</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros y ordenamiento (procesados en la propia plantilla) -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body px-4 py-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-lg-4">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroTexto">
+          <i class="bi bi-search me-1"></i> Buscar cliente
+        </label>
+        <input type="text" class="form-control form-control-sm" id="filtroTexto"
+               placeholder="RUC/CI, razón social, correo, teléfono o dirección...">
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroEstado">Estado</label>
+        <select class="form-select form-select-sm" id="filtroEstado">
+          <option value="todos">Todos los estados</option>
+          <option value="activo">Solo activos</option>
+          <option value="inactivo">Solo inactivos</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroOrden">Ordenar por</label>
+        <select class="form-select form-select-sm" id="filtroOrden">
+          <option value="nombre">Razón social (A-Z)</option>
+          <option value="saldo">Mayor saldo pendiente</option>
+          <option value="disponible">Mayor cupo disponible</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-2 d-flex flex-column gap-2">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" id="filtroSoloSaldo">
+          <label class="form-check-label small fw-semibold text-muted" for="filtroSoloSaldo">Solo con saldo</label>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLimpiarFiltros">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
+        </button>
+      </div>
+    </div>
+    <div class="small text-muted mt-2" id="contadorResultados">
+      Mostrando {{ clientes|length }} de {{ clientes|length }} cliente(s) registrado(s).
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de clientes -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0 text-uppercase text-muted small">
+      <i class="bi bi-list-ul me-1"></i> Detalle de clientes y situación de crédito
+    </h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaClientes">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">RUC / Cédula</th>
+            <th>Cliente / Razón Social</th>
+            <th>Contacto</th>
+            <th class="text-end">Límite de Crédito</th>
+            <th class="text-center">Plazo</th>
+            <th class="text-end">Saldo Pendiente</th>
+            <th class="text-end">Cupo Disponible</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyClientes">
+          {% for c in clientes %}
+            {% set saldo = c.saldo_pendiente or 0 %}
+            {% set limite = c.limite_credito or 0 %}
+            {% set disponible = limite - saldo %}
+            {% set uso = (saldo / limite * 100) if limite > 0 else 0 %}
+            {% set uso_pct = 100 if uso > 100 else uso %}
+          <tr class="fila-cliente"
+              data-id="{{ c.id }}"
+              data-nombre="{{ c.nombre_razon_social }}"
+              data-estado="{% if c.activo %}activo{% else %}inactivo{% endif %}"
+              data-saldo="{{ '%.2f'|format(saldo) }}"
+              data-disponible="{{ '%.2f'|format(disponible) }}"
+              data-buscar="{{ (c.identificacion ~ ' ' ~ c.nombre_razon_social ~ ' ' ~ (c.email or '') ~ ' ' ~ (c.telefono or '') ~ ' ' ~ (c.direccion or ''))|lower }}">
+            <td class="ps-4"><code class="text-dark">{{ c.identificacion }}</code></td>
+            <td>
+              <div class="fw-semibold text-dark">{{ c.nombre_razon_social }}</div>
+              <small class="text-muted">{{ c.direccion|default('Dirección no registrada', true) }}</small>
+            </td>
+            <td>
+              <div class="small text-dark">
+                <i class="bi bi-envelope me-1 text-muted"></i>{{ c.email|default('—', true) }}
+              </div>
+              <div class="small text-muted">
+                <i class="bi bi-telephone me-1"></i>{{ c.telefono|default('—', true) }}
+              </div>
+            </td>
+            <td class="text-end fw-semibold">$ {{ "{:,.2f}".format(limite) }}</td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">{{ c.dias_credito|default(0, true) }} días</span>
+            </td>
+            <td class="text-end" style="min-width: 150px;">
+              <div class="fw-bold {% if saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+                $ {{ "{:,.2f}".format(saldo) }}
+              </div>
+              <div class="progress mt-1" style="height: 5px;">
+                <div class="progress-bar {% if uso_pct >= 100 %}bg-danger{% elif uso_pct >= 70 %}bg-warning{% else %}bg-success{% endif %}"
+                     role="progressbar" style="width: {{ '%.0f'|format(uso_pct) }}%;"
+                     aria-valuenow="{{ '%.0f'|format(uso_pct) }}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div class="small text-muted">{{ '%.0f'|format(uso_pct) }}% del cupo utilizado</div>
+            </td>
+            <td class="text-end fw-semibold {% if disponible < 0 %}text-danger{% else %}text-success{% endif %}">
+              $ {{ "{:,.2f}".format(disponible) }}
+              {% if disponible < 0 %}<br><small class="text-danger">Cupo excedido</small>{% endif %}
+            </td>
+            <td class="text-center">
+              {% if c.activo %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVO</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">INACTIVO</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              <div class="btn-group btn-group-sm" role="group" aria-label="Acciones del cliente">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFichaCliente"
+                        data-id="{{ c.id }}"
+                        data-nombre="{{ c.nombre_razon_social }}"
+                        data-ruc="{{ c.identificacion }}"
+                        data-email="{{ c.email|default('', true) }}"
+                        data-telefono="{{ c.telefono|default('', true) }}"
+                        data-direccion="{{ c.direccion|default('', true) }}"
+                        data-limite="{{ '%.2f'|format(limite) }}"
+                        data-dias="{{ c.dias_credito|default(0, true) }}"
+                        data-saldo="{{ '%.2f'|format(saldo) }}"
+                        title="Ver ficha e historial de movimientos">
+                  <i class="bi bi-person-vcard"></i> Ficha
+                </button>
+                <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-success"
+                   title="Registrar un cobro en Cuentas por Cobrar">
+                  <i class="bi bi-cash-coin"></i> Cobros
+                </a>
+                <a href="{{ url_for('sales.create_sale') }}" class="btn btn-outline-secondary"
+                   title="Emitir una factura de venta a este cliente">
+                  <i class="bi bi-cart-plus"></i> Vender
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-4 d-block mb-2"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="filaSinResultados" class="d-none">
+            <td colspan="9" class="text-center py-4 text-muted">
+              <i class="bi bi-search me-1"></i> Sin registros para mostrar con los filtros aplicados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Registrar nuevo cliente ================= -->
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-labelledby="modalNuevoClienteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4">
+      <form method="POST" action="{{ url_for('partners.customers') }}">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold" id="modalNuevoClienteLabel">
+            <i class="bi bi-person-plus text-primary me-2"></i>Registrar Nuevo Cliente
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-light border small mb-3">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            El cliente se crea con saldo pendiente en <strong>$ 0.00</strong> y fecha de trabajo
+            <strong>{{ hoy|default('—', true) }}</strong>. El registro quedará a nombre del usuario
+            <strong>{{ g.user.username if g.user else '—' }}</strong>.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_identificacion">RUC / Cédula <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cli_identificacion" name="identificacion" required
+                     maxlength="20" placeholder="Ej.: 1792345678001" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_nombre">Nombre / Razón Social <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cli_nombre" name="nombre_razon_social" required
+                     maxlength="150" placeholder="Ej.: Distribuidora El Progreso Cía. Ltda." autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_email">Correo electrónico</label>
+              <input type="email" class="form-control" id="cli_email" name="email" maxlength="120"
+                     placeholder="cliente@dominio.com" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_telefono">Teléfono</label>
+              <input type="text" class="form-control" id="cli_telefono" name="telefono" maxlength="30"
+                     placeholder="Ej.: 0991234567" autocomplete="off">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold" for="cli_direccion">Dirección</label>
+              <input type="text" class="form-control" id="cli_direccion" name="direccion" maxlength="200"
+                     placeholder="Ej.: Av. Amazonas N34-120 y Av. Naciones Unidas, Quito" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_limite">Límite de Crédito (USD)</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="cli_limite" name="limite_credito"
+                       value="5000.00" min="0" step="0.01">
+              </div>
+              <div class="form-text">Cupo máximo de crédito autorizado al cliente.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="cli_dias">Días de Crédito</label>
+              <input type="number" class="form-control" id="cli_dias" name="dias_credito"
+                     value="30" min="0" max="365" step="1">
+              <div class="form-text">Plazo otorgado para el pago de sus facturas.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i> Guardar Cliente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Ficha e historial del cliente ================= -->
+<div class="modal fade" id="modalFichaCliente" tabindex="-1" aria-labelledby="modalFichaClienteLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4">
+      <div class="modal-header bg-light">
+        <div>
+          <h5 class="modal-title fw-bold mb-1" id="modalFichaClienteLabel">
+            <i class="bi bi-person-vcard text-primary me-2"></i><span id="fichaNombre">Ficha del Cliente</span>
+          </h5>
+          <div class="small text-muted">
+            <span class="me-3"><i class="bi bi-upc-scan me-1"></i><span id="fichaRuc">—</span></span>
+            <span class="me-3"><i class="bi bi-envelope me-1"></i><span id="fichaEmail">—</span></span>
+            <span class="me-3"><i class="bi bi-telephone me-1"></i><span id="fichaTelefono">—</span></span>
+            <span><i class="bi bi-geo-alt me-1"></i><span id="fichaDireccion">—</span></span>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Límite de crédito</div>
+              <div class="fw-bold" id="fichaLimite">$ 0.00</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Plazo de crédito</div>
+              <div class="fw-bold" id="fichaDias">0 días</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Saldo pendiente</div>
+              <div class="fw-bold text-danger" id="fichaSaldo">$ 0.00</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Cupo disponible</div>
+              <div class="fw-bold text-success" id="fichaDisponible">$ 0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="fichaCargando" class="text-center py-4 text-muted">
+          <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando historial del cliente...
+        </div>
+
+        <div id="fichaError" class="alert alert-warning d-none" role="alert">
+          <i class="bi bi-exclamation-triangle me-1"></i><span id="fichaErrorTexto"></span>
+        </div>
+
+        <div id="fichaContenido" class="d-none">
+          <ul class="nav nav-tabs" id="fichaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-btn-ventas" data-bs-toggle="tab" data-bs-target="#tab-ventas"
+                      type="button" role="tab" aria-controls="tab-ventas" aria-selected="true">
+                <i class="bi bi-cart-check me-1"></i>Ventas <span class="badge bg-primary-subtle text-primary border ms-1" id="contVentas">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-servicios" data-bs-toggle="tab" data-bs-target="#tab-servicios"
+                      type="button" role="tab" aria-controls="tab-servicios" aria-selected="false">
+                <i class="bi bi-headset me-1"></i>Servicios <span class="badge bg-info-subtle text-info border ms-1" id="contServicios">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-cobros" data-bs-toggle="tab" data-bs-target="#tab-cobros"
+                      type="button" role="tab" aria-controls="tab-cobros" aria-selected="false">
+                <i class="bi bi-cash-coin me-1"></i>Cobros <span class="badge bg-success-subtle text-success border ms-1" id="contCobros">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-cxc" data-bs-toggle="tab" data-bs-target="#tab-cxc"
+                      type="button" role="tab" aria-controls="tab-cxc" aria-selected="false">
+                <i class="bi bi-receipt me-1"></i>Cuentas por Cobrar <span class="badge bg-warning-subtle text-warning border ms-1" id="contCxc">0</span>
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom p-3">
+            <div class="tab-pane fade show active" id="tab-ventas" role="tabpanel" aria-labelledby="tab-btn-ventas">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Factura</th>
+                      <th>Fecha</th>
+                      <th>Forma de pago</th>
+                      <th class="text-end">Subtotal</th>
+                      <th class="text-end">IVA</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyVentas"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-servicios" role="tabpanel" aria-labelledby="tab-btn-servicios">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Factura</th>
+                      <th>Fecha</th>
+                      <th>Descripción del servicio</th>
+                      <th class="text-end">Subtotal</th>
+                      <th class="text-end">IVA</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyServicios"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-cobros" role="tabpanel" aria-labelledby="tab-btn-cobros">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Medio de pago</th>
+                      <th>Comprobante</th>
+                      <th>Observación</th>
+                      <th class="text-end">Monto cobrado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyCobros"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-cxc" role="tabpanel" aria-labelledby="tab-btn-cxc">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Documento</th>
+                      <th>Origen</th>
+                      <th>Emisión</th>
+                      <th>Vencimiento</th>
+                      <th class="text-end">Monto original</th>
+                      <th class="text-end">Saldo actual</th>
+                      <th class="text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyCxc"></tbody>
+                </table>
+              </div>
+              <div class="small text-muted mt-2">
+                Saldo total por cobrar del cliente según cuentas pendientes:
+                <span class="fw-bold text-danger" id="totalCxc">$ 0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-receipt me-1"></i> Registrar cobro en Cuentas por Cobrar
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Utilidades de formato (USD y texto seguro) ---------- */
+  function money(valor) {
+    var n = Number(valor || 0);
+    if (isNaN(n)) { n = 0; }
+    return "$ " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function esc(valor) {
+    return String(valor === null || valor === undefined ? "" : valor)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function txt(valor) {
+    var s = esc(valor);
+    return s === "" ? '<span class="text-muted">&mdash;</span>' : s;
+  }
+  function pick(obj, claves) {
+    if (!obj) { return ""; }
+    for (var i = 0; i < claves.length; i++) {
+      var v = obj[claves[i]];
+      if (v !== undefined && v !== null && v !== "") { return v; }
+    }
+    return "";
+  }
+  function badgeEstado(estado) {
+    var e = String(estado || "—").toUpperCase();
+    var clase = "bg-secondary-subtle text-secondary border";
+    if (e === "PAGADA" || e === "COBRADA" || e === "ACTIVO") { clase = "bg-success-subtle text-success border border-success-subtle"; }
+    else if (e === "PENDIENTE" || e === "PARCIAL" || e === "EMITIDA" || e === "REGISTRADA") { clase = "bg-warning-subtle text-warning border border-warning-subtle"; }
+    else if (e === "VENCIDA" || e === "ANULADA") { clase = "bg-danger-subtle text-danger border border-danger-subtle"; }
+    return '<span class="badge ' + clase + '">' + esc(e) + "</span>";
+  }
+  function filaVacia(columnas, mensaje) {
+    return '<tr><td colspan="' + columnas + '" class="text-center py-3 text-muted">' +
+      '<i class="bi bi-inbox me-1"></i>' + esc(mensaje || "Sin movimientos") + "</td></tr>";
+  }
+
+  /* ---------- Filtros, ordenamiento y contador de la tabla ---------- */
+  var tbodyClientes = document.getElementById("tbodyClientes");
+  var inputTexto = document.getElementById("filtroTexto");
+  var selEstado = document.getElementById("filtroEstado");
+  var selOrden = document.getElementById("filtroOrden");
+  var chkSoloSaldo = document.getElementById("filtroSoloSaldo");
+  var btnLimpiar = document.getElementById("btnLimpiarFiltros");
+  var contador = document.getElementById("contadorResultados");
+  var filaSinResultados = document.getElementById("filaSinResultados");
+
+  if (tbodyClientes) {
+    var filas = Array.prototype.slice.call(tbodyClientes.querySelectorAll("tr.fila-cliente"));
+    var totalFilas = filas.length;
+
+    function aplicarFiltros() {
+      var texto = (inputTexto ? inputTexto.value : "").trim().toLowerCase();
+      var estado = selEstado ? selEstado.value : "todos";
+      var soloSaldo = chkSoloSaldo ? chkSoloSaldo.checked : false;
+      var visibles = 0;
+
+      filas.forEach(function (fila) {
+        var coincideTexto = texto === "" || (fila.dataset.buscar || "").indexOf(texto) !== -1;
+        var coincideEstado = estado === "todos" || fila.dataset.estado === estado;
+        var coincideSaldo = !soloSaldo || parseFloat(fila.dataset.saldo || "0") > 0;
+        var mostrar = coincideTexto && coincideEstado && coincideSaldo;
+        fila.classList.toggle("d-none", !mostrar);
+        if (mostrar) { visibles++; }
+      });
+
+      var orden = selOrden ? selOrden.value : "nombre";
+      var ordenadas = filas.slice();
+      if (orden === "saldo") {
+        ordenadas.sort(function (a, b) { return parseFloat(b.dataset.saldo) - parseFloat(a.dataset.saldo); });
+      } else if (orden === "disponible") {
+        ordenadas.sort(function (a, b) { return parseFloat(b.dataset.disponible) - parseFloat(a.dataset.disponible); });
+      } else {
+        ordenadas.sort(function (a, b) {
+          return (a.dataset.nombre || "").localeCompare(b.dataset.nombre || "", "es", { sensitivity: "base" });
+        });
+      }
+      ordenadas.forEach(function (fila) { tbodyClientes.appendChild(fila); });
+      if (filaSinResultados) { tbodyClientes.appendChild(filaSinResultados); }
+
+      if (filaSinResultados) {
+        filaSinResultados.classList.toggle("d-none", visibles !== 0 || totalFilas === 0);
+      }
+      if (contador) {
+        contador.textContent = "Mostrando " + visibles + " de " + totalFilas +
+          " cliente(s) registrado(s)" + (visibles !== totalFilas ? " (filtros activos)." : ".");
+      }
+    }
+
+    ["input", "change"].forEach(function (evento) {
+      if (inputTexto) { inputTexto.addEventListener(evento, aplicarFiltros); }
+      if (selEstado) { selEstado.addEventListener(evento, aplicarFiltros); }
+      if (selOrden) { selOrden.addEventListener(evento, aplicarFiltros); }
+      if (chkSoloSaldo) { chkSoloSaldo.addEventListener(evento, aplicarFiltros); }
+    });
+
+    if (btnLimpiar) {
+      btnLimpiar.addEventListener("click", function () {
+        if (inputTexto) { inputTexto.value = ""; }
+        if (selEstado) { selEstado.value = "todos"; }
+        if (selOrden) { selOrden.value = "nombre"; }
+        if (chkSoloSaldo) { chkSoloSaldo.checked = false; }
+        aplicarFiltros();
+      });
+    }
+  }
+
+  /* ---------- Ficha e historial del cliente (API JSON /api/customers/<id>/history) ---------- */
+  var modalFicha = document.getElementById("modalFichaCliente");
+  if (modalFicha) {
+    modalFicha.addEventListener("show.bs.modal", function (evento) {
+      var btn = evento.relatedTarget;
+      if (!btn) { return; }
+
+      var id = btn.getAttribute("data-id");
+      var limite = parseFloat(btn.getAttribute("data-limite") || "0");
+      var dias = btn.getAttribute("data-dias") || "0";
+      var saldo = parseFloat(btn.getAttribute("data-saldo") || "0");
+
+      document.getElementById("fichaNombre").textContent = btn.getAttribute("data-nombre") || "Ficha del Cliente";
+      document.getElementById("fichaRuc").textContent = btn.getAttribute("data-ruc") || "—";
+      document.getElementById("fichaEmail").textContent = btn.getAttribute("data-email") || "—";
+      document.getElementById("fichaTelefono").textContent = btn.getAttribute("data-telefono") || "—";
+      document.getElementById("fichaDireccion").textContent = btn.getAttribute("data-direccion") || "—";
+      document.getElementById("fichaLimite").textContent = money(limite);
+      document.getElementById("fichaDias").textContent = dias + " días";
+      document.getElementById("fichaSaldo").textContent = money(saldo);
+      document.getElementById("fichaDisponible").textContent = money(limite - saldo);
+
+      var cajaError = document.getElementById("fichaError");
+      var textoError = document.getElementById("fichaErrorTexto");
+      var cargando = document.getElementById("fichaCargando");
+      var contenido = document.getElementById("fichaContenido");
+      cajaError.classList.add("d-none");
+      cargando.classList.remove("d-none");
+      contenido.classList.add("d-none");
+      ["tbodyVentas", "tbodyServicios", "tbodyCobros", "tbodyCxc"].forEach(function (tbodyId) {
+        document.getElementById(tbodyId).innerHTML = "";
+      });
+      ["contVentas", "contServicios", "contCobros", "contCxc"].forEach(function (spanId) {
+        document.getElementById(spanId).textContent = "0";
+      });
+      document.getElementById("totalCxc").textContent = money(0);
+
+      fetch("/api/customers/" + encodeURIComponent(id) + "/history", { headers: { "Accept": "application/json" } })
+        .then(function (respuesta) {
+          if (!respuesta.ok) { throw new Error("El servidor respondió con código " + respuesta.status + "."); }
+          return respuesta.json();
+        })
+        .then(function (data) {
+          if (!data || data.success === false) {
+            throw new Error((data && data.error) || "El historial del cliente no está disponible.");
+          }
+
+          var ventas = data.ventas || [];
+          var servicios = data.servicios || [];
+          var cobros = data.cobros || [];
+          var cxc = data.cuentas_cobrar || [];
+
+          document.getElementById("contVentas").textContent = ventas.length;
+          document.getElementById("contServicios").textContent = servicios.length;
+          document.getElementById("contCobros").textContent = cobros.length;
+          document.getElementById("contCxc").textContent = cxc.length;
+
+          document.getElementById("tbodyVentas").innerHTML = ventas.length ? ventas.map(function (v) {
+            return "<tr>" +
+              '<td><code>' + txt(pick(v, ["numero_factura", "numero", "documento"])) + "</code></td>" +
+              "<td>" + txt(pick(v, ["fecha", "fecha_emision"])) + "</td>" +
+              "<td>" + txt(pick(v, ["forma_pago"])) + "</td>" +
+              '<td class="text-end">' + money(pick(v, ["subtotal", "base_imponible"])) + "</td>" +
+              '<td class="text-end text-muted">' + money(pick(v, ["iva_valor"])) + "</td>" +
+              '<td class="text-end fw-bold">' + money(pick(v, ["total"])) + "</td>" +
+              '<td class="text-center">' + badgeEstado(pick(v, ["estado"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(7, "Sin movimientos");
+
+          document.getElementById("tbodyServicios").innerHTML = servicios.length ? servicios.map(function (s) {
+            return "<tr>" +
+              '<td><code>' + txt(pick(s, ["numero_factura", "numero", "documento"])) + "</code></td>" +
+              "<td>" + txt(pick(s, ["fecha"])) + "</td>" +
+              "<td>" + txt(pick(s, ["descripcion", "servicio_nombre", "nombre_servicio", "concepto"])) + "</td>" +
+              '<td class="text-end">' + money(pick(s, ["subtotal"])) + "</td>" +
+              '<td class="text-end text-muted">' + money(pick(s, ["iva_valor"])) + "</td>" +
+              '<td class="text-end fw-bold">' + money(pick(s, ["total"])) + "</td>" +
+              '<td class="text-center">' + badgeEstado(pick(s, ["estado"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(7, "Sin movimientos");
+
+          document.getElementById("tbodyCobros").innerHTML = cobros.length ? cobros.map(function (c) {
+            return "<tr>" +
+              "<td>" + txt(pick(c, ["fecha"])) + "</td>" +
+              "<td>" + txt(pick(c, ["medio_pago"])) + "</td>" +
+              "<td>" + txt(pick(c, ["numero_comprobante"])) + "</td>" +
+              "<td>" + txt(pick(c, ["observacion"])) + "</td>" +
+              '<td class="text-end fw-bold text-success">' + money(pick(c, ["monto"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(5, "Sin movimientos");
+
+          document.getElementById("tbodyCxc").innerHTML = cxc.length ? cxc.map(function (r) {
+            return "<tr>" +
+              '<td><code>' + txt(pick(r, ["numero_documento", "numero_factura"])) + "</code></td>" +
+              "<td>" + txt(pick(r, ["tipo_origen"])) + "</td>" +
+              "<td>" + txt(pick(r, ["fecha_emision"])) + "</td>" +
+              "<td>" + txt(pick(r, ["fecha_vencimiento"])) + "</td>" +
+              '<td class="text-end">' + money(pick(r, ["monto_original"])) + "</td>" +
+              '<td class="text-end fw-bold text-danger">' + money(pick(r, ["saldo_actual"])) + "</td>" +
+              '<td class="text-center">' + badgeEstado(pick(r, ["estado"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(7, "Sin movimientos");
+
+          var totalCxc = cxc.reduce(function (acc, r) {
+            var estado = String(pick(r, ["estado"]) || "").toUpperCase();
+            if (estado !== "PAGADA") {
+              acc += Number(pick(r, ["saldo_actual"]) || 0);
+            }
+            return acc;
+          }, 0);
+          document.getElementById("totalCxc").textContent = money(totalCxc);
+
+          cargando.classList.add("d-none");
+          contenido.classList.remove("d-none");
+        })
+        .catch(function (error) {
+          cargando.classList.add("d-none");
+          textoError.textContent = "No se pudo cargar el historial del cliente: " + error.message;
+          cajaError.classList.remove("d-none");
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

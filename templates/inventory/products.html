@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Productos - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-boxes text-primary me-2"></i>Catálogo de Inventarios</h3>
+    <p class="text-muted small mb-0">20 Productos de primera necesidad con control permanente de existencias y costos</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('inventory.stock_report') }}" class="btn btn-outline-primary">
+      <i class="bi bi-bar-chart-steps me-1"></i> Análisis de Stock
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-primary-subtle border-primary-subtle">
+      <div class="small text-muted text-uppercase fw-bold">Total Productos Registrados</div>
+      <div class="fs-3 fw-bold text-primary">{{ productos|length }} Artículos</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-3 bg-success-subtle border-success-subtle">
+      <div class="small text-muted text-uppercase fw-bold">Valoración Total de Inventario</div>
+      <div class="fs-3 fw-bold text-success">${{ "{:,.2f}".format(total_valor) }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-3 {% if alertas_count > 0 %}bg-danger-subtle border-danger-subtle{% else %}bg-light{% endif %}">
+      <div class="small text-muted text-uppercase fw-bold">Alertas de Stock Bajo</div>
+      <div class="fs-3 fw-bold {% if alertas_count > 0 %}text-danger{% else %}text-muted{% endif %}">{{ alertas_count }} Productos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Category Filters -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-3 d-flex flex-wrap gap-2 align-items-center">
+    <span class="small fw-bold text-muted me-2"><i class="bi bi-funnel me-1"></i> Categorías:</span>
+    <a href="{{ url_for('inventory.products') }}" class="btn btn-sm {% if not selected_cat %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">Todas</a>
+    {% for cat in categorias %}
+      <a href="{{ url_for('inventory.products', categoria=cat) }}" class="btn btn-sm {% if selected_cat == cat %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill">{{ cat }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Products Table -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Código</th>
+            <th>Categoría</th>
+            <th>Descripción del Producto</th>
+            <th>Unidad</th>
+            <th class="text-end">Costo Unitario</th>
+            <th class="text-end">Precio Venta</th>
+            <th class="text-center">Stock Actual</th>
+            <th class="text-end">Valor Total</th>
+            <th class="text-center pe-4">Kardex</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in productos %}
+          <tr>
+            <td class="ps-4"><code>{{ p.codigo }}</code></td>
+            <td><span class="badge bg-light text-dark border">{{ p.categoria }}</span></td>
+            <td class="fw-semibold text-dark">{{ p.descripcion }}</td>
+            <td class="text-muted small">{{ p.unidad_medida }}</td>
+            <td class="text-end">${{ "{:,.2f}".format(p.costo_unitario) }}</td>
+            <td class="text-end fw-bold text-primary">${{ "{:,.2f}".format(p.precio_venta) }}</td>
+            <td class="text-center">
+              <span class="badge {% if p.stock_actual <= p.stock_minimo %}bg-danger{% else %}bg-success-subtle text-success border border-success-subtle{% endif %} px-3 py-1">
+                {{ p.stock_actual }}
+              </span>
+            </td>
+            <td class="text-end fw-bold">${{ "{:,.2f}".format(p.stock_actual * p.costo_unitario) }}</td>
+            <td class="text-center pe-4">
+              <a href="{{ url_for('inventory.kardex', producto_id=p.id) }}" class="btn btn-outline-primary btn-sm p-1 px-2" title="Ver Kardex">
+                <i class="bi bi-card-list"></i> Kardex
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

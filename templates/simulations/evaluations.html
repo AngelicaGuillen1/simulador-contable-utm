@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block title %}Mis Evaluaciones - Simulador Contable{% endblock %}
+
+{# ---------- Macros de apoyo ---------- #}
+{% macro estado_badge(estado) %}
+  {% if estado == 'COMPLETADO' %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Completado</span>
+  {% elif estado == 'EN_PROGRESO' %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-hourglass-split me-1"></i>En Progreso</span>
+  {% elif estado == 'ABANDONADO' %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle-fill me-1"></i>Abandonado</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border">{{ estado or 'Sin estado' }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro nivel_badge(nivel) %}
+  {% if nivel == 1 %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle">Básico</span>
+  {% elif nivel == 2 %}
+    <span class="badge bg-info-subtle text-info border border-info-subtle">Intermedio</span>
+  {% elif nivel == 3 %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Avanzado</span>
+  {% elif nivel == 4 %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Integral</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border">Nivel {{ nivel }}</span>
+  {% endif %}
+{% endmacro %}
+
+{# Calificación sobre 100 con semáforo académico institucional #}
+{% macro calificacion_badge(puntuacion) %}
+  {% if puntuacion is none or puntuacion is undefined %}
+    <span class="badge bg-secondary-subtle text-secondary border">Sin calificar</span>
+  {% elif puntuacion >= 85 %}
+    <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Correcto · {{ "%.2f"|format(puntuacion) }}</span>
+  {% elif puntuacion >= 50 %}
+    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Parcial · {{ "%.2f"|format(puntuacion) }}</span>
+  {% else %}
+    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Incorrecto · {{ "%.2f"|format(puntuacion) }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro tiempo_texto(segundos) %}
+  {% set t = segundos or 0 %}
+  {% set h = t // 3600 %}
+  {% set m = (t % 3600) // 60 %}
+  {% set s = t % 60 %}
+  {% if h > 0 %}{{ h }}h {{ m }}m {{ s }}s{% elif m > 0 %}{{ m }}m {{ s }}s{% else %}{{ s }}s{% endif %}
+{% endmacro %}
+
+{# ---------- Métricas de resumen ---------- #}
+{% set completados = intentos|selectattr('estado', 'equalto', 'COMPLETADO')|list %}
+{% set en_progreso = intentos|selectattr('estado', 'equalto', 'EN_PROGRESO')|list %}
+{% set abandonados = intentos|selectattr('estado', 'equalto', 'ABANDONADO')|list %}
+{% set notas = completados|map(attribute='puntuacion_total')|select('number')|list %}
+{% set promedio = (notas|sum / (notas|length)) if notas|length > 0 else 0 %}
+{% set mejor_nota = notas|max if notas|length > 0 else 0 %}
+{% set nota_minima = notas|min if notas|length > 0 else 0 %}
+{% set aprobados = notas|select('ge', 85)|list %}
+{% set tiempo_total = intentos|map(attribute='tiempo_segundos')|select('number')|sum %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+  <div class="card-body p-4 p-md-5">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill mb-2 fw-bold">
+          <i class="bi bi-award-fill me-1"></i> Rendimiento Académico
+        </span>
+        <h2 class="fw-bold mb-2">Mis Evaluaciones del Simulador</h2>
+        <p class="lead fs-6 text-white-50 mb-4">
+          Historial completo de intentos calificados por el Agente Evaluador IA: puntuaciones, rúbrica contable,
+          tiempo invertido y semáforo de desempeño.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-3">
+            <i class="bi bi-play-circle-fill me-1"></i> Nueva Simulación
+          </a>
+          {% if g.user and g.user.rol_nombre in ['Docente', 'Administrador'] %}
+          <a href="{{ url_for('simulations.teacher_panel') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-mortarboard me-1"></i> Panel Docente
+          </a>
+          {% endif %}
+          <a href="{{ url_for('tutor.chat') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-robot me-1"></i> Revisar con el Tutor IA
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+        <div class="d-inline-block bg-white bg-opacity-10 p-4 rounded-4 border border-white border-opacity-10">
+          <div class="small text-uppercase text-white-50 fw-bold">Promedio de Casos Completados</div>
+          <div class="display-6 fw-bold {% if promedio >= 85 %}text-success{% elif promedio >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ "%.2f"|format(promedio) }}
+          </div>
+          <span class="badge {% if promedio >= 85 %}bg-success{% elif promedio >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %} mt-1">
+            {% if promedio >= 85 %}Desempeño Correcto
+            {% elif promedio >= 50 %}Desempeño Parcial
+            {% else %}Requiere Refuerzo{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indicadores -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Intentos Totales</div>
+          <div class="kpi-value">{{ intentos|length }}</div>
+          <div class="small text-muted mt-1">{{ en_progreso|length }} en progreso · {{ abandonados|length }} abandonado(s)</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-list-ol"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Casos Completados</div>
+          <div class="kpi-value text-success">{{ completados|length }}</div>
+          <div class="small text-muted mt-1">{{ aprobados|length }} con nota ≥ 85 pts</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-patch-check-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Mejor Puntuación</div>
+          <div class="kpi-value {% if mejor_nota >= 85 %}text-success{% elif mejor_nota >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ "%.2f"|format(mejor_nota) }}
+          </div>
+          <div class="small text-muted mt-1">Nota mínima obtenida: {{ "%.2f"|format(nota_minima) }}</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-trophy-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Tiempo Total Dedicado</div>
+          <div class="kpi-value">{{ tiempo_texto(tiempo_total) }}</div>
+          <div class="small text-muted mt-1">Suma de todos los intentos</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-stopwatch-fill"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Semáforo de rúbrica -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body d-flex flex-wrap gap-4 align-items-center justify-content-between">
+    <div class="d-flex align-items-center">
+      <div class="bg-primary text-white p-2 rounded-3 me-3"><i class="bi bi-info-circle-fill"></i></div>
+      <div>
+        <h6 class="fw-bold mb-0">Escala de calificación del Agente Evaluador IA</h6>
+        <small class="text-muted">Rúbrica: cuentas 40 pts · posición Debe/Haber 30 pts · importes 20 pts · partida doble 10 pts</small>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge bg-success fs-6"><i class="bi bi-check2-circle me-1"></i>Correcto: ≥ 85 pts</span>
+      <span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-circle me-1"></i>Parcial: 50 – 84.99 pts</span>
+      <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Incorrecto: &lt; 50 pts</span>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Evolución de puntuaciones -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Evolución de Puntuaciones</h6>
+        <small class="text-muted">Casos completados en orden cronológico inverso</small>
+      </div>
+      <div class="card-body px-4 pb-4">
+        {% if completados %}
+        <canvas id="scoresEvolutionChart" style="max-height: 260px;"></canvas>
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-bar-chart-line fs-1 d-block mb-2 text-secondary"></i>
+          Sin registros para mostrar. Completa un caso para ver tu evolución.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Detalle de intentos -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold mb-1"><i class="bi bi-clipboard-data text-primary me-2"></i>Historial Detallado de Intentos</h6>
+          <small class="text-muted">Incluye intentos en progreso y abandonados</small>
+        </div>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-printer me-1"></i> Centro de Reportes
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if intentos %}
+        <div class="table-responsive">
+          <table class="table table-custom table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Simulación</th>
+                <th class="text-center">Nivel</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
+                <th class="text-center">Tiempo</th>
+                <th class="text-center">Finalización</th>
+                <th class="text-center pe-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in intentos %}
+              <tr>
+                <td class="ps-4">
+                  <div class="fw-semibold text-dark">{{ i.simulacion_titulo }}</div>
+                  <div class="small text-muted">
+                    {{ i.estudiante_nombre }}
+                    {% if i.modo_examen == 1 %}
+                      <span class="badge bg-dark ms-1"><i class="bi bi-shield-lock-fill me-1"></i>Examen</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td class="text-center">{{ nivel_badge(i.simulacion_nivel) }}</td>
+                <td class="text-center">{{ estado_badge(i.estado) }}</td>
+                <td class="text-center">
+                  {{ calificacion_badge(i.puntuacion_total) }}
+                  {% if i.puntuacion_total is not none and i.puntuacion_total is not undefined %}
+                  <div class="progress mt-1" style="height: 5px;">
+                    <div class="progress-bar {% if i.puntuacion_total >= 85 %}bg-success{% elif i.puntuacion_total >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                         role="progressbar" style="width: {{ i.puntuacion_total|round(1) }}%;"></div>
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center small text-muted">{{ tiempo_texto(i.tiempo_segundos) }}</td>
+                <td class="text-center small text-muted">
+                  {{ i.fecha_fin or '—' }}
+                  <div class="text-muted" style="font-size: 0.72rem;">Inicio: {{ i.fecha_inicio or '—' }}</div>
+                </td>
+                <td class="text-center pe-4">
+                  <div class="d-flex justify-content-center gap-1">
+                    {% if i.estado == 'EN_PROGRESO' %}
+                    <a href="{{ url_for('simulations.play_simulation', simulacion_id=i.simulacion_id, intento_id=i.id) }}"
+                       class="btn btn-outline-warning btn-sm" title="Continuar este intento">
+                      <i class="bi bi-play-fill"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('simulations.start_simulation', simulacion_id=i.simulacion_id) }}"
+                       class="btn btn-outline-primary btn-sm" title="Reintentar la simulación">
+                      <i class="bi bi-arrow-repeat"></i> Reintentar
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-clipboard-x fs-1 d-block mb-3 text-secondary"></i>
+          Sin registros para mostrar. Aún no has iniciado ninguna simulación.
+          <div class="mt-3">
+            <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-primary btn-sm">
+              <i class="bi bi-play-circle-fill me-1"></i> Iniciar mi primera simulación
+            </a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if completados %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canvas = document.getElementById("scoresEvolutionChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const etiquetas = {{ completados|map(attribute='simulacion_titulo')|list|tojson }};
+  const puntajes = {{ completados|map(attribute='puntuacion_total')|list|tojson }};
+  const datos = puntajes.map(function (v) { return (v === null || v === undefined) ? 0 : v; });
+  const colores = datos.map(function (v) {
+    return v >= 85 ? "rgba(5, 150, 105, 0.75)" : (v >= 50 ? "rgba(217, 119, 6, 0.75)" : "rgba(225, 29, 72, 0.75)");
+  });
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        label: "Puntuación obtenida (sobre 100)",
+        data: datos,
+        backgroundColor: colores,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) { return ctx.parsed.y + " / 100 pts"; }
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { stepSize: 25 } }
+      }
+    }
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

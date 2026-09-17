@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Nueva Venta - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-cart-plus text-primary me-2"></i>Punto de Venta / Facturación Comercial</h3>
+    <p class="text-muted small mb-0">Emisión de facturas con cálculo en vivo de IVA, costo de ventas y descarga automática de stock</p>
+  </div>
+  <a href="{{ url_for('sales.list_sales') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Volver al Listado
+  </a>
+</div>
+
+<form method="POST" action="{{ url_for('sales.create_sale') }}" class="card border-0 shadow-sm rounded-4 p-4">
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <label class="form-label small fw-semibold">Cliente Receptor</label>
+      <select name="cliente_id" class="form-select" required>
+        <option value="">-- Seleccionar Cliente --</option>
+        {% for cl in clientes %}
+          <option value="{{ cl.id }}">{{ cl.nombre_razon_social }} (RUC/CI: {{ cl.identificacion }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Forma de Pago</label>
+      <select name="forma_pago" id="salesPaymentMethod" class="form-select" onchange="togglePaymentOptions()">
+        <option value="EFECTIVO">Efectivo (Caja General 1.1.01)</option>
+        <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+        <option value="CREDITO">Crédito Comercial (CxC Clientes 1.1.04)</option>
+      </select>
+    </div>
+
+    <div class="col-md-3" id="bankSelectGroup" style="display: none;">
+      <label class="form-label small fw-semibold">Banco Receptor</label>
+      <select name="banco_id" class="form-select">
+        {% for b in bancos %}
+          <option value="{{ b.id }}">{{ b.nombre_banco }} - {{ b.numero_cuenta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2" id="creditDaysGroup" style="display: none;">
+      <label class="form-label small fw-semibold">Plazo Crédito (Días)</label>
+      <input type="number" name="dias_credito" class="form-control" value="30" min="1">
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Método de Kardex</label>
+      <select name="metodo_kardex" class="form-select">
+        <option value="PROMEDIO">Promedio Ponderado</option>
+        <option value="FIFO">FIFO (PEPS)</option>
+      </select>
+    </div>
+  </div>
+
+  <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Productos a Facturar</h5>
+
+  <div class="table-responsive mb-3">
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 40%;">Producto</th>
+          <th style="width: 15%;">Cantidad</th>
+          <th style="width: 20%;">Precio Unitario ($)</th>
+          <th style="width: 20%;">Subtotal ($)</th>
+          <th style="width: 5%;"></th>
+        </tr>
+      </thead>
+      <tbody id="saleItemsBody">
+        <tr class="sale-item-row">
+          <td>
+            <select name="producto_id[]" class="form-select form-select-sm prod-select" onchange="updateProductPrice(this)" required>
+              <option value="">-- Seleccione Producto --</option>
+              {% for p in productos %}
+                <option value="{{ p.id }}" data-price="{{ p.precio_venta }}" data-stock="{{ p.stock_actual }}">
+                  {{ p.codigo }} - {{ p.descripcion }} (Stock: {{ p.stock_actual }} | ${{ "{:,.2f}".format(p.precio_venta) }})
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <input type="number" step="1" min="1" name="cantidad[]" class="form-control form-control-sm cant-input text-end" value="1" oninput="calculateSaleTotals()" required>
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="precio[]" class="form-control form-control-sm price-input text-end" value="0.00" oninput="calculateSaleTotals()" required>
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm subtotal-display text-end fw-semibold" value="$0.00" readonly>
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="this.closest('tr').remove(); calculateSaleTotals();"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSaleRow()">
+      <i class="bi bi-plus-lg me-1"></i> Agregar Producto
+    </button>
+
+    <!-- Totals Calculation Box -->
+    <div class="card bg-light border p-3 rounded-3" style="width: 320px;">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Subtotal Base Imponible:</span>
+        <strong id="saleSubtotalDisplay">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">IVA Ventas (15%):</span>
+        <strong id="saleIvaDisplay" class="text-primary">$0.00</strong>
+      </div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Total Factura:</span>
+        <span id="saleTotalDisplay" class="fs-4 fw-bold text-success">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-end">
+    <button type="submit" class="btn btn-success px-5 py-2 fw-bold rounded-3 shadow">
+      <i class="bi bi-check-circle-fill me-1"></i> Confirmar y Emitir Venta
+    </button>
+  </div>
+</form>
+
+<!-- Template for Dynamic JS Rows -->
+<div id="productSelectTemplate" class="d-none">
+  {% for p in productos %}
+    <option value="{{ p.id }}" data-price="{{ p.precio_venta }}" data-stock="{{ p.stock_actual }}">
+      {{ p.codigo }} - {{ p.descripcion }} (Stock: {{ p.stock_actual }} | ${{ "{:,.2f}".format(p.precio_venta) }})
+    </option>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePaymentOptions() {
+  const method = document.getElementById("salesPaymentMethod").value;
+  const bankGroup = document.getElementById("bankSelectGroup");
+  const creditGroup = document.getElementById("creditDaysGroup");
+
+  bankGroup.style.display = method === "TRANSFERENCIA" ? "block" : "none";
+  creditGroup.style.display = method === "CREDITO" ? "block" : "none";
+}
+
+function addSaleRow() {
+  const tableBody = document.getElementById("saleItemsBody");
+  const optionsHtml = document.getElementById("productSelectTemplate").innerHTML;
+
+  const row = document.createElement("tr");
+  row.className = "sale-item-row";
+  row.innerHTML = `
+    <td>
+      <select name="producto_id[]" class="form-select form-select-sm prod-select" onchange="updateProductPrice(this)" required>
+        <option value="">-- Seleccione Producto --</option>
+        ${optionsHtml}
+      </select>
+    </td>
+    <td>
+      <input type="number" step="1" min="1" name="cantidad[]" class="form-control form-control-sm cant-input text-end" value="1" oninput="calculateSaleTotals()" required>
+    </td>
+    <td>
+      <input type="number" step="0.01" min="0" name="precio[]" class="form-control form-control-sm price-input text-end" value="0.00" oninput="calculateSaleTotals()" required>
+    </td>
+    <td>
+      <input type="text" class="form-control form-control-sm subtotal-display text-end fw-semibold" value="$0.00" readonly>
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="this.closest('tr').remove(); calculateSaleTotals();"><i class="bi bi-trash"></i></button>
+    </td>
+  `;
+  tableBody.appendChild(row);
+  calculateSaleTotals();
+}
+
+function updateProductPrice(selectEl) {
+  const row = selectEl.closest("tr");
+  const selectedOpt = selectEl.options[selectEl.selectedIndex];
+  const price = selectedOpt.getAttribute("data-price") || 0;
+  row.querySelector(".price-input").value = parseFloat(price).toFixed(2);
+  calculateSaleTotals();
+}
+
+function calculateSaleTotals() {
+  const rows = document.querySelectorAll(".sale-item-row");
+  let subtotal = 0;
+
+  rows.forEach((r) => {
+    const cant = parseFloat(r.querySelector(".cant-input").value || 0);
+    const price = parseFloat(r.querySelector(".price-input").value || 0);
+    const itemSub = Math.round(cant * price * 100) / 100;
+    r.querySelector(".subtotal-display").value = `$${itemSub.toFixed(2)}`;
+    subtotal += itemSub;
+  });
+
+  subtotal = Math.round(subtotal * 100) / 100;
+  const iva = Math.round(subtotal * 0.15 * 100) / 100;
+  const total = Math.round((subtotal + iva) * 100) / 100;
+
+  document.getElementById("saleSubtotalDisplay").textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById("saleIvaDisplay").textContent = `$${iva.toFixed(2)}`;
+  document.getElementById("saleTotalDisplay").textContent = `$${total.toFixed(2)}`;
+}
+</script>
+{% endblock %}

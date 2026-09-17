@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Simulador Integral de Sistema Contable{% endblock %} - Nueva Esperanza</title>
+  
+  <!-- Bootstrap 5.3 CSS & Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
+  <!-- Custom ERP Theme CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  {% if g.user %}
+  <!-- Sidebar Navigation -->
+  <nav id="sidebar-wrapper">
+    <div class="sidebar-heading">
+      <div class="d-flex align-items-center">
+        <div class="bg-primary text-white p-2 rounded-3 me-2">
+          <i class="bi bi-calculator-fill fs-5"></i>
+        </div>
+        <div>
+          <h5>SIMULADOR CONTABLE</h5>
+          <div class="subtitle">Servicios y Comercio</div>
+        </div>
+      </div>
+      <div class="mt-2 text-info small fw-bold text-truncate" title="Comercial y Servicios Nueva Esperanza">
+        <i class="bi bi-building me-1"></i> Nueva Esperanza S.A.
+      </div>
+    </div>
+
+    <div class="py-2">
+      <a href="{{ url_for('dashboard.index') }}" class="sidebar-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard General
+      </a>
+
+      <div class="nav-section-title">Contabilidad Central</div>
+      <a href="{{ url_for('accounting.accounts') }}" class="sidebar-link {% if 'accounting.accounts' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-diagram-3"></i> Plan de Cuentas
+      </a>
+      <a href="{{ url_for('accounting.journal') }}" class="sidebar-link {% if 'accounting.journal' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-journal-text"></i> Libro Diario
+      </a>
+      <a href="{{ url_for('accounting.ledger') }}" class="sidebar-link {% if 'accounting.ledger' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-book"></i> Libro Mayor
+      </a>
+      <a href="{{ url_for('accounting.trial_balance') }}" class="sidebar-link {% if 'accounting.trial_balance' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-scale"></i> Balance Comprobación
+      </a>
+      <a href="{{ url_for('accounting.adjustments') }}" class="sidebar-link {% if 'accounting.adjustments' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-sliders"></i> Ajustes Contables
+      </a>
+      <a href="{{ url_for('accounting.closing') }}" class="sidebar-link {% if 'accounting.closing' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-lock"></i> Cierre de Período
+      </a>
+
+      <div class="nav-section-title">Operaciones Comerciales</div>
+      <a href="{{ url_for('sales.list_sales') }}" class="sidebar-link {% if 'sales.list_sales' in (request.endpoint or '') or 'sales.create_sale' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-cart-check"></i> Ventas de Bienes
+      </a>
+      <a href="{{ url_for('sales.services') }}" class="sidebar-link {% if 'sales.services' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-headset"></i> Servicios Prestados
+      </a>
+      <a href="{{ url_for('purchases.list_purchases') }}" class="sidebar-link {% if 'purchases' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-bag-plus"></i> Compras a Proveedores
+      </a>
+
+      <div class="nav-section-title">Inventario & Kardex</div>
+      <a href="{{ url_for('inventory.products') }}" class="sidebar-link {% if 'inventory.products' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-boxes"></i> Catálogo de Productos
+      </a>
+      <a href="{{ url_for('inventory.kardex') }}" class="sidebar-link {% if 'inventory.kardex' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-card-list"></i> Kardex (FIFO / Promedio)
+      </a>
+      <a href="{{ url_for('inventory.stock_report') }}" class="sidebar-link {% if 'inventory.stock_report' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-bar-chart-steps"></i> Existencias & Alertas
+      </a>
+
+      <div class="nav-section-title">Tesorería & Cartera</div>
+      <a href="{{ url_for('treasury.cash') }}" class="sidebar-link {% if 'treasury.cash' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-cash-stack"></i> Caja & Arqueos
+      </a>
+      <a href="{{ url_for('treasury.banks') }}" class="sidebar-link {% if 'treasury.banks' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-bank"></i> Cuentas Bancarias
+      </a>
+      <a href="{{ url_for('treasury.reconciliation') }}" class="sidebar-link {% if 'treasury.reconciliation' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Conciliación Bancaria
+      </a>
+      <a href="{{ url_for('partners.customers') }}" class="sidebar-link {% if 'partners.customers' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-people"></i> Clientes
+      </a>
+      <a href="{{ url_for('partners.receivables') }}" class="sidebar-link {% if 'partners.receivables' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-receipt"></i> Cuentas por Cobrar
+      </a>
+      <a href="{{ url_for('partners.suppliers') }}" class="sidebar-link {% if 'partners.suppliers' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-truck"></i> Proveedores
+      </a>
+      <a href="{{ url_for('partners.payables') }}" class="sidebar-link {% if 'partners.payables' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-credit-card"></i> Cuentas por Pagar
+      </a>
+      <a href="{{ url_for('documents.index') }}" class="sidebar-link {% if 'documents' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-files"></i> Documentos Fuente
+      </a>
+      <a href="{{ url_for('taxes.index') }}" class="sidebar-link {% if 'taxes' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-percent"></i> Tributación
+      </a>
+
+      <div class="nav-section-title">Informes Financieros NIIF</div>
+      <a href="{{ url_for('financial_statements.income_statement') }}" class="sidebar-link {% if 'financial_statements.income_statement' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Estado de Resultados
+      </a>
+      <a href="{{ url_for('financial_statements.balance_sheet') }}" class="sidebar-link {% if 'financial_statements.balance_sheet' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-file-earmark-check"></i> Situación Financiera
+      </a>
+      <a href="{{ url_for('financial_statements.cash_flow') }}" class="sidebar-link {% if 'financial_statements.cash_flow' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-water"></i> Flujo de Efectivo
+      </a>
+
+      <div class="nav-section-title">Entorno Universitario & IA</div>
+      <a href="{{ url_for('simulations.list_simulations') }}" class="sidebar-link text-warning {% if 'simulations.list' in (request.endpoint or '') or 'simulations.play' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-joystick text-warning"></i> Simulador de Casos
+      </a>
+      <a href="{{ url_for('simulations.evaluations') }}" class="sidebar-link {% if 'simulations.evaluations' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-award"></i> Mis Evaluaciones
+      </a>
+      {% if g.user.rol_nombre in ['Docente', 'Administrador'] %}
+      <a href="{{ url_for('simulations.teacher_panel') }}" class="sidebar-link {% if 'simulations.teacher_panel' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-mortarboard"></i> Panel Analítica Docente
+      </a>
+      {% endif %}
+      <a href="{{ url_for('tutor.chat') }}" class="sidebar-link text-info {% if 'tutor' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-robot text-info"></i> Tutor Contable IA
+      </a>
+      <a href="{{ url_for('reports.index') }}" class="sidebar-link {% if 'reports' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-printer"></i> Centro de Reportes
+      </a>
+
+      {% if g.user.rol_nombre == 'Administrador' %}
+      <div class="nav-section-title">Administración del Sistema</div>
+      <a href="{{ url_for('admin.index') }}" class="sidebar-link {% if 'admin.index' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-gear-fill"></i> Parámetros & Config
+      </a>
+      <a href="{{ url_for('admin.users') }}" class="sidebar-link {% if 'admin.users' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-person-gear"></i> Gestión Usuarios
+      </a>
+      <a href="{{ url_for('admin.taxes') }}" class="sidebar-link {% if 'admin.taxes' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-percent"></i> Parámetros Tributarios
+      </a>
+      <a href="{{ url_for('admin.audit') }}" class="sidebar-link {% if 'admin.audit' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-shield-check"></i> Auditoría & Trazabilidad
+      </a>
+      {% endif %}
+
+      <div class="p-3"></div>
+    </div>
+  </nav>
+
+  <!-- Page Content Wrapper -->
+  <div id="page-content-wrapper">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="d-flex align-items-center">
+        <button class="btn btn-outline-secondary btn-sm d-lg-none me-2" id="sidebarToggle">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+        <div class="d-none d-md-block">
+          <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-2">Simulador Universitario Activo</span>
+          <span class="text-muted small fw-semibold">
+            Período: {{ periodo_activo.nombre if periodo_activo else 'Sin período abierto' }}
+          </span>
+          <span class="text-muted small fw-semibold ms-2">
+            <i class="bi bi-calendar-check me-1"></i>Fecha de trabajo: {{ fecha_trabajo or '—' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Global Live Search -->
+      <div class="search-container">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="globalSearchInput" class="search-input" placeholder="Buscar cuentas, productos, clientes, facturas...">
+        <div id="searchDropdown" class="search-dropdown"></div>
+      </div>
+
+      <!-- Quick Action Buttons & User Profile -->
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning btn-sm fw-bold d-none d-sm-inline-flex align-items-center">
+          <i class="bi bi-play-circle-fill me-1"></i> Iniciar Simulación
+        </a>
+        <a href="{{ url_for('tutor.chat') }}" class="btn btn-outline-primary btn-sm d-none d-sm-inline-flex align-items-center">
+          <i class="bi bi-robot me-1"></i> Tutor IA
+        </a>
+
+        <div class="dropdown">
+          <button class="btn btn-light btn-sm border dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+            <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.8rem;">
+              {{ g.user.username[:2]|upper }}
+            </div>
+            <div class="text-start d-none d-md-block me-1">
+              <div class="fw-bold small lh-1">{{ g.user.nombre_completo.split(' - ')[0] }}</div>
+              <div class="text-muted" style="font-size: 0.7rem;">{{ g.user.rol_nombre }}</div>
+            </div>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li><h6 class="dropdown-header">Usuario: {{ g.user.username }}</h6></li>
+            <li><span class="dropdown-item-text small text-muted"><i class="bi bi-envelope me-1"></i> {{ g.user.email }}</span></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{{ url_for('simulations.evaluations') }}"><i class="bi bi-award me-2"></i> Ver mis resultados</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('accounting.journal') }}"><i class="bi bi-journal-text me-2"></i> Ir al sistema contable</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Body Container -->
+    <main class="container-fluid p-4">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+              <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Professional Footer -->
+    <footer class="mt-auto py-3 bg-white border-top text-center text-muted small">
+      <div class="container-fluid">
+        <strong>Simulador Integral de Sistema Contable</strong> &bull; Empresa Ficticia: <em>Comercial y Servicios Nueva Esperanza S.A.</em> &bull; Entorno Universitario de Aprendizaje Contable & IA
+      </div>
+    </footer>
+  </div>
+  {% else %}
+  <!-- Login / Public Layout -->
+  <main class="min-vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="w-100 px-3" style="max-width: 450px;">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-3" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block public_content %}{% endblock %}
+    <!-- Contenido de páginas de error mostradas a usuarios no autenticados -->
+    {% block error_content %}{% endblock %}
+  </main>
+  {% endif %}
+
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Global App JS -->
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

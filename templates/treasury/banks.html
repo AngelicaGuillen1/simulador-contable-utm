@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+{% block title %}Bancos y Movimientos - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# Disponibilidad de la ruta de movimientos bancarios en el url_map de la aplicación #}
+{% set _endpoints = url_for.__self__.view_functions if url_for.__self__.view_functions is defined else {} %}
+{% set hay_movimiento_banco = 'treasury.bank_movement' in _endpoints %}
+{# Metadatos de los tipos de movimiento bancario: signo contable y presentación #}
+{% set tipo_meta = {
+  'DEPOSITO':               {'signo':  1, 'color': 'success', 'label': 'Depósito'},
+  'TRANSFERENCIA_RECIBIDA': {'signo':  1, 'color': 'success', 'label': 'Transferencia recibida'},
+  'TRANSFERENCIA_EMITIDA':  {'signo': -1, 'color': 'danger',  'label': 'Transferencia emitida'},
+  'NOTA_DEBITO':            {'signo': -1, 'color': 'danger',  'label': 'Nota de débito'},
+  'NOTA_CREDITO':           {'signo':  1, 'color': 'success', 'label': 'Nota de crédito'},
+  'COMISION':               {'signo': -1, 'color': 'warning', 'label': 'Comisión bancaria'},
+  'INTERES':                {'signo':  1, 'color': 'info',    'label': 'Interés ganado'}
+} %}
+
+{% set tot = namespace(saldo=0.0, contable=0.0, pendientes=0) %}
+{% for b in bancos %}
+  {% set tot.saldo = tot.saldo + (b.saldo_actual or 0) %}
+  {% set tot.contable = tot.contable + (b.saldo_contable_real or 0) %}
+{% endfor %}
+{% for m in movimientos %}
+  {% if not m.conciliado %}
+    {% set tot.pendientes = tot.pendientes + 1 %}
+  {% endif %}
+{% endfor %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-bank text-primary me-2"></i>Bancos y Movimientos</h3>
+    <p class="text-muted small mb-0">
+      Cuentas bancarias, saldos contables y registro de movimientos &bull;
+      Fecha de trabajo: <strong>{{ hoy|default('—') }}</strong>
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('treasury.reconciliation') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left-right me-1"></i> Ir a Conciliación
+    </a>
+    {% if hay_movimiento_banco %}
+    <button type="button" class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#bankMovementModal">
+      <i class="bi bi-plus-circle me-1"></i> Registrar Movimiento
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPIs Bancarios -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Total en Bancos</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(tot.saldo) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-cash-coin me-1"></i> Saldo registrado por banco</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-bank"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Saldo Libro Mayor</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(tot.contable) }}</div>
+          <div class="small text-muted mt-1">
+            {% set dif_bancos = tot.saldo - tot.contable %}
+            {% if dif_bancos|abs < 0.01 %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Cuadrado con libros</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Diferencia $ {{ "{:,.2f}".format(dif_bancos|abs) }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-journal-bookmark"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Movimientos Registrados</div>
+          <div class="kpi-value">{{ movimientos|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-list-ul me-1"></i> Últimos movimientos bancarios</div>
+        </div>
+        <div class="kpi-icon bg-secondary-subtle text-secondary"><i class="bi bi-list-ul"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Pendientes de Conciliar</div>
+          <div class="kpi-value {% if tot.pendientes > 0 %}text-warning{% else %}text-success{% endif %}">{{ tot.pendientes }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-hourglass-split me-1"></i> Movimientos sin marcar como conciliados</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cuentas Bancarias -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0"><i class="bi bi-wallet2 text-primary me-2"></i>Cuentas Bancarias</h6>
+    <span class="badge bg-light text-dark border">{{ bancos|length }} cuenta(s) activa(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Banco</th>
+            <th>Número de Cuenta</th>
+            <th>Tipo</th>
+            <th>Cuenta Contable</th>
+            <th class="text-end">Saldo Registrado</th>
+            <th class="text-end">Saldo Libro Mayor</th>
+            <th class="text-center">Estado</th>
+            <th class="text-end pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bancos %}
+          {% set dif = (b.saldo_actual or 0) - (b.saldo_contable_real or 0) %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-semibold text-dark">{{ b.nombre_banco }}</div>
+              <div class="text-muted small">Banco #{{ b.id }}</div>
+            </td>
+            <td><code>{{ b.numero_cuenta }}</code></td>
+            <td>
+              {% if b.tipo_cuenta == 'CORRIENTE' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Corriente</span>
+              {% else %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">Ahorros</span>
+              {% endif %}
+            </td>
+            <td><code>{{ b.cuenta_contable_id }}</code></td>
+            <td class="text-end">$ {{ "{:,.2f}".format(b.saldo_actual or 0) }}</td>
+            <td class="text-end fw-semibold">$ {{ "{:,.2f}".format(b.saldo_contable_real or 0) }}</td>
+            <td class="text-center">
+              {% if b.activo %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Activa</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactiva</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group btn-group-sm" role="group">
+                {% if hay_movimiento_banco %}
+                <button type="button" class="btn btn-outline-primary btn-nuevo-mov"
+                        data-banco-id="{{ b.id }}" data-banco-nombre="{{ b.nombre_banco }}" title="Registrar movimiento en este banco">
+                  <i class="bi bi-plus-lg"></i> Movimiento
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-outline-secondary btn-filtrar-mov"
+                        data-banco-id="{{ b.id }}" title="Ver movimientos de este banco">
+                  <i class="bi bi-funnel"></i> Movimientos
+                </button>
+                {% if dif|abs >= 0.01 %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                      data-bs-toggle="tooltip" role="img"
+                      title="Diferencia detectada entre el saldo registrado y el Libro Mayor por $ {{ "{:,.2f}".format(dif|abs) }}">
+                  <i class="bi bi-exclamation-triangle"></i>
+                </span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Movimientos Bancarios -->
+  <div class="col-12 col-xl-8">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-arrow-left-right text-info me-2"></i>Movimientos Bancarios</h6>
+          <span class="badge bg-light text-dark border" id="contadorMovimientos">{{ movimientos|length }} movimiento(s)</span>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col-12 col-md-4">
+            <select id="filtroBanco" class="form-select form-select-sm">
+              <option value="">Todos los bancos</option>
+              {% for b in bancos %}
+              <option value="{{ b.id }}">{{ b.nombre_banco }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <select id="filtroEstado" class="form-select form-select-sm">
+              <option value="">Todos los estados</option>
+              <option value="1">Conciliados</option>
+              <option value="0">Pendientes</option>
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <input type="search" id="filtroTexto" class="form-control form-control-sm" placeholder="Buscar concepto o referencia...">
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 520px;">
+          <table class="table table-custom align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Fecha</th>
+                <th>Banco / Cuenta</th>
+                <th>Tipo de Movimiento</th>
+                <th class="text-end">Monto</th>
+                <th class="text-center">Rol en el Efectivo</th>
+                <th>Referencia</th>
+                <th class="text-center">Asiento</th>
+                <th class="text-center pe-4">Conciliado</th>
+              </tr>
+            </thead>
+            <tbody id="movimientosBody">
+              {% for m in movimientos %}
+              {% set meta = tipo_meta.get(m.tipo_movimiento, {'signo': 1, 'color': 'secondary', 'label': m.tipo_movimiento}) %}
+              <tr class="mov-row"
+                  data-banco="{{ m.banco_id }}"
+                  data-conciliado="{{ 1 if m.conciliado else 0 }}"
+                  data-texto="{{ (m.concepto or '')|lower }} {{ (m.numero_referencia or '')|lower }}">
+                <td class="ps-4 text-nowrap small">{{ m.fecha }}</td>
+                <td>
+                  <div class="fw-semibold small">{{ m.nombre_banco }}</div>
+                  <div class="text-muted small"><code>{{ m.numero_cuenta }}</code></div>
+                </td>
+                <td class="small">
+                  <span class="badge bg-{{ meta.color }}-subtle text-{{ meta.color }} border border-{{ meta.color }}-subtle">
+                    {{ meta.label }}
+                  </span>
+                  <div class="text-muted small mt-1">{{ m.concepto or '—' }}</div>
+                </td>
+                <td class="text-end fw-semibold text-nowrap">
+                  {% if meta.signo > 0 %}
+                    <span class="text-success">+ $ {{ "{:,.2f}".format(m.monto or 0) }}</span>
+                  {% else %}
+                    <span class="text-danger">- $ {{ "{:,.2f}".format(m.monto or 0) }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-center small">
+                  {% if meta.signo > 0 %}
+                    <span class="text-success"><i class="bi bi-box-arrow-in-down me-1"></i>Entrada</span>
+                  {% else %}
+                    <span class="text-danger"><i class="bi bi-box-arrow-up me-1"></i>Salida</span>
+                  {% endif %}
+                </td>
+                <td class="small text-muted">{{ m.numero_referencia or '—' }}</td>
+                <td class="text-center small">
+                  {% if m.asiento_id %}
+                    <a href="{{ url_for('accounting.journal') }}" class="text-decoration-none" title="Ver asiento contable generado">
+                      <code>#{{ m.asiento_id }}</code>
+                    </a>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-center pe-4">
+                  {% if m.conciliado %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check2 me-1"></i>Sí</span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                  <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+                </td>
+              </tr>
+              {% endfor %}
+              <tr id="filaSinResultados" class="d-none">
+                <td colspan="8" class="text-center text-muted py-4">
+                  <i class="bi bi-search fs-4 d-block mb-1"></i> Sin registros para mostrar
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Composición de saldos -->
+  <div class="col-12 col-xl-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-success me-2"></i>Saldo Contable por Banco</h6>
+      </div>
+      <div class="card-body">
+        <canvas id="graficoBancos" height="220"></canvas>
+        <hr>
+        <ul class="list-unstyled small mb-0">
+          {% for b in bancos %}
+          <li class="d-flex justify-content-between align-items-center py-1">
+            <span class="text-truncate me-2"><span class="badge bg-light text-dark border me-1">{{ loop.index }}</span>{{ b.nombre_banco }}</span>
+            <span class="fw-semibold text-nowrap">$ {{ "{:,.2f}".format(b.saldo_contable_real or 0) }}</span>
+          </li>
+          {% else %}
+          <li class="text-muted text-center py-2">Sin registros para mostrar</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: MOVIMIENTO BANCARIO ============ -->
+{% if hay_movimiento_banco %}
+<div class="modal fade" id="bankMovementModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <form method="POST" action="{{ url_for('treasury.bank_movement') }}" class="modal-content" id="bankMovementForm" autocomplete="off">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-bank2 text-primary me-2"></i>Registrar Movimiento Bancario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Banco / Cuenta <span class="text-danger">*</span></label>
+            <select name="banco_id" id="movBancoSelect" class="form-select" required>
+              <option value="">-- Seleccione la cuenta bancaria --</option>
+              {% for b in bancos %}
+              <option value="{{ b.id }}" data-saldo="{{ b.saldo_contable_real or 0 }}">
+                {{ b.nombre_banco }} - {{ b.numero_cuenta }} ({{ b.tipo_cuenta }})
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Saldo según Libro Mayor: <span id="movBancoSaldo" class="fw-semibold">$ 0.00</span></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Tipo de Movimiento <span class="text-danger">*</span></label>
+            <select name="tipo_movimiento" id="movTipoBanco" class="form-select" required>
+              <option value="DEPOSITO" selected>Depósito</option>
+              <option value="TRANSFERENCIA_RECIBIDA">Transferencia recibida</option>
+              <option value="TRANSFERENCIA_EMITIDA">Transferencia emitida</option>
+              <option value="NOTA_DEBITO">Nota de débito</option>
+              <option value="NOTA_CREDITO">Nota de crédito</option>
+              <option value="COMISION">Comisión bancaria</option>
+              <option value="INTERES">Interés ganado</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Monto <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" step="0.01" min="0.01" name="monto" id="movMontoBanco" class="form-control text-end" value="0.00" required>
+            </div>
+            <div class="form-text" id="movBancoEfecto">Incrementa el saldo de la cuenta bancaria.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Número de Referencia</label>
+            <input type="text" name="numero_referencia" id="movReferencia" class="form-control" maxlength="60"
+                   placeholder="Ej: TRF-002145 / CHQ-000871">
+            <div class="form-text">Referencia del documento bancario (transferencia, cheque o comprobante).</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Concepto / Glosa <span class="text-danger">*</span></label>
+            <input type="text" name="concepto" class="form-control" maxlength="200" required
+                   placeholder="Ej: Depósito de recaudación diaria de caja general">
+          </div>
+          <div class="col-12">
+            <div class="alert alert-light border mb-0 small">
+              <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
+              El movimiento genera el asiento contable automático: los depósitos, transferencias recibidas, notas de crédito e intereses debitan la cuenta bancaria;
+              las transferencias emitidas, notas de débito y comisiones la acreditan.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-save me-1"></i>Registrar Movimiento</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning border rounded-4 d-flex align-items-start gap-3 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+  <div class="small">
+    <strong class="d-block mb-1">Registro de movimientos bancarios no disponible</strong>
+    La ruta de movimientos bancarios no está habilitada en esta instalación, por lo que no se ofrece el formulario correspondiente.
+    La consulta de cuentas, saldos y movimientos registrados permanece operativa.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  /* Formato monetario idéntico al del servidor ("{:,.2f}"): $ 1,234.56 */
+  function miles(n) {
+    var partes = Math.abs(isFinite(n) ? n : 0).toFixed(2).split('.');
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return partes[0] + '.' + partes[1];
+  }
+  function money(n) {
+    var v = isFinite(n) ? n : 0;
+    return (v < 0 ? '- $ ' : '$ ') + miles(v);
+  }
+
+  /* ---------- Filtros de la tabla de movimientos ---------- */
+  var filtroBanco = document.getElementById('filtroBanco');
+  var filtroEstado = document.getElementById('filtroEstado');
+  var filtroTexto = document.getElementById('filtroTexto');
+  var filas = Array.prototype.slice.call(document.querySelectorAll('.mov-row'));
+  var contador = document.getElementById('contadorMovimientos');
+  var filaVacia = document.getElementById('filaSinResultados');
+
+  function aplicarFiltros() {
+    var banco = filtroBanco ? filtroBanco.value : '';
+    var estado = filtroEstado ? filtroEstado.value : '';
+    var texto = filtroTexto ? filtroTexto.value.trim().toLowerCase() : '';
+    var visibles = 0;
+
+    filas.forEach(function (fila) {
+      var ok = true;
+      if (banco && fila.getAttribute('data-banco') !== banco) { ok = false; }
+      if (ok && estado && fila.getAttribute('data-conciliado') !== estado) { ok = false; }
+      if (ok && texto && fila.getAttribute('data-texto').indexOf(texto) === -1) { ok = false; }
+      fila.classList.toggle('d-none', !ok);
+      if (ok) { visibles++; }
+    });
+
+    if (contador) { contador.textContent = visibles + ' de ' + filas.length + ' movimiento(s)'; }
+    if (filaVacia) { filaVacia.classList.toggle('d-none', visibles !== 0 || filas.length === 0); }
+  }
+
+  [filtroBanco, filtroEstado, filtroTexto].forEach(function (el) {
+    if (!el) { return; }
+    el.addEventListener('input', aplicarFiltros);
+    el.addEventListener('change', aplicarFiltros);
+  });
+
+  /* ---------- Modal de movimiento bancario ---------- */
+  var modalEl = document.getElementById('bankMovementModal');
+  var selBanco = document.getElementById('movBancoSelect');
+  var selTipo = document.getElementById('movTipoBanco');
+  var lblSaldo = document.getElementById('movBancoSaldo');
+  var hintEfecto = document.getElementById('movBancoEfecto');
+
+  var ENTRADAS = ['DEPOSITO', 'TRANSFERENCIA_RECIBIDA', 'NOTA_CREDITO', 'INTERES'];
+
+  function refreshBanco() {
+    if (selBanco && lblSaldo) {
+      var opt = selBanco.options[selBanco.selectedIndex];
+      var saldo = opt && opt.dataset.saldo ? parseFloat(opt.dataset.saldo) : 0;
+      lblSaldo.textContent = money(saldo);
+    }
+    if (selTipo && hintEfecto) {
+      var esEntrada = ENTRADAS.indexOf(selTipo.value) !== -1;
+      hintEfecto.innerHTML = esEntrada
+        ? '<i class="bi bi-arrow-up-circle text-success me-1"></i>Incrementa (debita) el saldo de la cuenta bancaria.'
+        : '<i class="bi bi-arrow-down-circle text-danger me-1"></i>Disminuye (acredita) el saldo de la cuenta bancaria.';
+    }
+  }
+
+  if (selBanco) { selBanco.addEventListener('change', refreshBanco); }
+  if (selTipo) { selTipo.addEventListener('change', refreshBanco); }
+  refreshBanco();
+
+  /* Botón "Movimiento" por banco: preselecciona la cuenta */
+  document.querySelectorAll('.btn-nuevo-mov').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (selBanco) { selBanco.value = btn.getAttribute('data-banco-id'); }
+      refreshBanco();
+      if (modalEl) { bootstrap.Modal.getOrCreateInstance(modalEl).show(); }
+    });
+  });
+
+  /* Botón "Movimientos" por banco: filtra la tabla */
+  document.querySelectorAll('.btn-filtrar-mov').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (filtroBanco) { filtroBanco.value = btn.getAttribute('data-banco-id'); }
+      if (filtroEstado) { filtroEstado.value = ''; }
+      if (filtroTexto) { filtroTexto.value = ''; }
+      aplicarFiltros();
+      var tabla = document.getElementById('movimientosBody');
+      if (tabla) { tabla.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+
+  /* ---------- Gráfico de saldos contables ---------- */
+  var canvas = document.getElementById('graficoBancos');
+  if (canvas && window.Chart) {
+    var etiquetas = {{ bancos|map(attribute='nombre_banco')|list|tojson }};
+    var saldos = {{ bancos|map(attribute='saldo_contable_real')|list|tojson }};
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: etiquetas,
+        datasets: [{
+          label: 'Saldo Libro Mayor ($)',
+          data: saldos,
+          backgroundColor: 'rgba(13, 110, 253, 0.65)',
+          borderColor: 'rgba(13, 110, 253, 1)',
+          borderWidth: 1,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return money(ctx.parsed.y); }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function (v) { return '$ ' + miles(v); }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /* Tooltips de Bootstrap en los indicadores de diferencia */
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    if (window.bootstrap && bootstrap.Tooltip) { new bootstrap.Tooltip(el); }
+  });
+})();
+</script>
+{% endblock %}

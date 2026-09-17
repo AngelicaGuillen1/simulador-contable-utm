@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block title %}Estado de Situación Financiera - Simulador Integral de Sistema Contable{% endblock %}
+
+{# --- Presentación contable: valor afectado por su signo (depreciaciones y provisiones restan) --- #}
+{% macro importe(item) %}{% set v = item.valor * item.signo %}{% if v < 0 %}({{ "{:,.2f}".format(v|abs) }}){% else %}{{ "{:,.2f}".format(v) }}{% endif %}{% endmacro %}
+
+{% block content %}
+{% set periodo_txt = fecha_corte if fecha_corte else 'Al último registro contabilizado (todos los movimientos)' %}
+{% set act_corr = bs.total_activo_corriente %}
+{% set pas_corr = bs.total_pasivo_corriente %}
+{% set capital_trabajo = act_corr - pas_corr %}
+{% set razon_liquidez = (act_corr / pas_corr) if pas_corr else 0 %}
+{% set endeudamiento = (bs.total_pasivo / bs.total_activo * 100) if bs.total_activo else 0 %}
+{% set autonomia = (bs.total_patrimonio / bs.total_activo * 100) if bs.total_activo else 0 %}
+
+<!-- Encabezado del informe -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-file-earmark-check text-primary me-2"></i>Estado de Situación Financiera</h3>
+    <p class="text-muted small mb-0">
+      Balance General &bull; NIC 1 / NIIF para Pymes &bull; Comercial y Servicios Nueva Esperanza S.A.
+    </p>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-2">
+      <i class="bi bi-calendar3 me-1"></i>Corte: {{ periodo_txt }}
+    </span>
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-2 ms-1">
+      <i class="bi bi-currency-dollar me-1"></i>Expresado en USD
+    </span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('financial_statements.income_statement') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i> Estado de Resultados
+    </a>
+    <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i> Centro de Reportes
+    </a>
+    <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i> Imprimir
+    </button>
+  </div>
+</div>
+
+<!-- Validación de la ecuación contable -->
+{% if bs.balanceado %}
+<div class="balance-banner balanced">
+  <span>
+    <i class="bi bi-check-circle-fill me-2"></i>
+    Activo = Pasivo + Patrimonio &#10003; &mdash; Ecuación contable cuadrada.
+  </span>
+  <span class="fw-bold">Diferencia: $ {{ "{:,.2f}".format(bs.diferencia) }}</span>
+</div>
+{% else %}
+<div class="balance-banner unbalanced">
+  <span>
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    Activo &#8800; Pasivo + Patrimonio &mdash; Diferencia detectada: $ {{ "{:,.2f}".format(bs.diferencia) }}
+  </span>
+  <span class="fw-bold">Requiere revisión de ajustes</span>
+</div>
+<div class="alert alert-danger d-flex align-items-start shadow-sm" role="alert">
+  <i class="bi bi-shield-exclamation fs-5 me-2"></i>
+  <div>
+    <strong>Alerta de consistencia contable.</strong>
+    El total de activos ($ {{ "{:,.2f}".format(bs.total_activo) }}) no coincide con Pasivo + Patrimonio
+    ($ {{ "{:,.2f}".format(bs.total_pasivo_y_patrimonio) }}). Diferencia de <strong>$ {{ "{:,.2f}".format(bs.diferencia) }}</strong>.
+    Revise los asientos de ajuste y depreciación antes de emitir el informe:
+    <a href="{{ url_for('accounting.adjustments') }}" class="alert-link">Ajustes Contables</a> &bull;
+    <a href="{{ url_for('accounting.trial_balance') }}" class="alert-link">Balance de Comprobación</a>.
+  </div>
+</div>
+{% endif %}
+
+<!-- Filtro de fecha de corte -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <form method="get" action="{{ url_for('financial_statements.balance_sheet') }}" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label for="fecha_corte" class="form-label small fw-semibold mb-1">Fecha de corte</label>
+        <input type="date" class="form-control form-control-sm" id="fecha_corte" name="fecha_corte"
+               value="{{ fecha_corte if fecha_corte else '' }}">
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i> Aplicar corte
+        </button>
+        <a href="{{ url_for('financial_statements.balance_sheet') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Ver todos los movimientos
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Indicadores estructurales -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Total Activo</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(bs.total_activo) }}</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-building"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">
+        Corriente: $ {{ "{:,.2f}".format(bs.total_activo_corriente) }} &bull; No corriente: $ {{ "{:,.2f}".format(bs.total_activo_no_corriente) }}
+      </small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Total Pasivo</div>
+          <div class="kpi-value text-danger">$ {{ "{:,.2f}".format(bs.total_pasivo) }}</div>
+        </div>
+        <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-credit-card-2-front"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">Endeudamiento: {{ "{:,.2f}".format(endeudamiento) }}% del activo</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Total Patrimonio</div>
+          <div class="kpi-value {% if bs.total_patrimonio < 0 %}text-danger{% else %}text-success{% endif %}">
+            $ {{ "{:,.2f}".format(bs.total_patrimonio) }}
+          </div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-piggy-bank"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">Autonomía financiera: {{ "{:,.2f}".format(autonomia) }}%</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Pasivo + Patrimonio</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(bs.total_pasivo_y_patrimonio) }}</div>
+        </div>
+        <div class="kpi-icon {% if bs.balanceado %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">
+          <i class="bi {% if bs.balanceado %}bi-check2-circle{% else %}bi-x-circle{% endif %}"></i>
+        </div>
+      </div>
+      <small class="text-muted d-block mt-2">Diferencia vs. Activo: $ {{ "{:,.2f}".format(bs.diferencia) }}</small>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- COLUMNA ACTIVO -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0"><i class="bi bi-building text-primary me-2"></i>Activo</h6>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          $ {{ "{:,.2f}".format(bs.total_activo) }}
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 20%;">Código</th>
+              <th style="width: 55%;">Cuenta</th>
+              <th class="text-end" style="width: 25%;">Importe (USD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="table-light">
+              <td colspan="3" class="fw-bold text-uppercase">Activo Corriente</td>
+            </tr>
+            {% for item in bs.activos_corrientes %}
+            <tr>
+              <td class="text-muted">{{ item.codigo }}</td>
+              <td>{{ item.nombre }}</td>
+              <td class="text-end">{{ importe(item) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Sin saldos registrados en activo corriente.</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Activo Corriente</td>
+              <td class="text-end fw-bold">{{ "{:,.2f}".format(bs.total_activo_corriente) }}</td>
+            </tr>
+
+            <tr class="table-light border-top">
+              <td colspan="3" class="fw-bold text-uppercase">Activo No Corriente</td>
+            </tr>
+            {% for item in bs.activos_no_corrientes %}
+            <tr>
+              <td class="text-muted">{{ item.codigo }}</td>
+              <td>
+                {{ item.nombre }}
+                {% if item.signo == -1 %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">cuenta de crédito</span>
+                {% endif %}
+              </td>
+              <td class="text-end">{{ importe(item) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Sin saldos registrados en activo no corriente.</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Activo No Corriente</td>
+              <td class="text-end fw-bold">{{ "{:,.2f}".format(bs.total_activo_no_corriente) }}</td>
+            </tr>
+            <tr class="table-light border-top border-2">
+              <td></td>
+              <td class="fw-bold text-uppercase">Total Activo</td>
+              <td class="text-end fw-bold fs-6">$ {{ "{:,.2f}".format(bs.total_activo) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white border-top py-3">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Los importes entre paréntesis corresponden a depreciaciones acumuladas y provisiones, presentadas como
+          disminución del rubro (NIC 1, presentación compensada de partidas).
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNA PASIVO Y PATRIMONIO -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin text-danger me-2"></i>Pasivo y Patrimonio</h6>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+          $ {{ "{:,.2f}".format(bs.total_pasivo_y_patrimonio) }}
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 20%;">Código</th>
+              <th style="width: 55%;">Cuenta</th>
+              <th class="text-end" style="width: 25%;">Importe (USD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="table-light">
+              <td colspan="3" class="fw-bold text-uppercase">Pasivo Corriente</td>
+            </tr>
+            {% for item in bs.pasivos_corrientes %}
+            <tr>
+              <td class="text-muted">{{ item.codigo }}</td>
+              <td>{{ item.nombre }}</td>
+              <td class="text-end">{{ importe(item) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Sin saldos registrados en pasivo corriente.</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Pasivo Corriente</td>
+              <td class="text-end fw-bold">{{ "{:,.2f}".format(bs.total_pasivo_corriente) }}</td>
+            </tr>
+
+            <tr class="table-light border-top">
+              <td colspan="3" class="fw-bold text-uppercase">Pasivo No Corriente</td>
+            </tr>
+            {% for item in bs.pasivos_no_corrientes %}
+            <tr>
+              <td class="text-muted">{{ item.codigo }}</td>
+              <td>{{ item.nombre }}</td>
+              <td class="text-end">{{ importe(item) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Sin saldos registrados en pasivo no corriente.</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Pasivo No Corriente</td>
+              <td class="text-end fw-bold">{{ "{:,.2f}".format(bs.total_pasivo_no_corriente) }}</td>
+            </tr>
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Pasivo</td>
+              <td class="text-end fw-bold">$ {{ "{:,.2f}".format(bs.total_pasivo) }}</td>
+            </tr>
+
+            <tr class="table-light border-top">
+              <td colspan="3" class="fw-bold text-uppercase">Patrimonio Neto</td>
+            </tr>
+            {% for item in bs.patrimonio %}
+            <tr>
+              <td class="text-muted">{{ item.codigo }}</td>
+              <td>
+                {{ item.nombre }}
+                {% if item.signo == -1 %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">pérdida / déficit</span>
+                {% endif %}
+              </td>
+              <td class="text-end">{{ importe(item) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Sin saldos registrados en patrimonio.</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-top">
+              <td></td>
+              <td class="fw-bold">Total Patrimonio</td>
+              <td class="text-end fw-bold {% if bs.total_patrimonio < 0 %}text-danger{% endif %}">
+                $ {{ "{:,.2f}".format(bs.total_patrimonio) }}
+              </td>
+            </tr>
+            <tr class="table-light border-top border-2">
+              <td></td>
+              <td class="fw-bold text-uppercase">Total Pasivo y Patrimonio</td>
+              <td class="text-end fw-bold fs-6 {% if not bs.balanceado %}text-danger{% else %}text-success{% endif %}">
+                $ {{ "{:,.2f}".format(bs.total_pasivo_y_patrimonio) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white border-top py-3">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          La utilidad del ejercicio en curso se incorpora al patrimonio como resultado del período (cuenta 3.3.02)
+          mientras el cierre contable no se haya ejecutado.
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verificación y análisis -->
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check text-primary me-2"></i>Comprobación de la Ecuación Contable</h6>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between border-bottom py-2">
+          <span class="text-muted">Total Activo</span>
+          <span class="fw-semibold">$ {{ "{:,.2f}".format(bs.total_activo) }}</span>
+        </div>
+        <div class="d-flex justify-content-between border-bottom py-2">
+          <span class="text-muted">Total Pasivo</span>
+          <span class="fw-semibold">$ {{ "{:,.2f}".format(bs.total_pasivo) }}</span>
+        </div>
+        <div class="d-flex justify-content-between border-bottom py-2">
+          <span class="text-muted">Total Patrimonio</span>
+          <span class="fw-semibold">$ {{ "{:,.2f}".format(bs.total_patrimonio) }}</span>
+        </div>
+        <div class="d-flex justify-content-between border-bottom py-2">
+          <span class="text-muted">Pasivo + Patrimonio</span>
+          <span class="fw-semibold">$ {{ "{:,.2f}".format(bs.total_pasivo_y_patrimonio) }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2">
+          <span class="fw-bold">Diferencia</span>
+          <span class="fw-bold {% if bs.balanceado %}text-success{% else %}text-danger{% endif %}">
+            $ {{ "{:,.2f}".format(bs.diferencia) }}
+            {% if bs.balanceado %}<i class="bi bi-check-circle-fill ms-1"></i>{% else %}<i class="bi bi-exclamation-triangle-fill ms-1"></i>{% endif %}
+          </span>
+        </div>
+        {% if not bs.balanceado %}
+        <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-danger btn-sm w-100 mt-2">
+          <i class="bi bi-journal-text me-1"></i> Revisar asientos del Libro Diario
+        </a>
+        {% else %}
+        <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-outline-success btn-sm w-100 mt-2">
+          <i class="bi bi-scale me-1"></i> Ver Balance de Comprobación
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-speedometer text-primary me-2"></i>Indicadores Financieros</h6>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-custom mb-0">
+          <thead>
+            <tr>
+              <th>Indicador</th>
+              <th class="text-end">Valor</th>
+              <th class="text-end">Interpretación</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Razón Corriente (Activo C. / Pasivo C.)</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(razon_liquidez) }}</td>
+              <td class="text-end">
+                {% if pas_corr == 0 %}
+                <span class="text-muted small">Sin pasivo corriente</span>
+                {% elif razon_liquidez >= 1.5 %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Sólida</span>
+                {% elif razon_liquidez >= 1 %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Aceptable</span>
+                {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Ajustada</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>Capital de Trabajo</td>
+              <td class="text-end fw-semibold {% if capital_trabajo < 0 %}text-danger{% endif %}">
+                $ {{ "{:,.2f}".format(capital_trabajo) }}
+              </td>
+              <td class="text-end small text-muted">
+                {% if capital_trabajo >= 0 %}Holgura operativa{% else %}Déficit operativo{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>Endeudamiento (Pasivo / Activo)</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(endeudamiento) }}%</td>
+              <td class="text-end">
+                {% if endeudamiento <= 50 %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Bajo</span>
+                {% elif endeudamiento <= 70 %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Moderado</span>
+                {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Alto</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>Autonomía Financiera (Patrimonio / Activo)</td>
+              <td class="text-end fw-semibold {% if autonomia < 0 %}text-danger{% endif %}">
+                {{ "{:,.2f}".format(autonomia) }}%
+              </td>
+              <td class="text-end small text-muted">
+                {% if autonomia < 0 %}Patrimonio negativo{% else %}Respaldo propio{% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white border-top py-3">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Indicadores calculados con los saldos de este estado financiero (formulación financiera estándar).
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

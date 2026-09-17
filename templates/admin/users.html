@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Usuarios - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set usuarios = usuarios|default([], true) %}
+{% set roles = roles|default([], true) %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-person-gear text-primary me-2"></i>Gestión de Usuarios</h3>
+    <p class="text-muted small mb-0">Cuentas de acceso al simulador contable con roles Administrador, Docente, Estudiante y Auditor</p>
+  </div>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newUserModal">
+    <i class="bi bi-person-plus me-1"></i> Nuevo Usuario
+  </button>
+</div>
+
+<!-- KPIs de usuarios -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Total de Usuarios</div>
+          <div class="kpi-value">{{ usuarios|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i> Cuentas registradas</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary">
+          <i class="bi bi-person-vcard"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Usuarios Activos</div>
+          <div class="kpi-value text-success">{{ usuarios|selectattr('activo', 'equalto', 1)|list|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-check-circle me-1"></i> Con acceso habilitado</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success">
+          <i class="bi bi-person-check"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Usuarios Inactivos</div>
+          <div class="kpi-value text-secondary">{{ usuarios|rejectattr('activo', 'equalto', 1)|list|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-slash-circle me-1"></i> Acceso restringido</div>
+        </div>
+        <div class="kpi-icon bg-secondary-subtle text-secondary">
+          <i class="bi bi-person-dash"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Roles Definidos</div>
+          <div class="kpi-value">{{ roles|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-shield-lock me-1"></i> Perfiles de permisos</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info">
+          <i class="bi bi-diagram-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-info d-flex align-items-start rounded-4 shadow-sm">
+  <i class="bi bi-shield-lock-fill me-2 mt-1"></i>
+  <div class="small">
+    <strong>Seguridad de credenciales:</strong> las contraseñas se almacenan exclusivamente como
+    <em>hash</em> criptográfico y nunca se muestran en pantalla. Cada creación de usuario queda registrada
+    en la bitácora de auditoría (inmutable) con el usuario que la ejecutó.
+  </div>
+</div>
+
+<!-- Tabla de usuarios -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="fw-bold mb-1">Usuarios Registrados</h5>
+      <p class="text-muted small mb-0">Listado de cuentas con su rol asignado y estado de acceso</p>
+    </div>
+    <span class="badge bg-light text-dark border">{{ usuarios|length }} usuario(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-custom table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">#</th>
+            <th>Usuario</th>
+            <th>Nombre Completo</th>
+            <th>Correo Electrónico</th>
+            <th class="text-center">Rol</th>
+            <th class="text-center">Estado</th>
+            <th class="pe-4">Creado En</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr>
+            <td class="ps-4 text-muted small">{{ u.id }}</td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                     style="width: 32px; height: 32px; font-size: 0.75rem;">
+                  {{ u.username[:2]|upper }}
+                </div>
+                <div>
+                  <div class="fw-bold text-dark"><code>{{ u.username }}</code></div>
+                  <div class="text-muted" style="font-size: 0.72rem;">ID de cuenta: {{ u.id }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="fw-semibold text-dark">{{ u.nombre_completo }}</td>
+            <td>
+              <a href="mailto:{{ u.email }}" class="text-decoration-none small">
+                <i class="bi bi-envelope me-1"></i>{{ u.email }}
+              </a>
+            </td>
+            <td class="text-center">
+              {% if u.rol_nombre == 'Administrador' %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                <i class="bi bi-shield-fill me-1"></i>{{ u.rol_nombre }}
+              </span>
+              {% elif u.rol_nombre == 'Docente' %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-mortarboard-fill me-1"></i>{{ u.rol_nombre }}
+              </span>
+              {% elif u.rol_nombre == 'Auditor' %}
+              <span class="badge bg-dark-subtle text-dark border">
+                <i class="bi bi-clipboard-data me-1"></i>{{ u.rol_nombre }}
+              </span>
+              {% else %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle">
+                <i class="bi bi-person-fill me-1"></i>{{ u.rol_nombre or 'Sin rol' }}
+              </span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if u.activo %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border px-3">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="pe-4 text-muted small">
+              <i class="bi bi-calendar3 me-1"></i>{{ u.creado_en or '—' }}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">Sin registros para mostrar</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Usuario -->
+<div class="modal fade" id="newUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.users') }}" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus text-primary me-2"></i>Crear Nuevo Usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold" for="newUsername">Nombre de Usuario</label>
+          <input type="text" class="form-control" id="newUsername" name="username"
+                 placeholder="Ej: jperez" autocomplete="off" required>
+          <div class="form-text">Identificador único con el que el usuario iniciará sesión.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold" for="newPassword">Contraseña</label>
+          <input type="password" class="form-control" id="newPassword" name="password"
+                 placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password" required>
+          <div class="form-text">Se almacena cifrada mediante hash; no es posible consultarla después.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold" for="newNombre">Nombre Completo</label>
+          <input type="text" class="form-control" id="newNombre" name="nombre_completo"
+                 placeholder="Ej: Juan Pérez Gómez" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold" for="newEmail">Correo Electrónico</label>
+          <input type="email" class="form-control" id="newEmail" name="email"
+                 placeholder="Ej: jperez@nuevaesperanza.com" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-semibold" for="newRol">Rol del Usuario</label>
+          <select class="form-select" id="newRol" name="rol_id" required>
+            {% for r in roles %}
+            <option value="{{ r.id }}" title="{{ r.descripcion or '' }}">
+              {{ r.nombre }}{% if r.descripcion %} — {{ r.descripcion }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">El rol determina los módulos y acciones permitidas en el simulador.</div>
+        </div>
+        <div class="alert alert-light border small mb-0">
+          <i class="bi bi-info-circle me-1"></i> El usuario se crea con estado <strong>Activo</strong> y la
+          creación es registrada automáticamente en la bitácora de auditoría.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar Usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

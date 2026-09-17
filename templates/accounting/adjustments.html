@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Ajustes Contables - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-sliders text-primary me-2"></i>Ajustes Contables</h3>
+    <p class="text-muted small mb-0">Regularización de saldos al cierre del ejercicio (Depreciaciones, Provisiones y Devengados)</p>
+  </div>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAdjustmentModal">
+    <i class="bi bi-plus-circle me-1"></i> Registrar Ajuste
+  </button>
+</div>
+
+<!-- Quick Adjustment Helpers -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+      <div class="d-flex align-items-center mb-3">
+        <div class="bg-primary text-white p-3 rounded-3 me-3"><i class="bi bi-tools fs-4"></i></div>
+        <div>
+          <h6 class="fw-bold mb-0">Depreciación de Activos Fijos</h6>
+          <small class="text-muted">Método Línea Recta</small>
+        </div>
+      </div>
+      <p class="small text-muted mb-3">Calcula y contabiliza automáticamente el desgaste mensual de Muebles, Equipos de Cómputo y Vehículos.</p>
+      <form method="POST" action="{{ url_for('accounting.adjustments') }}" class="mt-auto">
+        <input type="hidden" name="tipo_ajuste" value="DEPRECIACION">
+        <input type="hidden" name="glosa" value="Ajuste mensual por depreciación de activos fijos del período">
+        <input type="hidden" name="monto" value="350.83">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-calculator me-1"></i> Generar Depreciación ($350.83)</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+      <div class="d-flex align-items-center mb-3">
+        <div class="bg-warning text-dark p-3 rounded-3 me-3"><i class="bi bi-shield-slash fs-4"></i></div>
+        <div>
+          <h6 class="fw-bold mb-0">Provisión Cuentas Incobrables</h6>
+          <small class="text-muted">Estimación 1% Cartera</small>
+        </div>
+      </div>
+      <p class="small text-muted mb-3">Reconoce el gasto por deterioro de créditos comerciales contra la cuenta complementaria de activo.</p>
+      <form method="POST" action="{{ url_for('accounting.adjustments') }}" class="mt-auto">
+        <input type="hidden" name="tipo_ajuste" value="INCOBRABLES">
+        <input type="hidden" name="glosa" value="Ajuste por provisión del 1% sobre cartera de clientes">
+        <input type="hidden" name="monto" value="45.00">
+        <button type="submit" class="btn btn-outline-warning btn-sm w-100 text-dark"><i class="bi bi-calculator me-1"></i> Generar Provisión ($45.00)</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+      <div class="d-flex align-items-center mb-3">
+        <div class="bg-info text-dark p-3 rounded-3 me-3"><i class="bi bi-arrow-repeat fs-4"></i></div>
+        <div>
+          <h6 class="fw-bold mb-0">Arqueo y Ajuste de Caja</h6>
+          <small class="text-muted">Regularización de Faltante/Sobrante</small>
+        </div>
+      </div>
+      <p class="small text-muted mb-3">Inspecciona el saldo físico de billetes y monedas contra el saldo de libros contables.</p>
+      <a href="{{ url_for('treasury.cash') }}" class="btn btn-outline-info btn-sm w-100 text-dark mt-auto"><i class="bi bi-cash-coin me-1"></i> Ir al Módulo de Arqueo</a>
+    </div>
+  </div>
+</div>
+
+<!-- History of Adjustments -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white py-3 px-4 border-bottom">
+    <h5 class="fw-bold mb-0">Asientos de Ajuste Contabilizados</h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Asiento</th>
+            <th>Fecha</th>
+            <th>Concepto / Glosa</th>
+            <th>Documento</th>
+            <th class="text-end pe-4">Importe Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in ajustes %}
+          <tr>
+            <td class="ps-4"><span class="badge bg-dark">#{{ a.numero_asiento }}</span></td>
+            <td>{{ a.fecha }}</td>
+            <td class="fw-semibold">{{ a.glosa }}</td>
+            <td><span class="badge bg-light text-dark border">{{ a.tipo_documento }} {{ a.numero_documento or '' }}</span></td>
+            <td class="text-end fw-bold text-success pe-4">${{ "{:,.2f}".format(a.total_debe) }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">No se registran asientos de ajuste en el período.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Manual Adjustment -->
+<div class="modal fade" id="newAdjustmentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('accounting.adjustments') }}" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Registrar Asiento de Ajuste</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Tipo de Ajuste</label>
+          <select name="tipo_ajuste" class="form-select" required>
+            <option value="DEPRECIACION">Depreciación de Activos Fijos</option>
+            <option value="INCOBRABLES">Provisión Cuentas Incobrables</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Monto del Ajuste ($)</label>
+          <input type="number" step="0.01" min="0.01" name="monto" class="form-control" placeholder="0.00" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Glosa Explicativa</label>
+          <input type="text" name="glosa" class="form-control" placeholder="Ajuste periódico de fin de mes" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Contabilizar Ajuste</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

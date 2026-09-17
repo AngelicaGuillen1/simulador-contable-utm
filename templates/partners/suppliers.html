@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+{% block title %}Proveedores - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# ================= Agregados calculados con las variables del contrato ================= #}
+{% set np = namespace(total_saldo=0.0, total_dias=0, activos=0, inactivos=0, con_saldo=0) %}
+{% for p in proveedores %}
+  {% set saldo_p = p.saldo_pendiente or 0 %}
+  {% set ns_dias = p.dias_credito or 0 %}
+  {% set np.total_saldo = np.total_saldo + saldo_p %}
+  {% set np.total_dias = np.total_dias + ns_dias %}
+  {% if p.activo %}
+    {% set np.activos = np.activos + 1 %}
+  {% else %}
+    {% set np.inactivos = np.inactivos + 1 %}
+  {% endif %}
+  {% if saldo_p > 0 %}
+    {% set np.con_saldo = np.con_saldo + 1 %}
+  {% endif %}
+{% endfor %}
+{% set plazo_promedio = ((np.total_dias / (proveedores|length))|round(0, 'floor')|int) if proveedores|length > 0 else 0 %}
+
+<!-- Encabezado del módulo -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-truck text-primary me-2"></i>Cartera de Proveedores</h3>
+    <p class="text-muted small mb-0">
+      Registro de proveedores de <em>Comercial y Servicios Nueva Esperanza S.A.</em> con control de plazos, obligaciones y saldos por pagar.
+      Fecha de trabajo de la simulación: <span class="fw-semibold text-dark">{{ hoy|default('—', true) }}</span>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('partners.payables') }}" class="btn btn-outline-primary">
+      <i class="bi bi-credit-card me-1"></i> Cuentas por Pagar
+    </a>
+    <a href="{{ url_for('purchases.create_purchase') }}" class="btn btn-outline-success">
+      <i class="bi bi-bag-plus me-1"></i> Registrar Compra
+    </a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoProveedor">
+      <i class="bi bi-plus-circle me-1"></i> Nuevo Proveedor
+    </button>
+  </div>
+</div>
+
+<!-- Indicadores de obligaciones -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-truck"></i></div>
+      <div>
+        <div class="kpi-label">Proveedores Registrados</div>
+        <div class="kpi-value">{{ proveedores|length }}</div>
+        <div class="small text-muted">
+          <span class="text-success fw-semibold">{{ np.activos }} activos</span> ·
+          <span class="text-secondary fw-semibold">{{ np.inactivos }} inactivos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-credit-card-2-front"></i></div>
+      <div>
+        <div class="kpi-label">Saldo Total por Pagar</div>
+        <div class="kpi-value text-danger">$ {{ "{:,.2f}".format(np.total_saldo) }}</div>
+        <div class="small text-muted">{{ np.con_saldo }} proveedor(es) con obligaciones pendientes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-calendar-check"></i></div>
+      <div>
+        <div class="kpi-label">Plazo Promedio de Crédito</div>
+        <div class="kpi-value">{{ plazo_promedio }} días</div>
+        <div class="small text-muted">Condición promedio negociada con proveedores</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card h-100 d-flex align-items-center gap-3">
+      <div class="kpi-icon bg-light text-secondary"><i class="bi bi-journal-text"></i></div>
+      <div>
+        <div class="kpi-label">Documentos por Gestionar</div>
+        <div class="kpi-value">{{ np.con_saldo }}</div>
+        <div class="small text-muted">Pagos pendientes en el módulo de cuentas por pagar</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros y ordenamiento (procesados en la propia plantilla) -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body px-4 py-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-lg-4">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroTexto">
+          <i class="bi bi-search me-1"></i> Buscar proveedor
+        </label>
+        <input type="text" class="form-control form-control-sm" id="filtroTexto"
+               placeholder="RUC, razón social, correo, teléfono o dirección...">
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroEstado">Estado</label>
+        <select class="form-select form-select-sm" id="filtroEstado">
+          <option value="todos">Todos los estados</option>
+          <option value="activo">Solo activos</option>
+          <option value="inactivo">Solo inactivos</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-3">
+        <label class="form-label small fw-semibold text-muted mb-1" for="filtroOrden">Ordenar por</label>
+        <select class="form-select form-select-sm" id="filtroOrden">
+          <option value="nombre">Razón social (A-Z)</option>
+          <option value="saldo">Mayor saldo por pagar</option>
+          <option value="dias">Mayor plazo de crédito</option>
+        </select>
+      </div>
+      <div class="col-12 col-lg-2 d-flex flex-column gap-2">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" id="filtroSoloSaldo">
+          <label class="form-check-label small fw-semibold text-muted" for="filtroSoloSaldo">Solo con saldo</label>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLimpiarFiltros">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
+        </button>
+      </div>
+    </div>
+    <div class="small text-muted mt-2" id="contadorResultados">
+      Mostrando {{ proveedores|length }} de {{ proveedores|length }} proveedor(es) registrado(s).
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de proveedores -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0 text-uppercase text-muted small">
+      <i class="bi bi-list-ul me-1"></i> Detalle de proveedores y situación de obligaciones
+    </h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="tablaProveedores">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">RUC</th>
+            <th>Proveedor / Razón Social</th>
+            <th>Contacto</th>
+            <th class="text-center">Plazo de Crédito</th>
+            <th class="text-end">Saldo por Pagar</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyProveedores">
+          {% for p in proveedores %}
+            {% set saldo = p.saldo_pendiente or 0 %}
+          <tr class="fila-proveedor"
+              data-id="{{ p.id }}"
+              data-nombre="{{ p.razon_social }}"
+              data-estado="{% if p.activo %}activo{% else %}inactivo{% endif %}"
+              data-saldo="{{ '%.2f'|format(saldo) }}"
+              data-dias="{{ p.dias_credito|default(0, true) }}"
+              data-buscar="{{ (p.identificacion ~ ' ' ~ p.razon_social ~ ' ' ~ (p.email or '') ~ ' ' ~ (p.telefono or '') ~ ' ' ~ (p.direccion or ''))|lower }}">
+            <td class="ps-4"><code class="text-dark">{{ p.identificacion }}</code></td>
+            <td>
+              <div class="fw-semibold text-dark">{{ p.razon_social }}</div>
+              <small class="text-muted">{{ p.direccion|default('Dirección no registrada', true) }}</small>
+            </td>
+            <td>
+              <div class="small text-dark">
+                <i class="bi bi-envelope me-1 text-muted"></i>{{ p.email|default('—', true) }}
+              </div>
+              <div class="small text-muted">
+                <i class="bi bi-telephone me-1"></i>{{ p.telefono|default('—', true) }}
+              </div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">{{ p.dias_credito|default(0, true) }} días</span>
+            </td>
+            <td class="text-end">
+              <div class="fw-bold {% if saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+                $ {{ "{:,.2f}".format(saldo) }}
+              </div>
+              <small class="{% if saldo > 0 %}text-danger{% else %}text-muted{% endif %}">
+                {% if saldo > 0 %}Obligación pendiente de pago{% else %}Sin obligaciones pendientes{% endif %}
+              </small>
+            </td>
+            <td class="text-center">
+              {% if p.activo %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVO</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">INACTIVO</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              <div class="btn-group btn-group-sm" role="group" aria-label="Acciones del proveedor">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFichaProveedor"
+                        data-id="{{ p.id }}"
+                        data-nombre="{{ p.razon_social }}"
+                        data-ruc="{{ p.identificacion }}"
+                        data-email="{{ p.email|default('', true) }}"
+                        data-telefono="{{ p.telefono|default('', true) }}"
+                        data-direccion="{{ p.direccion|default('', true) }}"
+                        data-dias="{{ p.dias_credito|default(0, true) }}"
+                        data-saldo="{{ '%.2f'|format(saldo) }}"
+                        title="Ver ficha e historial de movimientos">
+                  <i class="bi bi-person-vcard"></i> Ficha
+                </button>
+                <a href="{{ url_for('partners.payables') }}" class="btn btn-outline-success"
+                   title="Registrar un pago en Cuentas por Pagar">
+                  <i class="bi bi-credit-card"></i> Pagos
+                </a>
+                <a href="{{ url_for('purchases.create_purchase') }}" class="btn btn-outline-secondary"
+                   title="Registrar una compra a este proveedor">
+                  <i class="bi bi-bag-plus"></i> Comprar
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-4 d-block mb-2"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="filaSinResultados" class="d-none">
+            <td colspan="7" class="text-center py-4 text-muted">
+              <i class="bi bi-search me-1"></i> Sin registros para mostrar con los filtros aplicados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Registrar nuevo proveedor ================= -->
+<div class="modal fade" id="modalNuevoProveedor" tabindex="-1" aria-labelledby="modalNuevoProveedorLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4">
+      <form method="POST" action="{{ url_for('partners.suppliers') }}">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold" id="modalNuevoProveedorLabel">
+            <i class="bi bi-plus-circle text-primary me-2"></i>Registrar Nuevo Proveedor
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-light border small mb-3">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            El proveedor se crea con saldo por pagar en <strong>$ 0.00</strong> y fecha de trabajo
+            <strong>{{ hoy|default('—', true) }}</strong>. El registro quedará a nombre del usuario
+            <strong>{{ g.user.username if g.user else '—' }}</strong>.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="prv_identificacion">RUC <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="prv_identificacion" name="identificacion" required
+                     maxlength="20" placeholder="Ej.: 1790012345001" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="prv_razon">Razón Social <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="prv_razon" name="razon_social" required
+                     maxlength="150" placeholder="Ej.: Importadora Andina S.A." autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="prv_email">Correo electrónico</label>
+              <input type="email" class="form-control" id="prv_email" name="email" maxlength="120"
+                     placeholder="proveedor@dominio.com" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="prv_telefono">Teléfono</label>
+              <input type="text" class="form-control" id="prv_telefono" name="telefono" maxlength="30"
+                     placeholder="Ej.: 022345678" autocomplete="off">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-semibold" for="prv_direccion">Dirección</label>
+              <input type="text" class="form-control" id="prv_direccion" name="direccion" maxlength="200"
+                     placeholder="Ej.: Av. Eloy Alfaro y Av. 10 de Agosto, Guayaquil" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="prv_dias">Días de Crédito</label>
+              <input type="number" class="form-control" id="prv_dias" name="dias_credito"
+                     value="30" min="0" max="365" step="1">
+              <div class="form-text">Plazo concedido por el proveedor para cancelar la factura.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i> Guardar Proveedor
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Modal: Ficha e historial del proveedor ================= -->
+<div class="modal fade" id="modalFichaProveedor" tabindex="-1" aria-labelledby="modalFichaProveedorLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4">
+      <div class="modal-header bg-light">
+        <div>
+          <h5 class="modal-title fw-bold mb-1" id="modalFichaProveedorLabel">
+            <i class="bi bi-person-vcard text-primary me-2"></i><span id="fichaNombre">Ficha del Proveedor</span>
+          </h5>
+          <div class="small text-muted">
+            <span class="me-3"><i class="bi bi-upc-scan me-1"></i><span id="fichaRuc">—</span></span>
+            <span class="me-3"><i class="bi bi-envelope me-1"></i><span id="fichaEmail">—</span></span>
+            <span class="me-3"><i class="bi bi-telephone me-1"></i><span id="fichaTelefono">—</span></span>
+            <span><i class="bi bi-geo-alt me-1"></i><span id="fichaDireccion">—</span></span>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Plazo de crédito</div>
+              <div class="fw-bold" id="fichaDias">0 días</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Saldo por pagar</div>
+              <div class="fw-bold text-danger" id="fichaSaldo">$ 0.00</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Compras registradas</div>
+              <div class="fw-bold" id="fichaCompras">0</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="border rounded-3 p-2 h-100 bg-light">
+              <div class="small text-muted text-uppercase fw-bold">Total comprado</div>
+              <div class="fw-bold text-primary" id="fichaTotalCompras">$ 0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="fichaCargando" class="text-center py-4 text-muted">
+          <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando historial del proveedor...
+        </div>
+
+        <div id="fichaError" class="alert alert-warning d-none" role="alert">
+          <i class="bi bi-exclamation-triangle me-1"></i><span id="fichaErrorTexto"></span>
+        </div>
+
+        <div id="fichaContenido" class="d-none">
+          <ul class="nav nav-tabs" id="fichaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-btn-compras" data-bs-toggle="tab" data-bs-target="#tab-compras"
+                      type="button" role="tab" aria-controls="tab-compras" aria-selected="true">
+                <i class="bi bi-bag-check me-1"></i>Compras <span class="badge bg-primary-subtle text-primary border ms-1" id="contCompras">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-pagos" data-bs-toggle="tab" data-bs-target="#tab-pagos"
+                      type="button" role="tab" aria-controls="tab-pagos" aria-selected="false">
+                <i class="bi bi-cash-stack me-1"></i>Pagos <span class="badge bg-success-subtle text-success border ms-1" id="contPagos">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-btn-cxp" data-bs-toggle="tab" data-bs-target="#tab-cxp"
+                      type="button" role="tab" aria-controls="tab-cxp" aria-selected="false">
+                <i class="bi bi-credit-card-2-front me-1"></i>Cuentas por Pagar <span class="badge bg-warning-subtle text-warning border ms-1" id="contCxp">0</span>
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom p-3">
+            <div class="tab-pane fade show active" id="tab-compras" role="tabpanel" aria-labelledby="tab-btn-compras">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Factura</th>
+                      <th>Fecha</th>
+                      <th>Forma de pago</th>
+                      <th class="text-end">Subtotal</th>
+                      <th class="text-end">IVA</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyCompras"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-pagos" role="tabpanel" aria-labelledby="tab-btn-pagos">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Medio de pago</th>
+                      <th>Comprobante</th>
+                      <th>Observación</th>
+                      <th class="text-end">Monto pagado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyPagos"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tab-cxp" role="tabpanel" aria-labelledby="tab-btn-cxp">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Factura</th>
+                      <th>Emisión</th>
+                      <th>Vencimiento</th>
+                      <th class="text-end">Monto original</th>
+                      <th class="text-end">Saldo actual</th>
+                      <th class="text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyCxp"></tbody>
+                </table>
+              </div>
+              <div class="small text-muted mt-2">
+                Saldo total pendiente con el proveedor según cuentas por pagar:
+                <span class="fw-bold text-danger" id="totalCxp">$ 0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <a href="{{ url_for('partners.payables') }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-credit-card me-1"></i> Registrar pago en Cuentas por Pagar
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Utilidades de formato (USD y texto seguro) ---------- */
+  function money(valor) {
+    var n = Number(valor || 0);
+    if (isNaN(n)) { n = 0; }
+    return "$ " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function esc(valor) {
+    return String(valor === null || valor === undefined ? "" : valor)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function txt(valor) {
+    var s = esc(valor);
+    return s === "" ? '<span class="text-muted">&mdash;</span>' : s;
+  }
+  function pick(obj, claves) {
+    if (!obj) { return ""; }
+    for (var i = 0; i < claves.length; i++) {
+      var v = obj[claves[i]];
+      if (v !== undefined && v !== null && v !== "") { return v; }
+    }
+    return "";
+  }
+  function badgeEstado(estado) {
+    var e = String(estado || "—").toUpperCase();
+    var clase = "bg-secondary-subtle text-secondary border";
+    if (e === "PAGADA" || e === "COBRADA" || e === "ACTIVO" || e === "RECIBIDA") { clase = "bg-success-subtle text-success border border-success-subtle"; }
+    else if (e === "PENDIENTE" || e === "PARCIAL" || e === "EMITIDA" || e === "REGISTRADA") { clase = "bg-warning-subtle text-warning border border-warning-subtle"; }
+    else if (e === "VENCIDA" || e === "ANULADA") { clase = "bg-danger-subtle text-danger border border-danger-subtle"; }
+    return '<span class="badge ' + clase + '">' + esc(e) + "</span>";
+  }
+  function filaVacia(columnas, mensaje) {
+    return '<tr><td colspan="' + columnas + '" class="text-center py-3 text-muted">' +
+      '<i class="bi bi-inbox me-1"></i>' + esc(mensaje || "Sin movimientos") + "</td></tr>";
+  }
+
+  /* ---------- Filtros, ordenamiento y contador de la tabla ---------- */
+  var tbodyProveedores = document.getElementById("tbodyProveedores");
+  var inputTexto = document.getElementById("filtroTexto");
+  var selEstado = document.getElementById("filtroEstado");
+  var selOrden = document.getElementById("filtroOrden");
+  var chkSoloSaldo = document.getElementById("filtroSoloSaldo");
+  var btnLimpiar = document.getElementById("btnLimpiarFiltros");
+  var contador = document.getElementById("contadorResultados");
+  var filaSinResultados = document.getElementById("filaSinResultados");
+
+  if (tbodyProveedores) {
+    var filas = Array.prototype.slice.call(tbodyProveedores.querySelectorAll("tr.fila-proveedor"));
+    var totalFilas = filas.length;
+
+    function aplicarFiltros() {
+      var texto = (inputTexto ? inputTexto.value : "").trim().toLowerCase();
+      var estado = selEstado ? selEstado.value : "todos";
+      var soloSaldo = chkSoloSaldo ? chkSoloSaldo.checked : false;
+      var visibles = 0;
+
+      filas.forEach(function (fila) {
+        var coincideTexto = texto === "" || (fila.dataset.buscar || "").indexOf(texto) !== -1;
+        var coincideEstado = estado === "todos" || fila.dataset.estado === estado;
+        var coincideSaldo = !soloSaldo || parseFloat(fila.dataset.saldo || "0") > 0;
+        var mostrar = coincideTexto && coincideEstado && coincideSaldo;
+        fila.classList.toggle("d-none", !mostrar);
+        if (mostrar) { visibles++; }
+      });
+
+      var orden = selOrden ? selOrden.value : "nombre";
+      var ordenadas = filas.slice();
+      if (orden === "saldo") {
+        ordenadas.sort(function (a, b) { return parseFloat(b.dataset.saldo) - parseFloat(a.dataset.saldo); });
+      } else if (orden === "dias") {
+        ordenadas.sort(function (a, b) { return parseFloat(b.dataset.dias) - parseFloat(a.dataset.dias); });
+      } else {
+        ordenadas.sort(function (a, b) {
+          return (a.dataset.nombre || "").localeCompare(b.dataset.nombre || "", "es", { sensitivity: "base" });
+        });
+      }
+      ordenadas.forEach(function (fila) { tbodyProveedores.appendChild(fila); });
+      if (filaSinResultados) { tbodyProveedores.appendChild(filaSinResultados); }
+
+      if (filaSinResultados) {
+        filaSinResultados.classList.toggle("d-none", visibles !== 0 || totalFilas === 0);
+      }
+      if (contador) {
+        contador.textContent = "Mostrando " + visibles + " de " + totalFilas +
+          " proveedor(es) registrado(s)" + (visibles !== totalFilas ? " (filtros activos)." : ".");
+      }
+    }
+
+    ["input", "change"].forEach(function (evento) {
+      if (inputTexto) { inputTexto.addEventListener(evento, aplicarFiltros); }
+      if (selEstado) { selEstado.addEventListener(evento, aplicarFiltros); }
+      if (selOrden) { selOrden.addEventListener(evento, aplicarFiltros); }
+      if (chkSoloSaldo) { chkSoloSaldo.addEventListener(evento, aplicarFiltros); }
+    });
+
+    if (btnLimpiar) {
+      btnLimpiar.addEventListener("click", function () {
+        if (inputTexto) { inputTexto.value = ""; }
+        if (selEstado) { selEstado.value = "todos"; }
+        if (selOrden) { selOrden.value = "nombre"; }
+        if (chkSoloSaldo) { chkSoloSaldo.checked = false; }
+        aplicarFiltros();
+      });
+    }
+  }
+
+  /* ---------- Ficha e historial del proveedor (API JSON /api/suppliers/<id>/history) ---------- */
+  var modalFicha = document.getElementById("modalFichaProveedor");
+  if (modalFicha) {
+    modalFicha.addEventListener("show.bs.modal", function (evento) {
+      var btn = evento.relatedTarget;
+      if (!btn) { return; }
+
+      var id = btn.getAttribute("data-id");
+      var dias = btn.getAttribute("data-dias") || "0";
+      var saldo = parseFloat(btn.getAttribute("data-saldo") || "0");
+
+      document.getElementById("fichaNombre").textContent = btn.getAttribute("data-nombre") || "Ficha del Proveedor";
+      document.getElementById("fichaRuc").textContent = btn.getAttribute("data-ruc") || "—";
+      document.getElementById("fichaEmail").textContent = btn.getAttribute("data-email") || "—";
+      document.getElementById("fichaTelefono").textContent = btn.getAttribute("data-telefono") || "—";
+      document.getElementById("fichaDireccion").textContent = btn.getAttribute("data-direccion") || "—";
+      document.getElementById("fichaDias").textContent = dias + " días";
+      document.getElementById("fichaSaldo").textContent = money(saldo);
+      document.getElementById("fichaCompras").textContent = "0";
+      document.getElementById("fichaTotalCompras").textContent = money(0);
+
+      var cajaError = document.getElementById("fichaError");
+      var textoError = document.getElementById("fichaErrorTexto");
+      var cargando = document.getElementById("fichaCargando");
+      var contenido = document.getElementById("fichaContenido");
+      cajaError.classList.add("d-none");
+      cargando.classList.remove("d-none");
+      contenido.classList.add("d-none");
+      ["tbodyCompras", "tbodyPagos", "tbodyCxp"].forEach(function (tbodyId) {
+        document.getElementById(tbodyId).innerHTML = "";
+      });
+      ["contCompras", "contPagos", "contCxp"].forEach(function (spanId) {
+        document.getElementById(spanId).textContent = "0";
+      });
+      document.getElementById("totalCxp").textContent = money(0);
+
+      fetch("/api/suppliers/" + encodeURIComponent(id) + "/history", { headers: { "Accept": "application/json" } })
+        .then(function (respuesta) {
+          if (!respuesta.ok) { throw new Error("El servidor respondió con código " + respuesta.status + "."); }
+          return respuesta.json();
+        })
+        .then(function (data) {
+          if (!data || data.success === false) {
+            throw new Error((data && data.error) || "El historial del proveedor no está disponible.");
+          }
+
+          var compras = data.compras || [];
+          var pagos = data.pagos || [];
+          var cxp = data.cuentas_pagar || [];
+
+          document.getElementById("contCompras").textContent = compras.length;
+          document.getElementById("contPagos").textContent = pagos.length;
+          document.getElementById("contCxp").textContent = cxp.length;
+
+          var totalCompras = compras.reduce(function (acc, c) {
+            return acc + Number(pick(c, ["total"]) || 0);
+          }, 0);
+          document.getElementById("fichaCompras").textContent = compras.length;
+          document.getElementById("fichaTotalCompras").textContent = money(totalCompras);
+
+          document.getElementById("tbodyCompras").innerHTML = compras.length ? compras.map(function (c) {
+            return "<tr>" +
+              '<td><code>' + txt(pick(c, ["numero_factura", "numero", "documento"])) + "</code></td>" +
+              "<td>" + txt(pick(c, ["fecha"])) + "</td>" +
+              "<td>" + txt(pick(c, ["forma_pago"])) + "</td>" +
+              '<td class="text-end">' + money(pick(c, ["subtotal", "base_imponible"])) + "</td>" +
+              '<td class="text-end text-muted">' + money(pick(c, ["iva_valor"])) + "</td>" +
+              '<td class="text-end fw-bold">' + money(pick(c, ["total"])) + "</td>" +
+              '<td class="text-center">' + badgeEstado(pick(c, ["estado"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(7, "Sin movimientos");
+
+          document.getElementById("tbodyPagos").innerHTML = pagos.length ? pagos.map(function (p) {
+            return "<tr>" +
+              "<td>" + txt(pick(p, ["fecha"])) + "</td>" +
+              "<td>" + txt(pick(p, ["medio_pago"])) + "</td>" +
+              "<td>" + txt(pick(p, ["numero_comprobante"])) + "</td>" +
+              "<td>" + txt(pick(p, ["observacion"])) + "</td>" +
+              '<td class="text-end fw-bold text-success">' + money(pick(p, ["monto"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(5, "Sin movimientos");
+
+          document.getElementById("tbodyCxp").innerHTML = cxp.length ? cxp.map(function (r) {
+            return "<tr>" +
+              '<td><code>' + txt(pick(r, ["numero_factura", "numero_documento"])) + "</code></td>" +
+              "<td>" + txt(pick(r, ["fecha_emision"])) + "</td>" +
+              "<td>" + txt(pick(r, ["fecha_vencimiento"])) + "</td>" +
+              '<td class="text-end">' + money(pick(r, ["monto_original"])) + "</td>" +
+              '<td class="text-end fw-bold text-danger">' + money(pick(r, ["saldo_actual"])) + "</td>" +
+              '<td class="text-center">' + badgeEstado(pick(r, ["estado"])) + "</td>" +
+              "</tr>";
+          }).join("") : filaVacia(6, "Sin movimientos");
+
+          var totalCxp = cxp.reduce(function (acc, r) {
+            var estado = String(pick(r, ["estado"]) || "").toUpperCase();
+            if (estado !== "PAGADA") {
+              acc += Number(pick(r, ["saldo_actual"]) || 0);
+            }
+            return acc;
+          }, 0);
+          document.getElementById("totalCxp").textContent = money(totalCxp);
+
+          cargando.classList.add("d-none");
+          contenido.classList.remove("d-none");
+        })
+        .catch(function (error) {
+          cargando.classList.add("d-none");
+          textoError.textContent = "No se pudo cargar el historial del proveedor: " + error.message;
+          cajaError.classList.remove("d-none");
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

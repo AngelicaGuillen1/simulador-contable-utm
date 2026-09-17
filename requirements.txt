@@ -1,0 +1,22 @@
+# Simulador Integral de Sistema Contable - Dependencias
+# Instalación:  pip install -r requirements.txt
+
+# Núcleo web
+Flask>=3.0,<4.0
+Werkzeug>=3.0
+Jinja2>=3.1
+itsdangerous>=2.1
+click>=8.1
+blinker>=1.7
+
+# Servidor de producción 24/7 (python serve.py)
+waitress>=3.0
+
+# Exportación de reportes a Excel (el Centro de Reportes usa openpyxl)
+openpyxl>=3.1
+
+# Generación del Manual de Usuario en HTML (python docs/build_manual.py)
+markdown>=3.5
+
+# Pruebas automáticas (opcional, requerido solo para ejecutar la suite)
+pytest>=8.0

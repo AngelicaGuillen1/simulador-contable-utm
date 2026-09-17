@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}Simulador de Casos Contables{% endblock %}
+
+{# ---------- Macros de apoyo ---------- #}
+{% macro estado_badge(estado) %}
+  {% if estado == 'COMPLETADO' %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Completado</span>
+  {% elif estado == 'EN_PROGRESO' %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-hourglass-split me-1"></i>En Progreso</span>
+  {% elif estado == 'ABANDONADO' %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle-fill me-1"></i>Abandonado</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border">{{ estado or 'Sin estado' }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro nivel_badge(nivel) %}
+  {% if nivel == 1 %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-1-circle-fill me-1"></i>Básico</span>
+  {% elif nivel == 2 %}
+    <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-2-circle-fill me-1"></i>Intermedio</span>
+  {% elif nivel == 3 %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-3-circle-fill me-1"></i>Avanzado</span>
+  {% elif nivel == 4 %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-4-circle-fill me-1"></i>Caso Empresarial Integral</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border">Nivel {{ nivel }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro tiempo_badge(segundos) %}
+  {% set t = segundos or 0 %}
+  {% set h = t // 3600 %}
+  {% set m = (t % 3600) // 60 %}
+  {% set s = t % 60 %}
+  {% if h > 0 %}{{ h }}h {{ m }}m{% else %}{{ m }}m {{ s }}s{% endif %}
+{% endmacro %}
+
+{# ---------- Cálculos de resumen ---------- #}
+{% set total_simulaciones = simulaciones|length %}
+{% set completados = mis_intentos|selectattr('estado', 'equalto', 'COMPLETADO')|list %}
+{% set abiertos = mis_intentos|selectattr('estado', 'equalto', 'EN_PROGRESO')|list %}
+{% set notas = completados|map(attribute='puntuacion_total')|select('number')|list %}
+{% set promedio_personal = (notas|sum / (notas|length)) if notas|length > 0 else 0 %}
+
+{% block content %}
+
+<!-- Encabezado del simulador -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+  <div class="card-body p-4 p-md-5">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill mb-2 fw-bold">
+          <i class="bi bi-joystick me-1"></i> Entorno Universitario &amp; IA
+        </span>
+        <h2 class="fw-bold mb-2">Simulador de Casos Contables</h2>
+        <p class="lead fs-6 text-white-50 mb-4">
+          Resuelve casos reales de la empresa <em>Comercial y Servicios Nueva Esperanza S.A.</em>, registra la partida doble
+          y recibe retroalimentación automática del Agente Evaluador IA con rúbrica de 100 puntos.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-light text-dark fw-semibold px-4 py-2 rounded-3">
+            <i class="bi bi-award me-1"></i> Mis Evaluaciones
+          </a>
+          <a href="{{ url_for('tutor.chat') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-robot me-1"></i> Consultar al Tutor IA
+          </a>
+          <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-journal-text me-1"></i> Ir al Sistema Contable
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+        <div class="d-inline-block bg-white bg-opacity-10 p-4 rounded-4 border border-white border-opacity-10">
+          <div class="small text-uppercase text-white-50 fw-bold">Mi Promedio General</div>
+          <div class="display-6 fw-bold {% if promedio_personal >= 85 %}text-success{% elif promedio_personal >= 50 %}text-warning{% else %}text-white{% endif %}">
+            {{ "%.2f"|format(promedio_personal) }}<span class="fs-5">/100</span>
+          </div>
+          <span class="badge bg-primary bg-opacity-75 mt-1">
+            <i class="bi bi-check2-square me-1"></i> {{ completados|length }} caso(s) completado(s)
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indicadores del simulador -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Simulaciones Disponibles</div>
+          <div class="kpi-value">{{ total_simulaciones }}</div>
+          <div class="small text-muted mt-1">Casos activos por nivel</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-collection-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Mis Intentos Registrados</div>
+          <div class="kpi-value">{{ mis_intentos|length }}</div>
+          <div class="small text-muted mt-1">{{ abiertos|length }} en progreso</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-list-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Casos Completados</div>
+          <div class="kpi-value text-success">{{ completados|length }}</div>
+          <div class="small text-muted mt-1">Evaluados por el Agente IA</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-patch-check-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Promedio Personal</div>
+          <div class="kpi-value {% if promedio_personal >= 85 %}text-success{% elif promedio_personal >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ "%.2f"|format(promedio_personal) }}
+          </div>
+          <div class="small text-muted mt-1">Sobre intentos COMPLETADO</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-graph-up-arrow"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Los 4 niveles pedagógicos -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-success border-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-1"><i class="bi bi-1-circle-fill text-success me-1"></i> Nivel 1 · Básico</h6>
+        <p class="small text-muted mb-0">Registro de transacciones simples: compras, ventas de contado y asientos de apertura.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-info border-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-1"><i class="bi bi-2-circle-fill text-info me-1"></i> Nivel 2 · Intermedio</h6>
+        <p class="small text-muted mb-0">Crédito, IVA, retenciones, descuentos y control de inventarios con Kardex.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-warning border-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-1"><i class="bi bi-3-circle-fill text-warning me-1"></i> Nivel 3 · Avanzado</h6>
+        <p class="small text-muted mb-0">Ajustes, depreciaciones, conciliaciones bancarias y provisiones de cartera.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-danger border-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-1"><i class="bi bi-4-circle-fill text-danger me-1"></i> Nivel 4 · Integral</h6>
+        <p class="small text-muted mb-0">Caso empresarial completo: ciclo contable, cierre de período y estados financieros NIIF.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-sm btn-primary sim-filter active" data-filter="todos">
+        <i class="bi bi-grid-fill me-1"></i> Todos
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-success sim-filter" data-filter="nivel-1">Nivel 1 · Básico</button>
+      <button type="button" class="btn btn-sm btn-outline-info sim-filter" data-filter="nivel-2">Nivel 2 · Intermedio</button>
+      <button type="button" class="btn btn-sm btn-outline-warning sim-filter" data-filter="nivel-3">Nivel 3 · Avanzado</button>
+      <button type="button" class="btn btn-sm btn-outline-danger sim-filter" data-filter="nivel-4">Nivel 4 · Integral</button>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-dark sim-filter" data-filter="examen">
+      <i class="bi bi-shield-lock-fill me-1"></i> Solo Modo Examen
+    </button>
+  </div>
+</div>
+
+<!-- Tarjetas de simulaciones -->
+<h5 class="fw-bold mb-3"><i class="bi bi-joystick text-primary me-2"></i>Casos disponibles para resolver</h5>
+
+{% if simulaciones %}
+<div class="row g-4 mb-4" id="simCardsContainer">
+  {% for s in simulaciones %}
+  {% set intento_abierto = mis_intentos|selectattr('simulacion_id', 'equalto', s.id)|selectattr('estado', 'equalto', 'EN_PROGRESO')|list|first %}
+  <div class="col-md-6 col-xl-4 sim-card" data-nivel="nivel-{{ s.nivel }}" data-examen="{{ 1 if s.modo_examen == 1 else 0 }}">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          {{ nivel_badge(s.nivel) }}
+          {% if s.modo_examen == 1 %}
+            <span class="badge bg-dark"><i class="bi bi-shield-lock-fill me-1"></i>Modo Examen</span>
+          {% endif %}
+        </div>
+
+        <h6 class="fw-bold mb-1">{{ s.titulo }}</h6>
+        <p class="small text-muted mb-3">{{ s.descripcion or 'Caso práctico de contabilidad aplicada.' }}</p>
+
+        <ul class="list-unstyled small mb-3">
+          <li class="mb-1"><i class="bi bi-journal-text text-primary me-2"></i><strong>{{ s.total_casos }}</strong> caso(s) a resolver</li>
+          <li class="mb-1"><i class="bi bi-clock-history text-secondary me-2"></i>Duración sugerida: <strong>{{ s.duracion_minutos }} min</strong></li>
+          <li class="mb-1"><i class="bi bi-bullseye text-danger me-2"></i>Nota mínima: <strong>{{ "%.2f"|format(s.puntuacion_minima or 0) }}/100</strong></li>
+          <li class="mb-1"><i class="bi bi-person-workspace text-info me-2"></i>Docente: {{ s.docente_nombre or 'Sin asignar' }}</li>
+          <li><i class="bi bi-mortarboard text-secondary me-2"></i>Curso: {{ s.curso_nombre or 'General' }}</li>
+        </ul>
+
+        <div class="mt-auto">
+          {% if intento_abierto %}
+            <a href="{{ url_for('simulations.play_simulation', simulacion_id=s.id, intento_id=intento_abierto.id) }}"
+               class="btn btn-warning btn-sm w-100 fw-semibold mb-2">
+              <i class="bi bi-play-circle-fill me-1"></i> Continuar intento #{{ intento_abierto.id }}
+            </a>
+          {% endif %}
+          <a href="{{ url_for('simulations.start_simulation', simulacion_id=s.id) }}"
+             class="btn btn-primary btn-sm w-100 fw-semibold">
+            <i class="bi bi-flag-fill me-1"></i> {% if intento_abierto %}Iniciar nuevo intento{% else %}Iniciar Simulación{% endif %}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="alert alert-info border-0 shadow-sm d-none" id="emptyFilterMsg">
+  <i class="bi bi-info-circle-fill me-2"></i> Ninguna simulación coincide con el filtro seleccionado.
+</div>
+{% else %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-inboxes fs-1 d-block mb-3 text-secondary"></i>
+    <h6 class="fw-bold text-dark">Sin simulaciones disponibles</h6>
+    <p class="small mb-0">Aún no se han publicado casos activos para tu curso. Consulta con tu docente.</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Historial de intentos -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="fw-bold mb-1"><i class="bi bi-clock-history text-primary me-2"></i>Mis intentos de simulación</h5>
+      <p class="text-muted small mb-0">Trazabilidad de cada caso resuelto, puntuación y tiempo invertido</p>
+    </div>
+    <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-award me-1"></i> Ver evaluación detallada
+    </a>
+  </div>
+  <div class="card-body p-0">
+    {% if mis_intentos %}
+    <div class="table-responsive">
+      <table class="table table-custom table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Intento</th>
+            <th>Simulación</th>
+            <th>Nivel</th>
+            <th class="text-center">Estado</th>
+            <th class="text-end">Puntuación</th>
+            <th class="text-center">Tiempo</th>
+            <th class="text-center">Inicio</th>
+            <th class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in mis_intentos %}
+          <tr>
+            <td class="ps-4"><span class="badge bg-dark">#{{ i.id }}</span></td>
+            <td>
+              <div class="fw-semibold text-dark">{{ i.simulacion_titulo }}</div>
+              <div class="small text-muted">
+                {% if i.modo_examen == 1 %}<i class="bi bi-shield-lock-fill me-1"></i>Modo Examen{% else %}Práctica libre{% endif %}
+              </div>
+            </td>
+            <td>{{ nivel_badge(i.simulacion_nivel) }}</td>
+            <td class="text-center">{{ estado_badge(i.estado) }}</td>
+            <td class="text-end fw-bold">
+              {% if i.puntuacion_total is none or i.puntuacion_total is undefined %}
+                <span class="text-muted">—</span>
+              {% else %}
+                <span class="{% if i.puntuacion_total >= 85 %}text-success{% elif i.puntuacion_total >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                  {{ "%.2f"|format(i.puntuacion_total) }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-center text-muted small">{{ tiempo_badge(i.tiempo_segundos) }}</td>
+            <td class="text-center text-muted small">{{ i.fecha_inicio or '—' }}</td>
+            <td class="text-center pe-4">
+              <div class="d-flex justify-content-center gap-1">
+                {% if i.estado == 'EN_PROGRESO' %}
+                <a href="{{ url_for('simulations.play_simulation', simulacion_id=i.simulacion_id, intento_id=i.id) }}"
+                   class="btn btn-outline-warning btn-sm" title="Continuar intento">
+                  <i class="bi bi-play-fill"></i> Continuar
+                </a>
+                {% endif %}
+                <a href="{{ url_for('simulations.start_simulation', simulacion_id=i.simulacion_id) }}"
+                   class="btn btn-outline-primary btn-sm" title="Intentar nuevamente">
+                  <i class="bi bi-arrow-repeat"></i> Reintentar
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-5 text-center text-muted">
+      <i class="bi bi-clipboard-x fs-1 d-block mb-3 text-secondary"></i>
+      Sin registros para mostrar. Inicia una simulación para comenzar tu historial.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const botones = document.querySelectorAll(".sim-filter");
+  const tarjetas = document.querySelectorAll("#simCardsContainer .sim-card");
+  const avisoVacio = document.getElementById("emptyFilterMsg");
+
+  if (!botones.length || !tarjetas.length) return;
+
+  botones.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const filtro = btn.dataset.filter;
+
+      botones.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+
+      let visibles = 0;
+      tarjetas.forEach(function (card) {
+        let mostrar = false;
+        if (filtro === "todos") {
+          mostrar = true;
+        } else if (filtro === "examen") {
+          mostrar = card.dataset.examen === "1";
+        } else {
+          mostrar = card.dataset.nivel === filtro;
+        }
+        card.classList.toggle("d-none", !mostrar);
+        if (mostrar) visibles++;
+      });
+
+      if (avisoVacio) avisoVacio.classList.toggle("d-none", visibles > 0);
+    });
+  });
+});
+</script>
+{% endblock %}

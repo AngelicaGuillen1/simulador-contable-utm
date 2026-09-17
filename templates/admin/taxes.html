@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Parámetros Tributarios - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set impuestos = impuestos|default([], true) %}
+{% set cuentas = cuentas|default([], true) %}
+{% set tipos = ['IVA_VENTAS', 'IVA_COMPRAS', 'RET_RENTA_BIENES', 'RET_RENTA_SERVICIOS', 'RET_IVA_BIENES', 'RET_IVA_SERVICIOS'] %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-percent text-primary me-2"></i>Parámetros Tributarios</h3>
+    <p class="text-muted small mb-0">Configuración de IVA y retenciones bajo normativa del SRI (Ecuador) aplicada por el simulador</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('taxes.index') }}" class="btn btn-outline-primary">
+      <i class="bi bi-journal-check me-1"></i> Tributación & IVA del Período
+    </a>
+    <a href="{{ url_for('accounting.accounts') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-diagram-3 me-1"></i> Plan de Cuentas
+    </a>
+  </div>
+</div>
+
+<!-- Aviso obligatorio de configuración tributaria -->
+<div class="alert alert-warning d-flex align-items-start rounded-4 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+  <div class="small">
+    Las tasas son configurables por el administrador; el sistema nunca inventa porcentajes: si no existe
+    configuración para un tipo de impuesto, la operación se rechaza.
+  </div>
+</div>
+
+<!-- KPIs tributarios -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Impuestos Configurados</div>
+          <div class="kpi-value">{{ impuestos|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-percent me-1"></i> Registros activos</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary">
+          <i class="bi bi-receipt-cutoff"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">IVA Vigente</div>
+          <div class="kpi-value">
+            {% for i in impuestos if i.tipo == 'IVA_VENTAS' %}
+              {% if loop.first %}{{ "{:,.2f}".format(i.porcentaje) }}%{% endif %}
+            {% else %}
+              N/D
+            {% endfor %}
+          </div>
+          <div class="small text-muted mt-1"><i class="bi bi-cart-check me-1"></i> IVA en ventas</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success">
+          <i class="bi bi-cash-coin"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Cuentas de Movimiento</div>
+          <div class="kpi-value">{{ cuentas|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-diagram-3 me-1"></i> Cuentas contables disponibles</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info">
+          <i class="bi bi-journal-bookmark"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Tipos de Impuesto</div>
+          <div class="kpi-value">{{ tipos|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-list-check me-1"></i> IVA y retenciones SRI</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning">
+          <i class="bi bi-sliders"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de impuestos -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="fw-bold mb-1">Tabla de Impuestos y Retenciones</h5>
+      <p class="text-muted small mb-0">Cada tasa define el porcentaje aplicable y la cuenta contable donde se registra</p>
+    </div>
+    <span class="badge bg-light text-dark border">{{ impuestos|length }} impuesto(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-custom table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Código</th>
+            <th>Nombre del Impuesto</th>
+            <th>Tipo</th>
+            <th class="text-end">Porcentaje</th>
+            <th>Cuenta Contable</th>
+            <th>Vigencia Desde</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for imp in impuestos %}
+          <tr>
+            <td class="ps-4"><code>{{ imp.codigo }}</code></td>
+            <td class="fw-semibold text-dark">{{ imp.nombre }}</td>
+            <td><span class="badge bg-light text-dark border">{{ imp.tipo }}</span></td>
+            <td class="text-end fw-bold text-primary">{{ "{:,.2f}".format(imp.porcentaje) }} %</td>
+            <td class="small">
+              {% for c in cuentas %}
+                {% if c.id == imp.cuenta_contable_id %}
+                  <code>{{ c.codigo }}</code> <span class="text-muted">{{ c.nombre }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">Sin cuentas disponibles</span>
+              {% endfor %}
+            </td>
+            <td class="small text-muted">{{ imp.vigencia_desde or '—' }}</td>
+            <td class="text-center">
+              {% if imp.activo %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border px-3">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              <button type="button" class="btn btn-outline-primary btn-sm p-1 px-2"
+                      data-bs-toggle="modal" data-bs-target="#editTaxModal{{ imp.id }}"
+                      title="Editar tasa y cuenta contable">
+                <i class="bi bi-pencil-square"></i> Editar
+              </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">Sin registros para mostrar</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+    <div class="small text-muted">
+      <i class="bi bi-lightbulb me-1"></i>
+      Los porcentajes se aplican sobre la base imponible de cada operación. Al modificar una tasa, el cambio
+      impacta únicamente en los registros nuevos; los comprobantes ya emitidos conservan el valor con el que fueron generados.
+    </div>
+  </div>
+</div>
+
+<!-- Modales de edición: uno por cada impuesto -->
+{% for imp in impuestos %}
+<div class="modal fade" id="editTaxModal{{ imp.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.taxes') }}" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-pencil-square text-primary me-2"></i>Editar Impuesto <code>{{ imp.codigo }}</code>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="impuesto_id" value="{{ imp.id }}">
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Código del Impuesto</label>
+          <input type="text" class="form-control" value="{{ imp.codigo }}" disabled readonly>
+          <div class="form-text">El código identifica la tasa en los comprobantes y no puede modificarse.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold" for="nombreImp{{ imp.id }}">Nombre del Impuesto</label>
+          <input type="text" class="form-control" id="nombreImp{{ imp.id }}" name="nombre"
+                 value="{{ imp.nombre }}" required>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold" for="porcentajeImp{{ imp.id }}">Porcentaje (%)</label>
+            <input type="number" class="form-control" id="porcentajeImp{{ imp.id }}" name="porcentaje"
+                   value="{{ imp.porcentaje }}" step="0.01" min="0" max="100" required>
+            <div class="form-text">Valor vigente actual: {{ "{:,.2f}".format(imp.porcentaje) }} %</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold" for="tipoImp{{ imp.id }}">Tipo de Impuesto</label>
+            <select class="form-select" id="tipoImp{{ imp.id }}" name="tipo" required>
+              {% if imp.tipo not in tipos %}
+              <option value="{{ imp.tipo }}" selected>{{ imp.tipo }} (valor actual)</option>
+              {% endif %}
+              {% for t in tipos %}
+              <option value="{{ t }}" {% if imp.tipo == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="mb-3 mt-3">
+          <label class="form-label small fw-semibold" for="cuentaImp{{ imp.id }}">Cuenta Contable Asociada</label>
+          <select class="form-select" id="cuentaImp{{ imp.id }}" name="cuenta_contable_id" required>
+            {% for c in cuentas %}
+            <option value="{{ c.id }}" {% if c.id == imp.cuenta_contable_id %}selected{% endif %}>
+              {{ c.codigo }} — {{ c.nombre }}
+            </option>
+            {% else %}
+            <option value="{{ imp.cuenta_contable_id if imp.cuenta_contable_id else '' }}" selected>
+              Sin cuentas de movimiento disponibles — se conserva la cuenta actual
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Cuenta donde se registra el IVA por pagar o la retención correspondiente.</div>
+          {% if not cuentas %}
+          <div class="alert alert-warning small mt-2 mb-0">
+            <i class="bi bi-exclamation-triangle me-1"></i> No hay cuentas de movimiento en el Plan de Cuentas;
+            la cuenta asociada se mantendrá sin cambios.
+          </div>
+          {% endif %}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-semibold" for="activoImp{{ imp.id }}">Estado del Impuesto</label>
+          <select class="form-select" id="activoImp{{ imp.id }}" name="activo" required>
+            <option value="1" {% if imp.activo %}selected{% endif %}>Activo — el sistema lo aplica en las operaciones</option>
+            <option value="0" {% if not imp.activo %}selected{% endif %}>Inactivo — la operación se rechaza si se requiere este tipo</option>
+          </select>
+        </div>
+        <div class="alert alert-light border small mb-0">
+          <i class="bi bi-shield-check me-1"></i> Toda modificación de tasas queda registrada en la bitácora de
+          auditoría con el valor anterior y el nuevo valor.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

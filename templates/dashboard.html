@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Principal - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<!-- ===================== ENCABEZADO ===================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+  <div class="card-body p-4 p-md-5">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-primary px-3 py-2 rounded-pill mb-2 fw-semibold">Simulador Integral de Sistema Contable</span>
+        <h2 class="fw-bold mb-2">Comercial y Servicios Nueva Esperanza S.A.</h2>
+        <p class="lead mb-3 text-white-50 fs-6">
+          “Aprende contabilidad gestionando una empresa en un entorno de simulación.”
+        </p>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge bg-light text-dark"><i class="bi bi-calendar-check me-1"></i>Período: {{ periodo.nombre if periodo else 'Sin período abierto' }}</span>
+          <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Fecha de trabajo: {{ fecha_trabajo }}</span>
+          <span class="badge {{ 'bg-success' if periodo and periodo.estado == 'ABIERTO' else 'bg-danger' }}">
+            {{ periodo.estado if periodo else 'SIN PERÍODO' }}
+          </span>
+          <span class="badge bg-info text-dark" title="Datos con fines exclusivamente académicos">
+            <i class="bi bi-mortarboard me-1"></i>Datos de demostración
+          </span>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning fw-bold px-4 py-2 shadow-sm rounded-3">
+            <i class="bi bi-play-circle-fill me-1"></i> Iniciar Simulación
+          </a>
+          <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-journal-text me-1"></i> Ir al Sistema Contable
+          </a>
+          <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-light text-dark fw-semibold px-4 py-2 rounded-3">
+            <i class="bi bi-award me-1"></i> Ver Mis Resultados
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+        <div class="d-inline-block bg-white bg-opacity-10 p-4 rounded-4 border border-white border-opacity-10 text-start">
+          <div class="small text-uppercase text-white-50 fw-bold">Resultado del período</div>
+          <div class="display-6 fw-bold {% if utilidad_periodo >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ utilidad_periodo|money }}
+          </div>
+          <div class="small text-white-50 mt-2">Ventas: {{ ventas_total|money }}</div>
+          <div class="small text-white-50">Servicios: {{ servicios_total|money }}</div>
+          <div class="small text-white-50">Costo de ventas: {{ costo_ventas_total|money }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== INDICADORES FINANCIEROS ===================== -->
+<h6 class="text-uppercase text-muted fw-bold small mb-3">Indicadores financieros (libro mayor)</h6>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Caja</div>
+          <div class="kpi-value">{{ caja_balance|money }}</div>
+          <div class="small text-muted mt-1">Cuenta 1.1.01</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-cash-stack"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Bancos</div>
+          <div class="kpi-value">{{ bancos_total|money }}</div>
+          <div class="small text-muted mt-1">Pichincha {{ pichincha_balance|money }} &bull; Guayaquil {{ guayaquil_balance|money }}</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-bank"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Ventas de Bienes</div>
+          <div class="kpi-value">{{ ventas_total|money }}</div>
+          <div class="small text-muted mt-1">Cuenta 4.1.01</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-cart-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Ingresos por Servicios</div>
+          <div class="kpi-value">{{ servicios_total|money }}</div>
+          <div class="small text-muted mt-1">Cuenta 4.1.02</div>
+        </div>
+        <div class="kpi-icon bg-secondary-subtle text-secondary"><i class="bi bi-headset"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Compras del Período</div>
+          <div class="kpi-value">{{ (inventario_total)|money }}</div>
+          <div class="small text-muted mt-1">Inventario valorizado (1.1.06)</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-bag-plus"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Cuentas por Cobrar</div>
+          <div class="kpi-value">{{ cxc_total|money }}</div>
+          <div class="small text-muted mt-1">{{ cxc_vencidas }} documento(s) vencido(s)</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-receipt"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Cuentas por Pagar</div>
+          <div class="kpi-value">{{ cxp_total|money }}</div>
+          <div class="small text-muted mt-1">{{ cxp_proximas }} obligación(es) pendiente(s)</div>
+        </div>
+        <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-credit-card"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Utilidad del Período</div>
+          <div class="kpi-value {% if utilidad_periodo >= 0 %}text-success{% else %}text-danger{% endif %}">{{ utilidad_periodo|money }}</div>
+          <div class="small text-muted mt-1">Gastos acumulados: {{ gastos_total|money }}</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-graph-up-arrow"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GRÁFICOS ===================== -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="fw-bold mb-1">Evolución semanal de ventas, servicios, compras y gastos</h5>
+          <p class="text-muted small mb-0">Agregación real de las transacciones registradas en el período</p>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Tipo de gráfico">
+          <button type="button" class="btn btn-outline-primary active" id="btnChartBar" onclick="cambiarTipoGrafico('bar')">
+            <i class="bi bi-bar-chart"></i> Barras
+          </button>
+          <button type="button" class="btn btn-outline-primary" id="btnChartLine" onclick="cambiarTipoGrafico('line')">
+            <i class="bi bi-graph-up"></i> Líneas
+          </button>
+        </div>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <canvas id="financialTrendsChart" style="max-height: 300px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h5 class="fw-bold mb-1">Composición financiera</h5>
+        <p class="text-muted small mb-0">Disponibilidad, cartera e inventario</p>
+      </div>
+      <div class="card-body px-4 pb-4 d-flex align-items-center justify-content-center">
+        <canvas id="assetDistributionChart" style="max-height: 250px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ALERTAS ===================== -->
+<h6 class="text-uppercase text-muted fw-bold small mb-3">Alertas operativas</h6>
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 {{ 'border-danger' if alertas_stock else 'border-success' }}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="small fw-bold">Stock bajo mínimo</div>
+          <span class="badge {{ 'bg-danger' if alertas_stock else 'bg-success' }}">{{ alertas_stock|length }}</span>
+        </div>
+        <div class="text-muted small mt-2">Productos que requieren reabastecimiento inmediato.</div>
+        {% if alertas_stock %}
+        <div class="small mt-2">{{ alertas_stock[:3] | map(attribute='descripcion') | join(', ') }}{% if alertas_stock|length > 3 %}…{% endif %}</div>
+        {% endif %}
+        <a href="{{ url_for('inventory.stock_report') }}" class="btn btn-outline-danger btn-sm w-100 mt-3">Ver existencias</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 {{ 'border-warning' if cxc_vencidas else 'border-success' }}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="small fw-bold">Cartera vencida</div>
+          <span class="badge {{ 'bg-warning text-dark' if cxc_vencidas else 'bg-success' }}">{{ cxc_vencidas }}</span>
+        </div>
+        <div class="text-muted small mt-2">Monto vencido: {{ cxc_vencidas_monto|money }}</div>
+        <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-warning btn-sm w-100 mt-3">Gestionar cobros</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 {{ 'border-warning' if cxp_proximas else 'border-success' }}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="small fw-bold">Cuentas por pagar pendientes</div>
+          <span class="badge {{ 'bg-warning text-dark' if cxp_proximas else 'bg-success' }}">{{ cxp_proximas }}</span>
+        </div>
+        <div class="text-muted small mt-2">Saldo pendiente: {{ cxp_proximas_monto|money }}</div>
+        <a href="{{ url_for('partners.payables') }}" class="btn btn-outline-warning btn-sm w-100 mt-3">Programar pagos</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 {{ 'border-danger' if descuadres else 'border-success' }}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="small fw-bold">Asientos descuadrados</div>
+          <span class="badge {{ 'bg-danger' if descuadres else 'bg-success' }}">{{ descuadres }}</span>
+        </div>
+        <div class="text-muted small mt-2">
+          Control permanente de la partida doble: ningún asiento descuadrado se contabiliza.
+        </div>
+        <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-outline-danger btn-sm w-100 mt-3">Ver balance de comprobación</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ACTIVIDAD RECIENTE ===================== -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-0">Actividad contable reciente</h6>
+          <small class="text-muted">{{ total_asientos }} asientos contabilizados en el período</small>
+        </div>
+        <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-primary btn-sm">Ver diario</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr><th class="ps-4">Asiento</th><th>Fecha</th><th>Glosa</th><th>Módulo</th><th class="text-end">Monto</th></tr>
+            </thead>
+            <tbody>
+              {% for a in recent_journal %}
+              <tr>
+                <td class="ps-4"><span class="badge bg-dark">#{{ a.numero_asiento }}</span></td>
+                <td class="text-nowrap small">{{ a.fecha }}</td>
+                <td class="small">{{ a.glosa }}</td>
+                <td><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ a.origen_modulo }}</span></td>
+                <td class="text-end fw-semibold">{{ a.total_debe|money }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-4">Sin registros para mostrar.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-0">Documentos fuente recientes</h6>
+          <small class="text-muted">{{ total_documentos }} documentos en el sistema</small>
+        </div>
+        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-primary btn-sm">Ver todos</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {% for d in ultimos_documentos %}
+          <div class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold small">{{ d.tipo }} &bull; <code>{{ d.numero }}</code></div>
+              <div class="text-muted" style="font-size:0.78rem;">{{ d.fecha }} &bull; {{ d.emisor }}</div>
+            </div>
+            <span class="fw-semibold small">{{ d.monto_total|money }}</span>
+          </div>
+          {% else %}
+          <div class="p-4 text-center text-muted small">Sin documentos registrados.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== INVENTARIO Y CARTERA ===================== -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h6 class="fw-bold mb-0">Inventario por categoría</h6>
+          <small class="text-muted">{{ total_productos }} productos activos &bull; valor total {{ inventario_total|money }}</small>
+        </div>
+        <select id="filtroCategoria" class="form-select form-select-sm" style="max-width: 180px;" onchange="filtrarCategoriaInventario()">
+          <option value="">Todas las categorías</option>
+          {% for c in inventario_por_categoria %}
+          <option value="{{ c.categoria }}">{{ c.categoria }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tablaInventario">
+            <thead class="table-light">
+              <tr><th class="ps-4">Categoría</th><th class="text-center">Productos</th><th class="text-end">Valor al costo</th><th class="text-center">Acción</th></tr>
+            </thead>
+            <tbody>
+              {% for c in inventario_por_categoria %}
+              <tr data-categoria="{{ c.categoria }}">
+                <td class="ps-4 fw-semibold small">{{ c.categoria }}</td>
+                <td class="text-center">{{ c.productos }}</td>
+                <td class="text-end fw-semibold">{{ c.valor|money }}</td>
+                <td class="text-center">
+                  <a href="{{ url_for('inventory.products', categoria=c.categoria) }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-boxes"></i> Ver
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-4">Sin registros para mostrar.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-0">Cartera por estado</h6>
+          <small class="text-muted">{{ total_clientes }} clientes &bull; total cartera {{ cxc_total|money }}</small>
+        </div>
+        <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-primary btn-sm">Ver cartera</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr><th class="ps-4">Estado</th><th class="text-center">Documentos</th><th class="text-end">Saldo</th></tr>
+            </thead>
+            <tbody>
+              {% for e in cartera_por_estado %}
+              <tr>
+                <td class="ps-4">
+                  {% set color = {'PENDIENTE': 'warning', 'PARCIAL': 'info', 'PAGADA': 'success', 'VENCIDA': 'danger'}.get(e.estado, 'secondary') %}
+                  <span class="badge bg-{{ color }}-subtle text-{{ color }} border border-{{ color }}-subtle">{{ e.estado }}</span>
+                </td>
+                <td class="text-center">{{ e.cantidad }}</td>
+                <td class="text-end fw-semibold">{{ e.monto|money }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-4">Sin registros para mostrar.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="px-4 pb-3 pt-2 small text-muted">
+          IVA por compensar: débito fiscal {{ iva_ventas|money }} &bull; crédito tributario {{ iva_compras|money }}
+          (<a href="{{ url_for('taxes.index') }}">ver determinación tributaria</a>)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== RESULTADOS DE SIMULACIÓN ===================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold mb-0">Resultados de simulación</h6>
+      <small class="text-muted">Intenciones de práctica, evaluaciones completadas y promedio general</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning btn-sm fw-bold">
+        <i class="bi bi-play-circle me-1"></i> Practicar
+      </a>
+      <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-award me-1"></i> Mis evaluaciones
+      </a>
+    </div>
+  </div>
+  <div class="card-body px-4 pb-4">
+    <div class="row g-3">
+      <div class="col-sm-6 col-lg-3">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <div class="small text-muted">Intentos totales</div>
+          <div class="fs-4 fw-bold">{{ sim_stats.total_intentos }}</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <div class="small text-muted">Intentos completados</div>
+          <div class="fs-4 fw-bold">{{ sim_stats.intentos_completados }}</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <div class="small text-muted">Promedio general</div>
+          <div class="fs-4 fw-bold">{{ sim_stats.promedio_general }} / 100</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <div class="small text-muted">Estudiantes registrados</div>
+          <div class="fs-4 fw-bold">{{ sim_stats.total_estudiantes }}</div>
+        </div>
+      </div>
+    </div>
+    {% if sim_stats.niveles_stats %}
+    <div class="table-responsive mt-3">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr><th class="ps-3">Nivel</th><th class="text-center">Intentos</th><th class="text-end">Promedio</th></tr>
+        </thead>
+        <tbody>
+          {% for n in sim_stats.niveles_stats %}
+          <tr>
+            <td class="ps-3">Nivel {{ n.nivel }}</td>
+            <td class="text-center">{{ n.total_intentos }}</td>
+            <td class="text-end fw-semibold">{{ "%.2f"|format(n.promedio_nivel or 0) }} / 100</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="alert alert-light border mt-3 mb-0 small">
+      Aún no hay simulaciones evaluadas. Ingresa al
+      <a href="{{ url_for('simulations.list_simulations') }}">Simulador de Casos</a> para comenzar.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ===================== ACCESOS RÁPIDOS ===================== -->
+<h6 class="text-uppercase text-muted fw-bold small mb-3">Accesos rápidos</h6>
+<div class="row g-3">
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('sales.create_sale') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-cart-plus fs-3 text-primary d-block mb-2"></i>
+        <div class="small fw-semibold">Nueva venta</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('purchases.create_purchase') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-bag-plus fs-3 text-warning d-block mb-2"></i>
+        <div class="small fw-semibold">Nueva compra</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('sales.services') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-headset fs-3 text-info d-block mb-2"></i>
+        <div class="small fw-semibold">Facturar servicio</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('treasury.cash') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-cash-stack fs-3 text-success d-block mb-2"></i>
+        <div class="small fw-semibold">Caja y arqueo</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('financial_statements.income_statement') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-file-earmark-bar-graph fs-3 text-danger d-block mb-2"></i>
+        <div class="small fw-semibold">Estado de resultados</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <a href="{{ url_for('tutor.chat') }}" class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none text-dark">
+      <div class="card-body text-center">
+        <i class="bi bi-robot fs-3 text-secondary d-block mb-2"></i>
+        <div class="small fw-semibold">Tutor Contable IA</div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let graficoPrincipal = null;
+
+function datosGrafico(tipo) {
+  return {
+    labels: {{ chart_labels|tojson }},
+    datasets: [
+      { label: "Ventas de bienes", data: {{ ventas_data|tojson }}, backgroundColor: "rgba(37, 99, 235, 0.7)", borderColor: "#2563eb", borderRadius: 6, tension: 0.3, fill: false },
+      { label: "Ingresos por servicios", data: {{ servicios_data|tojson }}, backgroundColor: "rgba(13, 148, 136, 0.7)", borderColor: "#0d9488", borderRadius: 6, tension: 0.3, fill: false },
+      { label: "Compras", data: {{ compras_data|tojson }}, backgroundColor: "rgba(217, 119, 6, 0.7)", borderColor: "#d97706", borderRadius: 6, tension: 0.3, fill: false },
+      { label: "Gastos operacionales", data: {{ gastos_data|tojson }}, backgroundColor: "rgba(225, 29, 72, 0.7)", borderColor: "#e11d48", borderRadius: 6, tension: 0.3, fill: false }
+    ]
+  };
+}
+
+function dibujarGraficoPrincipal(tipo) {
+  const ctx = document.getElementById("financialTrendsChart");
+  if (!ctx) return;
+  if (graficoPrincipal) graficoPrincipal.destroy();
+  graficoPrincipal = new Chart(ctx, {
+    type: tipo,
+    data: datosGrafico(tipo),
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "top" }, tooltip: {
+        callbacks: { label: (c) => `${c.dataset.label}: $${Number(c.parsed.y || 0).toLocaleString("es-EC", { minimumFractionDigits: 2 })}` }
+      } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function cambiarTipoGrafico(tipo) {
+  dibujarGraficoPrincipal(tipo);
+  document.getElementById("btnChartBar").classList.toggle("active", tipo === "bar");
+  document.getElementById("btnChartLine").classList.toggle("active", tipo === "line");
+}
+
+function filtrarCategoriaInventario() {
+  const seleccion = document.getElementById("filtroCategoria").value;
+  document.querySelectorAll("#tablaInventario tbody tr[data-categoria]").forEach((fila) => {
+    fila.style.display = (!seleccion || fila.dataset.categoria === seleccion) ? "" : "none";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  dibujarGraficoPrincipal("bar");
+
+  const ctxAsset = document.getElementById("assetDistributionChart");
+  if (ctxAsset) {
+    new Chart(ctxAsset, {
+      type: "doughnut",
+      data: {
+        labels: ["Caja y bancos", "Cuentas por cobrar", "Inventarios"],
+        datasets: [{
+          data: [{{ caja_balance + bancos_total }}, {{ cxc_total }}, {{ inventario_total }}],
+          backgroundColor: ["#059669", "#d97706", "#2563eb"],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: { callbacks: { label: (c) => `${c.label}: $${Number(c.parsed).toLocaleString("es-EC", { minimumFractionDigits: 2 })}` } }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

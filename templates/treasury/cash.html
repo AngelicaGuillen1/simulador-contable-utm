@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+{% block title %}Caja y Arqueos - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# ------------------------------------------------------------------
+   Totalizadores calculados en servidor (Jinja) para los KPI de cabecera
+   ------------------------------------------------------------------ #}
+{% set ns = namespace(fisico=0.0, contable=0.0, abiertas=0) %}
+{% for c in cajas %}
+  {% set ns.fisico = ns.fisico + (c.saldo_actual or 0) %}
+  {% set ns.contable = ns.contable + (c.saldo_contable_real or 0) %}
+  {% if c.estado == 'ABIERTA' %}
+    {% set ns.abiertas = ns.abiertas + 1 %}
+  {% endif %}
+{% endfor %}
+{% set dif_global = ns.fisico - ns.contable %}
+{# Disponibilidad de la ruta de movimientos de caja en el url_map de la aplicación #}
+{% set _endpoints = url_for.__self__.view_functions if url_for.__self__.view_functions is defined else {} %}
+{% set hay_movimiento_caja = 'treasury.cash_movement' in _endpoints %}
+{# Tipos de movimiento de caja: signo sobre el efectivo y presentación #}
+{% set mov_meta = {
+  'APERTURA':       {'signo':  1, 'color': 'primary',   'label': 'Apertura de caja'},
+  'INGRESO':        {'signo':  1, 'color': 'success',   'label': 'Ingreso de efectivo'},
+  'INGRESO_VENTA':  {'signo':  1, 'color': 'success',   'label': 'Ingreso por venta'},
+  'INGRESO_COBRO':  {'signo':  1, 'color': 'success',   'label': 'Ingreso por cobro'},
+  'EGRESO':         {'signo': -1, 'color': 'danger',    'label': 'Egreso de efectivo'},
+  'EGRESO_COMPRA':  {'signo': -1, 'color': 'danger',    'label': 'Egreso por compra'},
+  'EGRESO_PAGO':    {'signo': -1, 'color': 'danger',    'label': 'Egreso por pago'},
+  'DEPOSITO_BANCO': {'signo': -1, 'color': 'warning',   'label': 'Depósito bancario'},
+  'RETIRO':         {'signo':  1, 'color': 'info',      'label': 'Retiro bancario'},
+  'CIERRE':         {'signo':  0, 'color': 'secondary', 'label': 'Cierre de caja'}
+} %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-cash-stack text-success me-2"></i>Caja y Arqueos</h3>
+    <p class="text-muted small mb-0">
+      Control de efectivo, arqueos físicos y movimientos de caja &bull;
+      Fecha de trabajo: <strong>{{ hoy|default('—') }}</strong>
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if hay_movimiento_caja %}
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#cashMovementModal">
+      <i class="bi bi-arrow-left-right me-1"></i> Movimiento de Caja
+    </button>
+    {% endif %}
+    <button type="button" class="btn btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#arqueoModal">
+      <i class="bi bi-clipboard-check me-1"></i> Nuevo Arqueo de Caja
+    </button>
+  </div>
+</div>
+
+<!-- KPIs de Tesorería -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Saldo Físico Declarado</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(ns.fisico) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-wallet2 me-1"></i> Último arqueo por caja</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Saldo según Libro Mayor</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(ns.contable) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-journal-bookmark me-1"></i> Saldo real de la cuenta contable</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-journal-bookmark"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Diferencia Acumulada</div>
+          <div class="kpi-value {% if dif_global|abs >= 0.01 %}text-danger{% else %}text-success{% endif %}">
+            $ {{ "{:,.2f}".format(dif_global|abs) }}
+          </div>
+          <div class="small text-muted mt-1">
+            {% if dif_global|abs < 0.01 %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Cajas cuadradas</span>
+            {% elif dif_global > 0 %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle">Sobrante global</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Faltante global</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-exclamation-triangle"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Cajas Abiertas</div>
+          <div class="kpi-value">{{ ns.abiertas }} / {{ cajas|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-unlock me-1"></i> Operativas para arqueo</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-unlock"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cajas Registradas -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0"><i class="bi bi-box-seam text-success me-2"></i>Cajas Registradas</h6>
+    <span class="badge bg-light text-dark border">{{ cajas|length }} caja(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Caja</th>
+            <th>Responsable</th>
+            <th>Cuenta Contable</th>
+            <th class="text-end">Saldo Físico</th>
+            <th class="text-end">Saldo Libro Mayor</th>
+            <th class="text-end">Diferencia</th>
+            <th class="text-center">Estado</th>
+            <th class="text-end pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cajas %}
+          {% set dif = (c.saldo_actual or 0) - (c.saldo_contable_real or 0) %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-semibold text-dark">{{ c.nombre }}</div>
+              <div class="text-muted small">Caja #{{ c.id }}</div>
+            </td>
+            <td>{{ c.responsable or '—' }}</td>
+            <td><code>{{ c.cuenta_contable_id }}</code></td>
+            <td class="text-end">$ {{ "{:,.2f}".format(c.saldo_actual or 0) }}</td>
+            <td class="text-end fw-semibold">$ {{ "{:,.2f}".format(c.saldo_contable_real or 0) }}</td>
+            <td class="text-end">
+              {% if dif|abs < 0.01 %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">$ 0.00</span>
+              {% elif dif > 0 %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">+ $ {{ "{:,.2f}".format(dif) }}</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">- $ {{ "{:,.2f}".format(dif|abs) }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if c.estado == 'ABIERTA' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Abierta</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Cerrada</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-success btn-arqueo"
+                        data-caja-id="{{ c.id }}"
+                        data-caja-nombre="{{ c.nombre }}"
+                        data-saldo-contable="{{ c.saldo_contable_real or 0 }}"
+                        {% if c.estado != 'ABIERTA' %}disabled title="Caja cerrada: no admite arqueo"{% else %}title="Realizar arqueo de esta caja"{% endif %}>
+                  <i class="bi bi-clipboard-check"></i> Arqueo
+                </button>
+                {% if hay_movimiento_caja %}
+                <button type="button" class="btn btn-outline-primary btn-movimiento"
+                        data-caja-id="{{ c.id }}"
+                        data-caja-nombre="{{ c.nombre }}"
+                        {% if c.estado != 'ABIERTA' %}disabled title="Caja cerrada: no admite movimientos"{% else %}title="Registrar movimiento en esta caja"{% endif %}>
+                  <i class="bi bi-arrow-left-right"></i> Movimiento
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Movimientos de Caja -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h6 class="fw-bold mb-0"><i class="bi bi-arrow-down-up text-info me-2"></i>Movimientos de Caja Registrados</h6>
+      <span class="badge bg-light text-dark border" id="contadorMovCaja">{{ movimientos|default([])|length }} movimiento(s)</span>
+    </div>
+    <div class="row g-2 mt-2">
+      <div class="col-12 col-md-5">
+        <select id="filtroCajaMov" class="form-select form-select-sm">
+          <option value="">Todas las cajas</option>
+          {% for c in cajas %}
+          <option value="{{ c.id }}">{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-7">
+        <input type="search" id="filtroTextoMov" class="form-control form-control-sm"
+               placeholder="Buscar por concepto o número de comprobante...">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive" style="max-height: 420px;">
+      <table class="table table-custom align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Fecha</th>
+            <th>Caja</th>
+            <th>Tipo de Movimiento</th>
+            <th class="text-end">Monto</th>
+            <th>Concepto</th>
+            <th>Comprobante</th>
+            <th class="text-center pe-4">Asiento</th>
+          </tr>
+        </thead>
+        <tbody id="movCajaBody">
+          {% for m in movimientos|default([]) %}
+          {% set meta = mov_meta.get(m.tipo_movimiento, {'signo': 1, 'color': 'secondary', 'label': m.tipo_movimiento}) %}
+          <tr class="mov-caja-row" data-caja="{{ m.caja_id }}"
+              data-texto="{{ (m.concepto or '')|lower }} {{ (m.numero_comprobante or '')|lower }}">
+            <td class="ps-4 text-nowrap small">{{ m.fecha }}</td>
+            <td class="fw-semibold small">{{ m.caja_nombre }}</td>
+            <td>
+              <span class="badge bg-{{ meta.color }}-subtle text-{{ meta.color }} border border-{{ meta.color }}-subtle">
+                {{ meta.label }}
+              </span>
+            </td>
+            <td class="text-end fw-semibold text-nowrap">
+              {% if meta.signo > 0 %}
+                <span class="text-success">+ $ {{ "{:,.2f}".format(m.monto or 0) }}</span>
+              {% elif meta.signo < 0 %}
+                <span class="text-danger">- $ {{ "{:,.2f}".format(m.monto or 0) }}</span>
+              {% else %}
+                <span class="text-muted">$ {{ "{:,.2f}".format(m.monto or 0) }}</span>
+              {% endif %}
+            </td>
+            <td class="small">{{ m.concepto or '—' }}</td>
+            <td class="small text-muted">{{ m.numero_comprobante or '—' }}</td>
+            <td class="text-center pe-4 small">
+              {% if m.asiento_id %}
+                <a href="{{ url_for('accounting.journal') }}" class="text-decoration-none" title="Ver asiento contable generado">
+                  <code>#{{ m.asiento_id }}</code>
+                </a>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="filaSinResultadosMov" class="d-none">
+            <td colspan="7" class="text-center text-muted py-4">
+              <i class="bi bi-search fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Historial de Arqueos -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-data text-primary me-2"></i>Historial de Arqueos de Caja</h6>
+    <span class="badge bg-light text-dark border">Últimos {{ arqueos|length }} arqueo(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">#</th>
+            <th>Fecha</th>
+            <th>Caja</th>
+            <th>Responsable del Arqueo</th>
+            <th class="text-end">Saldo Contable</th>
+            <th class="text-end">Saldo Físico</th>
+            <th class="text-end">Diferencia</th>
+            <th class="text-center">Resultado</th>
+            <th class="text-center">Acción</th>
+            <th class="pe-4">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in arqueos %}
+          {% set d = a.diferencia or 0 %}
+          <tr>
+            <td class="ps-4 text-muted">#{{ a.id }}</td>
+            <td class="text-nowrap">{{ a.fecha }}</td>
+            <td class="fw-semibold">{{ a.caja_nombre }}</td>
+            <td class="small">{{ a.usuario_nombre or '—' }}</td>
+            <td class="text-end">$ {{ "{:,.2f}".format(a.saldo_contable or 0) }}</td>
+            <td class="text-end">$ {{ "{:,.2f}".format(a.saldo_fisico or 0) }}</td>
+            <td class="text-end fw-semibold {% if d|abs >= 0.01 %}{{ 'text-info' if d > 0 else 'text-danger' }}{% endif %}">
+              $ {{ "{:,.2f}".format(d|abs) }}
+            </td>
+            <td class="text-center">
+              {% if d|abs < 0.01 %}
+                <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Cuadrado</span>
+                <div class="small text-muted mt-1">Sin ajuste</div>
+              {% elif a.asiento_ajuste_id %}
+                <span class="badge bg-secondary"><i class="bi bi-check2-all me-1"></i>Regularizado</span>
+                <div class="small text-muted mt-1">Asiento #{{ a.asiento_ajuste_id }}</div>
+              {% elif d > 0 %}
+                <span class="badge bg-info text-dark"><i class="bi bi-arrow-up-circle me-1"></i>Sobrante</span>
+              {% else %}
+                <span class="badge bg-danger"><i class="bi bi-arrow-down-circle me-1"></i>Faltante</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if d|abs >= 0.01 and not a.asiento_ajuste_id %}
+              <form method="POST" action="{{ url_for('treasury.regularize_cash_count', arqueo_id=a.id) }}"
+                    onsubmit="return confirm('¿Regularizar contablemente la diferencia de $ {{ "{:,.2f}".format(d|abs) }} de este arqueo?');">
+                <button type="submit" class="btn btn-outline-warning btn-sm"
+                        title="Genera el asiento de ajuste por la diferencia del arqueo">
+                  <i class="bi bi-sliders me-1"></i>Regularizar
+                </button>
+              </form>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td class="pe-4 small text-muted">{{ a.observaciones or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center text-muted py-4">
+              <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Nota técnica de arqueo -->
+<div class="alert alert-light border rounded-4 d-flex align-items-start gap-3 shadow-sm">
+  <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+  <div class="small">
+    <strong class="d-block mb-1">Metodología del Arqueo de Caja</strong>
+    El saldo contable se obtiene del Libro Mayor de la cuenta asociada a la caja y el saldo físico es el efectivo contado.
+    La diferencia se calcula como <code>Saldo Físico - Saldo Contable</code>: un resultado
+    <span class="badge bg-info-subtle text-info border border-info-subtle">positivo</span> representa un <strong>sobrante</strong> y uno
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">negativo</span> un <strong>faltante</strong> que debe justificarse en las observaciones.
+  </div>
+</div>
+
+<!-- ============ MODAL: ARQUEO DE CAJA ============ -->
+<div class="modal fade" id="arqueoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <form method="POST" action="{{ url_for('treasury.cash') }}" class="modal-content" id="arqueoForm" autocomplete="off">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-clipboard-check text-success me-2"></i>Registrar Arqueo de Caja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Caja a Arquear <span class="text-danger">*</span></label>
+            <select name="caja_id" id="arqueoCajaId" class="form-select" required>
+              <option value="">-- Seleccione la caja --</option>
+              {% for c in cajas %}
+              <option value="{{ c.id }}" data-saldo="{{ c.saldo_contable_real or 0 }}" {% if c.estado != 'ABIERTA' %}disabled{% endif %}>
+                {{ c.nombre }} - {{ c.responsable or 'Sin responsable' }}{% if c.estado != 'ABIERTA' %} (CERRADA){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Saldo Contable (Libro Mayor)</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="text" id="arqueoSaldoContable" class="form-control bg-light text-end fw-bold" value="0.00" readonly>
+            </div>
+            <div class="form-text">Saldo real de la cuenta contable asociada a la caja.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Saldo Físico Contado <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" step="0.01" min="0" name="saldo_fisico" id="arqueoSaldoFisico"
+                     class="form-control text-end" value="0.00" required>
+            </div>
+            <div class="form-text">Efectivo y valores contados físicamente en la caja.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Resultado del Arqueo</label>
+            <div class="border rounded-3 p-2 text-center bg-light">
+              <span id="arqueoDiferenciaBadge" class="badge bg-secondary fs-6 px-3 py-2">CUADRADO &bull; $ 0.00</span>
+            </div>
+            <div class="form-text mb-0">Diferencia = Saldo Físico - Saldo Contable.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Observaciones / Justificación de la Diferencia</label>
+            <textarea name="observaciones" class="form-control" rows="3"
+                      placeholder="Detalle el motivo de sobrantes o faltantes, testigos del arqueo y documentos de respaldo."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i>Guardar Arqueo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: MOVIMIENTO DE CAJA ============ -->
+{% if hay_movimiento_caja %}
+<div class="modal fade" id="cashMovementModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <form method="POST" action="{{ url_for('treasury.cash_movement') }}" class="modal-content" id="cashMovementForm" autocomplete="off">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-arrow-left-right text-primary me-2"></i>Registrar Movimiento de Caja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Caja <span class="text-danger">*</span></label>
+            <select name="caja_id" id="movCajaId" class="form-select" required>
+              <option value="">-- Seleccione la caja --</option>
+              {% for c in cajas %}
+              <option value="{{ c.id }}" {% if c.estado != 'ABIERTA' %}disabled{% endif %}>
+                {{ c.nombre }} - {{ c.responsable or 'Sin responsable' }}{% if c.estado != 'ABIERTA' %} (CERRADA){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Tipo de Movimiento <span class="text-danger">*</span></label>
+            <select name="tipo_movimiento" id="movTipo" class="form-select" required>
+              <option value="INGRESO" selected>Ingreso de efectivo (cobro en caja)</option>
+              <option value="EGRESO">Egreso de efectivo (pago desde caja)</option>
+              <option value="DEPOSITO_BANCO">Depósito bancario (caja &rarr; banco)</option>
+              <option value="RETIRO">Retiro bancario (banco &rarr; caja)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Monto <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" step="0.01" min="0.01" name="monto" id="movMonto" class="form-control text-end" value="0.00" required>
+            </div>
+            <div class="form-text" id="movMontoHint">Valor del efectivo recibido en la caja.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Número de Comprobante</label>
+            <input type="text" name="numero_comprobante" class="form-control" placeholder="Ej: CI-0001 / CE-0002">
+            <div class="form-text">Soporte interno de caja (recibo, vale o comprobante).</div>
+          </div>
+          <div class="col-md-6 d-none" id="movBancoWrapper">
+            <label class="form-label small fw-semibold" id="movBancoLabel">Cuenta Bancaria Vinculada (ID) <span class="text-danger">*</span></label>
+            <input type="number" name="banco_id" id="movBancoId" class="form-control" min="1" placeholder="Ej: 1">
+            <div class="form-text">
+              Requerido para depósitos y retiros: genera además el movimiento bancario correspondiente.
+              Consulte los identificadores en
+              <a href="{{ url_for('treasury.banks') }}" target="_blank" rel="noopener">Cuentas Bancarias</a>.
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Concepto / Glosa <span class="text-danger">*</span></label>
+            <input type="text" name="concepto" class="form-control" maxlength="200" required
+                   placeholder="Ej: Cobro factura 001-001-000012345 venta de mercadería">
+          </div>
+          <div class="col-12">
+            <div class="alert alert-light border mb-0 small">
+              <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
+              Al guardar, el sistema genera automáticamente el asiento contable de partida doble contra la cuenta del movimiento.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-save me-1"></i>Registrar Movimiento</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning border rounded-4 d-flex align-items-start gap-3 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+  <div class="small">
+    <strong class="d-block mb-1">Registro de movimientos de caja no disponible</strong>
+    La ruta de movimientos de caja no está habilitada en esta instalación, por lo que no se ofrece el formulario correspondiente.
+    Los arqueos de caja, en cambio, están plenamente operativos.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  /* Formato monetario idéntico al del servidor ("{:,.2f}"): $ 1,234.56 */
+  function miles(n) {
+    var partes = Math.abs(isFinite(n) ? n : 0).toFixed(2).split('.');
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return partes[0] + '.' + partes[1];
+  }
+  function money(n) {
+    var v = isFinite(n) ? n : 0;
+    return (v < 0 ? '- $ ' : '$ ') + miles(v);
+  }
+  function num(el) {
+    var v = parseFloat(el && el.value ? el.value : '0');
+    return isFinite(v) ? v : 0;
+  }
+
+  /* ---------- Arqueo de Caja: cálculo en vivo ---------- */
+  var arqueoForm = document.getElementById('arqueoForm');
+  var selCaja = document.getElementById('arqueoCajaId');
+  var inFisico = document.getElementById('arqueoSaldoFisico');
+  var lblContable = document.getElementById('arqueoSaldoContable');
+  var badgeDif = document.getElementById('arqueoDiferenciaBadge');
+
+  function saldoContableActual() {
+    if (!selCaja) { return 0; }
+    var opt = selCaja.options[selCaja.selectedIndex];
+    return opt && opt.dataset.saldo ? parseFloat(opt.dataset.saldo) : 0;
+  }
+
+  function refreshArqueo() {
+    if (!selCaja || !inFisico) { return; }
+    var contable = saldoContableActual();
+    if (lblContable) { lblContable.value = miles(contable); }
+    var dif = Math.round((num(inFisico) - contable) * 100) / 100;
+    if (!badgeDif) { return; }
+    if (Math.abs(dif) < 0.01) {
+      badgeDif.className = 'badge bg-success fs-6 px-3 py-2';
+      badgeDif.innerHTML = '<i class="bi bi-check2-circle me-1"></i>CUADRADO &bull; ' + money(0);
+    } else if (dif > 0) {
+      badgeDif.className = 'badge bg-info text-dark fs-6 px-3 py-2';
+      badgeDif.innerHTML = '<i class="bi bi-arrow-up-circle me-1"></i>SOBRANTE &bull; ' + money(dif);
+    } else {
+      badgeDif.className = 'badge bg-danger fs-6 px-3 py-2';
+      badgeDif.innerHTML = '<i class="bi bi-arrow-down-circle me-1"></i>FALTANTE &bull; ' + money(Math.abs(dif));
+    }
+  }
+
+  if (selCaja) { selCaja.addEventListener('change', refreshArqueo); }
+  if (inFisico) { inFisico.addEventListener('input', refreshArqueo); }
+
+  if (arqueoForm) {
+    arqueoForm.addEventListener('submit', function (e) {
+      var dif = Math.round((num(inFisico) - saldoContableActual()) * 100) / 100;
+      if (Math.abs(dif) >= 0.01) {
+        var tipo = dif > 0 ? 'SOBRANTE' : 'FALTANTE';
+        if (!window.confirm('El arqueo presenta un ' + tipo + ' de ' + money(Math.abs(dif)) +
+            '.\n¿Deseas registrar el arqueo con esta diferencia?')) {
+          e.preventDefault();
+        }
+      }
+    });
+  }
+
+  /* Botones de arqueo por caja */
+  document.querySelectorAll('.btn-arqueo').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (selCaja) { selCaja.value = btn.getAttribute('data-caja-id'); }
+      refreshArqueo();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('arqueoModal')).show();
+    });
+  });
+
+  /* ---------- Movimiento de Caja: banco condicional ---------- */
+  var movForm = document.getElementById('cashMovementForm');
+  var movTipo = document.getElementById('movTipo');
+  var movBancoWrapper = document.getElementById('movBancoWrapper');
+  var movBancoId = document.getElementById('movBancoId');
+  var movBancoLabel = document.getElementById('movBancoLabel');
+  var movMontoHint = document.getElementById('movMontoHint');
+  var movCajaId = document.getElementById('movCajaId');
+
+  var HINTS = {
+    'INGRESO': 'Valor del efectivo recibido en la caja.',
+    'EGRESO': 'Valor del efectivo entregado desde la caja.',
+    'DEPOSITO_BANCO': 'Valor depositado en la cuenta bancaria. Requiere indicar la cuenta bancaria vinculada.',
+    'RETIRO': 'Valor retirado del banco e ingresado a la caja. Requiere indicar la cuenta bancaria de origen.'
+  };
+  var REQUIEREN_BANCO = ['DEPOSITO_BANCO', 'RETIRO'];
+
+  function refreshMovimiento() {
+    if (!movTipo) { return; }
+    var requiereBanco = REQUIEREN_BANCO.indexOf(movTipo.value) !== -1;
+    if (movBancoWrapper) { movBancoWrapper.classList.toggle('d-none', !requiereBanco); }
+    if (movBancoId) {
+      movBancoId.required = requiereBanco;
+      if (!requiereBanco) { movBancoId.value = ''; }
+    }
+    if (movBancoLabel) {
+      movBancoLabel.innerHTML = movTipo.value === 'RETIRO'
+        ? 'Cuenta Bancaria de Origen (ID) <span class="text-danger">*</span>'
+        : 'Cuenta Bancaria de Destino (ID) <span class="text-danger">*</span>';
+    }
+    if (movMontoHint) { movMontoHint.textContent = HINTS[movTipo.value] || ''; }
+  }
+
+  if (movTipo) { movTipo.addEventListener('change', refreshMovimiento); }
+  if (movForm) {
+    movForm.addEventListener('submit', function (e) {
+      if (movTipo && REQUIEREN_BANCO.indexOf(movTipo.value) === -1 && movBancoId) { movBancoId.disabled = true; }
+    });
+  }
+  refreshMovimiento();
+
+  /* Botones de movimiento por caja */
+  document.querySelectorAll('.btn-movimiento').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (movCajaId) { movCajaId.value = btn.getAttribute('data-caja-id'); }
+      refreshMovimiento();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('cashMovementModal')).show();
+    });
+  });
+
+  /* ---------- Filtros de la tabla de movimientos de caja ---------- */
+  var filtroCajaMov = document.getElementById('filtroCajaMov');
+  var filtroTextoMov = document.getElementById('filtroTextoMov');
+  var filasMov = Array.prototype.slice.call(document.querySelectorAll('.mov-caja-row'));
+  var contadorMovCaja = document.getElementById('contadorMovCaja');
+  var filaVaciaMov = document.getElementById('filaSinResultadosMov');
+
+  function aplicarFiltrosMov() {
+    var caja = filtroCajaMov ? filtroCajaMov.value : '';
+    var texto = filtroTextoMov ? filtroTextoMov.value.trim().toLowerCase() : '';
+    var visibles = 0;
+
+    filasMov.forEach(function (fila) {
+      var ok = true;
+      if (caja && fila.getAttribute('data-caja') !== caja) { ok = false; }
+      if (ok && texto && fila.getAttribute('data-texto').indexOf(texto) === -1) { ok = false; }
+      fila.classList.toggle('d-none', !ok);
+      if (ok) { visibles++; }
+    });
+
+    if (contadorMovCaja) { contadorMovCaja.textContent = visibles + ' de ' + filasMov.length + ' movimiento(s)'; }
+    if (filaVaciaMov) { filaVaciaMov.classList.toggle('d-none', visibles !== 0 || filasMov.length === 0); }
+  }
+
+  [filtroCajaMov, filtroTextoMov].forEach(function (el) {
+    if (!el) { return; }
+    el.addEventListener('input', aplicarFiltrosMov);
+    el.addEventListener('change', aplicarFiltrosMov);
+  });
+})();
+</script>
+{% endblock %}

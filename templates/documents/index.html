@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Documentos Fuente - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="bi bi-files me-2 text-primary"></i>Documentos Fuente</h4>
+    <p class="text-muted small mb-0">
+      Documentos simulados que respaldan cada operación: facturas, comprobantes de ingreso y egreso,
+      notas de crédito y débito, papeletas de depósito, arqueos, roles de pago y órdenes de compra.
+      Cada documento se vincula al asiento contable que generó (cadena verificable documento &rarr; asiento &rarr; diario &rarr; mayor &rarr; estados financieros).
+    </p>
+  </div>
+  <div class="text-end">
+    <div class="kpi-card">
+      <div class="kpi-label">Monto documentado (filtro actual)</div>
+      <div class="kpi-value">{{ total_monto|money }}</div>
+      <div class="small text-muted mt-1">{{ documentos|length }} documentos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('documents.index') }}" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Tipo de documento</label>
+        <select name="tipo" class="form-select form-select-sm">
+          <option value="">Todos los tipos</option>
+          {% for codigo, nombre, grupo in tipos %}
+          <option value="{{ codigo }}" {% if selected_tipo == codigo %}selected{% endif %}>{{ nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Desde</label>
+        <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Hasta</label>
+        <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i> Filtrar</button>
+        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Resumen por tipo -->
+<div class="row g-3 mb-4">
+  {% for r in resumen %}
+  <div class="col-sm-6 col-lg-3">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="small text-muted fw-semibold">{{ etiqueta(r.tipo) }}</div>
+            <div class="fw-bold fs-5">{{ r.cantidad }}</div>
+            <div class="small text-muted">documentos</div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ r.tipo }}</span>
+            <div class="fw-semibold small mt-2">{{ r.monto_total|money }}</div>
+          </div>
+        </div>
+        <a href="{{ url_for('documents.index', tipo=r.tipo) }}" class="btn btn-outline-primary btn-sm w-100 mt-2">
+          <i class="bi bi-funnel me-1"></i> Ver solo este tipo
+        </a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="alert alert-light border mb-0">Sin documentos registrados.</div></div>
+  {% endfor %}
+</div>
+
+<!-- Listado -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h6 class="fw-bold mb-0">Documentos registrados</h6>
+      <small class="text-muted">Ordenados por fecha descendente</small>
+    </div>
+    <span class="badge bg-light text-dark border">Máximo 300 documentos</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Tipo</th>
+            <th>Número</th>
+            <th>Fecha</th>
+            <th>Emisor</th>
+            <th>Receptor</th>
+            <th class="text-end">Monto</th>
+            <th>Asiento contable</th>
+            <th class="text-center">Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in documentos %}
+          <tr>
+            <td class="ps-4">
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ etiqueta(d.tipo) }}</span>
+            </td>
+            <td><code>{{ d.numero }}</code></td>
+            <td class="text-nowrap">{{ d.fecha }}</td>
+            <td class="small">{{ d.emisor }}</td>
+            <td class="small">{{ d.receptor }}</td>
+            <td class="text-end fw-semibold">{{ d.monto_total|money }}</td>
+            <td>
+              {% if d.numero_asiento %}
+                <span class="badge bg-dark">#{{ d.numero_asiento }}</span>
+                <span class="small text-muted">{{ d.asiento_estado }}</span>
+              {% else %}
+                <span class="text-muted small">Sin asiento vinculado</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="verDocumento({{ d.id }})">
+                <i class="bi bi-eye"></i> Ver
+              </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              Sin registros para mostrar con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de detalle de documento fuente -->
+<div class="modal fade" id="documentoModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content rounded-4">
+      <div class="modal-header">
+        <h6 class="modal-title fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Documento fuente</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="documentoBody">
+        <div class="text-muted small">Cargando documento...</div>
+      </div>
+      <div class="modal-footer">
+        <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-journal-text me-1"></i> Ir al Libro Diario
+        </a>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function esc(v) {
+  return String(v === null || v === undefined ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function verDocumento(id) {
+  const body = document.getElementById("documentoBody");
+  body.innerHTML = '<div class="text-muted small">Cargando documento...</div>';
+  fetch("/documentos/" + id)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        body.innerHTML = '<div class="alert alert-danger mb-0">' + esc(data.error) + '</div>';
+        return;
+      }
+      const d = data.documento;
+      let datos = "";
+      if (d.datos_json) {
+        try {
+          const obj = JSON.parse(d.datos_json);
+          datos = '<table class="table table-sm table-bordered mb-0"><tbody>';
+          Object.keys(obj).forEach(k => {
+            let v = obj[k];
+            if (typeof v === "number") v = v.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (Array.isArray(v)) {
+              v = v.map(i => Object.keys(i).map(kk => kk + ": " + i[kk]).join(" | ")).join("<br>");
+            } else {
+              v = esc(v);
+            }
+            datos += '<tr><th class="bg-light" style="width:38%">' + esc(k) + '</th><td>' + v + '</td></tr>';
+          });
+          datos += "</tbody></table>";
+        } catch (e) {
+          datos = '<pre class="small mb-0">' + esc(d.datos_json) + '</pre>';
+        }
+      } else {
+        datos = '<div class="text-muted small">Sin datos estructurados.</div>';
+      }
+
+      body.innerHTML = `
+        <div class="row g-3 mb-3">
+          <div class="col-md-6"><div class="small text-muted">Tipo de documento</div><div class="fw-semibold">${esc(d.tipo)}</div></div>
+          <div class="col-md-6"><div class="small text-muted">Número</div><div class="fw-semibold"><code>${esc(d.numero)}</code></div></div>
+          <div class="col-md-6"><div class="small text-muted">Fecha</div><div class="fw-semibold">${esc(d.fecha)}</div></div>
+          <div class="col-md-6"><div class="small text-muted">Monto total</div><div class="fw-semibold">$${Number(d.monto_total).toLocaleString("es-EC", { minimumFractionDigits: 2 })}</div></div>
+          <div class="col-md-6"><div class="small text-muted">Emisor</div><div class="fw-semibold">${esc(d.emisor)}</div></div>
+          <div class="col-md-6"><div class="small text-muted">Receptor</div><div class="fw-semibold">${esc(d.receptor)}</div></div>
+          <div class="col-12"><div class="small text-muted">Descripción</div><div>${esc(d.descripcion)}</div></div>
+          <div class="col-md-6">
+            <div class="small text-muted">Asiento contable vinculado</div>
+            <div class="fw-semibold">${d.numero_asiento ? "#" + d.numero_asiento + " (" + esc(d.asiento_estado) + ")" : "Sin asiento"}</div>
+          </div>
+          <div class="col-md-6"><div class="small text-muted">Glosa del asiento</div><div class="small">${esc(d.asiento_glosa)}</div></div>
+        </div>
+        <h6 class="fw-bold small text-uppercase text-muted">Datos estructurados del documento</h6>
+        ${datos}
+      `;
+    })
+    .catch(err => {
+      body.innerHTML = '<div class="alert alert-danger mb-0">Error al cargar el documento: ' + esc(err) + '</div>';
+    });
+  new bootstrap.Modal(document.getElementById("documentoModal")).show();
+}
+</script>
+{% endblock %}

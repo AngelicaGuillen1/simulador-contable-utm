@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de Usuario - Simulador Integral de Sistema Contable</title>
+<style>
+  :root { --tinta:#1f2933; --suave:#52606d; --linea:#d9e2ec; --acento:#1d4ed8; --fondo:#f5f7fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--tinta);
+         font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.65; }
+  .barra { position:sticky; top:0; z-index:20; background:#111827; color:#fff; padding:12px 20px;
+            display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+  .barra strong { font-size:15px; letter-spacing:.3px; }
+  .barra .acciones { display:flex; gap:10px; flex-wrap:wrap; }
+  .barra a, .barra button { background:#1d4ed8; color:#fff; border:0; border-radius:6px;
+        padding:8px 14px; font-size:13.5px; font-weight:600; text-decoration:none; cursor:pointer; }
+  .barra a.sec { background:#374151; }
+  .barra a:hover, .barra button:hover { filter:brightness(1.15); }
+  main { max-width:1000px; margin:0 auto; padding:34px 28px 80px; background:#fff;
+          box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  h1 { font-size:30px; margin:0 0 4px; border-bottom:3px solid var(--acento); padding-bottom:10px; }
+  h2 { font-size:22px; margin:38px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--linea); }
+  h3 { font-size:18px; margin:26px 0 8px; color:#111827; }
+  h4 { font-size:16px; margin:20px 0 6px; }
+  p, li { color:var(--tinta); }
+  a { color:var(--acento); }
+  code { background:#eef2f7; border:1px solid var(--linea); border-radius:4px; padding:1px 5px;
+          font-family:Consolas,"Courier New",monospace; font-size:13px; }
+  pre { background:#0f172a; color:#e5edff; padding:14px 16px; border-radius:8px; overflow:auto;
+         font-family:Consolas,"Courier New",monospace; font-size:12.8px; line-height:1.5; }
+  pre code { background:none; border:0; color:inherit; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:14px 0 18px; font-size:14px; }
+  th, td { border:1px solid var(--linea); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#eef2f7; }
+  tbody tr:nth-child(even) { background:#fafcff; }
+  blockquote { margin:14px 0; padding:10px 16px; border-left:4px solid var(--acento);
+                background:#f0f6ff; color:#243b53; }
+  hr { border:0; border-top:1px solid var(--linea); margin:30px 0; }
+  img { max-width:100%; }
+  @media print {
+    :root { --fondo:#fff; }
+    .barra { display:none; }
+    body { background:#fff; font-size:11pt; }
+    main { max-width:none; box-shadow:none; padding:0; }
+    h2, h3 { page-break-after:avoid; }
+    table, pre, blockquote { page-break-inside:avoid; }
+    a { color:#000; text-decoration:none; }
+    @page { margin:14mm; }
+  }
+</style>
+</head>
+<body>
+<div class="barra">
+  <strong>Manual de Usuario &middot; Simulador Integral de Sistema Contable</strong>
+  <div class="acciones">
+    <a href="/">Ir al sistema</a>
+    <a class="sec" href="javascript:window.print()">Imprimir / Guardar PDF</a>
+    <a class="sec" href="/manual/fuente">Descargar fuente Markdown</a>
+  </div>
+</div>
+<main>
+<h1 id="manual-de-usuario">Manual de Usuario</h1>
+<h2 id="simulador-integral-de-sistema-contable">Simulador Integral de Sistema Contable</h2>
+<h3 id="servicios-y-comercialización-de-productos-comercial-y-servicios-nueva-esperanza-sa">Servicios y Comercialización de Productos — <em>Comercial y Servicios Nueva Esperanza S.A.</em></h3>
+<blockquote>
+<p>Versión del sistema: 1.0 · Período de demostración: <strong>Abril 2026</strong> · Fecha de trabajo por defecto: <strong>2026-04-30</strong>
+Documento generado para uso académico. Todos los datos son de <strong>demostración</strong>.</p>
+</blockquote>
+<hr>
+<h2 id="índice">Índice</h2>
+<ol>
+<li><a href="#1-qué-es-este-sistema">¿Qué es este sistema?</a></li>
+<li><a href="#2-requisitos-e-instalación">Requisitos e instalación</a></li>
+<li><a href="#3-cómo-ejecutar-y-detener-el-sistema">Cómo ejecutar y detener el sistema</a></li>
+<li><a href="#4-usuarios-contraseñas-y-roles">Usuarios, contraseñas y roles</a></li>
+<li><a href="#5-recorrido-guiado-de-15-minutos">Recorrido guiado de 15 minutos</a></li>
+<li><a href="#6-mapa-de-navegación">Mapa de navegación</a></li>
+<li><a href="#7-módulos-del-sistema">Módulos del sistema</a></li>
+<li><a href="#71-dashboard">Dashboard</a></li>
+<li><a href="#72-plan-de-cuentas">Plan de cuentas</a></li>
+<li><a href="#73-libro-diario">Libro Diario</a></li>
+<li><a href="#74-libro-mayor">Libro Mayor</a></li>
+<li><a href="#75-balance-de-comprobación">Balance de Comprobación</a></li>
+<li><a href="#76-ajustes-contables">Ajustes contables</a></li>
+<li><a href="#77-cierre-contable">Cierre contable</a></li>
+<li><a href="#78-ventas">Ventas</a></li>
+<li><a href="#79-servicios">Servicios</a></li>
+<li><a href="#710-compras">Compras</a></li>
+<li><a href="#711-productos">Productos</a></li>
+<li><a href="#712-kardex">Kardex</a></li>
+<li><a href="#713-existencias-y-alertas">Existencias y alertas</a></li>
+<li><a href="#714-caja-y-arqueos">Caja y arqueos</a></li>
+<li><a href="#715-bancos">Bancos</a></li>
+<li><a href="#716-conciliación-bancaria">Conciliación bancaria</a></li>
+<li><a href="#717-clientes">Clientes</a></li>
+<li><a href="#718-cuentas-por-cobrar">Cuentas por cobrar</a></li>
+<li><a href="#719-proveedores">Proveedores</a></li>
+<li><a href="#720-cuentas-por-pagar">Cuentas por pagar</a></li>
+<li><a href="#721-documentos-fuente">Documentos fuente</a></li>
+<li><a href="#722-tributación">Tributación</a></li>
+<li><a href="#723-estado-de-resultados">Estado de Resultados</a></li>
+<li><a href="#724-estado-de-situación-financiera">Estado de Situación Financiera</a></li>
+<li><a href="#725-estado-de-flujo-de-efectivo">Estado de Flujo de Efectivo</a></li>
+<li><a href="#726-simulador-de-casos">Simulador de Casos</a></li>
+<li><a href="#727-evaluaciones">Evaluaciones</a></li>
+<li><a href="#728-panel-de-analítica-docente">Panel de Analítica Docente</a></li>
+<li><a href="#729-tutor-contable-ia">Tutor Contable IA</a></li>
+<li><a href="#730-centro-de-reportes">Centro de Reportes</a></li>
+<li><a href="#731-administración">Administración</a></li>
+<li><a href="#8-reglas-contables-y-validaciones">Reglas contables y validaciones</a></li>
+<li><a href="#9-fecha-de-trabajo-y-períodos">Fecha de trabajo y períodos</a></li>
+<li><a href="#10-modo-examen-y-evaluación">Modo Examen y evaluación</a></li>
+<li><a href="#11-agentes-de-ia-y-api-interna">Agentes de IA y API interna</a></li>
+<li><a href="#12-datos-de-demostración">Datos de demostración</a></li>
+<li><a href="#13-solución-de-problemas">Solución de problemas</a></li>
+<li><a href="#14-preguntas-frecuentes">Preguntas frecuentes</a></li>
+<li><a href="#15-buenas-prácticas">Buenas prácticas</a></li>
+<li><a href="#16-glosario">Glosario</a></li>
+<li><a href="#17-anexos">Anexos</a></li>
+</ol>
+<hr>
+<h2 id="1-qué-es-este-sistema">1. ¿Qué es este sistema?</h2>
+<p>Es un <strong>sistema contable educativo completo (tipo ERP académico)</strong> que funciona en el navegador y
+opera sobre una empresa simulada real: <strong>Comercial y Servicios Nueva Esperanza S.A.</strong>, dedicada a
+dos actividades:</p>
+<ul>
+<li><strong>Comercial:</strong> venta de productos de primera necesidad (arroz, azúcar, aceite, leche, harina,
+  café, limpieza, higiene, bebidas y alimentos empacados).</li>
+<li><strong>Servicios:</strong> entrega/distribución, transporte, asesoría, mantenimiento e instalación.</li>
+</ul>
+<p><strong>No es una página informativa ni un conjunto de ejercicios aislados.</strong> Cada operación que registras
+se propaga automáticamente a todo el sistema:</p>
+<pre><code>Documento fuente → Transacción → Asiento → Libro Diario → Libro Mayor → Balance → Estados financieros
+</code></pre>
+<p>y, cuando corresponde:</p>
+<pre><code>Compra → Inventario (Kardex) → Venta → Costo de ventas → Resultado del período
+</code></pre>
+<p>Una venta, por ejemplo, actualiza de forma simultánea: el registro de venta, el inventario y su
+Kardex, el costo de ventas, la cartera del cliente, la caja o el banco, el IVA, los documentos
+fuente, el libro diario, el libro mayor, el balance de comprobación y los estados financieros.</p>
+<p><strong>¿Para quién es?</strong> Estudiantes de Contabilidad, Auditoría, Administración, Finanzas y áreas
+empresariales afines, y docentes que quieran asignar casos, evaluar automáticamente y ver analítica
+del avance del curso.</p>
+<hr>
+<h2 id="2-requisitos-e-instalación">2. Requisitos e instalación</h2>
+<p><strong>Requisitos</strong></p>
+<ul>
+<li>Windows, macOS o Linux</li>
+<li>Python 3.11 o superior</li>
+<li>Navegador moderno (Chrome, Edge, Firefox)</li>
+<li>Opcional: conexión a Internet solo para los recursos visuales (Bootstrap, Chart.js desde CDN);
+  el sistema funciona igual sin conexión, con estilos base.</li>
+</ul>
+<p><strong>Instalación (una sola vez)</strong></p>
+<pre><code class="language-bash">cd &quot;C:\Users\1161150\Desktop\Pagina web&quot;
+python -m venv .venv                     # crear entorno virtual (opcional pero recomendado)
+.venv\Scripts\activate                   # en Windows (en Linux/macOS: source .venv/bin/activate)
+pip install -r requirements.txt
+</code></pre>
+<p>Contenido de <code>requirements.txt</code>: Flask, Werkzeug, Jinja2, openpyxl (exportación a Excel) y pytest
+(pruebas automáticas).</p>
+<hr>
+<h2 id="3-cómo-ejecutar-y-detener-el-sistema">3. Cómo ejecutar y detener el sistema</h2>
+<p><strong>Ejecutar</strong></p>
+<pre><code class="language-bash">python app.py
+</code></pre>
+<p>La aplicación queda disponible en: <strong>http://127.0.0.1:5000</strong></p>
+<p>Al arrancar verás en la consola:</p>
+<pre><code> SIMULADOR INTEGRAL DE SISTEMA CONTABLE
+ Servicios y Comercialización de Productos - Comercial Nueva Esperanza
+ Servidor Flask disponible en: http://127.0.0.1:5000
+ Usuarios demo: admin/admin123 - docente/docente123 - estudiante/estudiante123
+</code></pre>
+<p><strong>Detener:</strong> <code>Ctrl + C</code> en la consola donde corre el servidor.</p>
+<h3 id="servicio-continuo-247-y-uso-en-red">Servicio continuo (24/7) y uso en red</h3>
+<p>Para dejar el sistema publicado de forma permanente se usa el servidor de producción incluido
+(<code>waitress</code>), no el servidor de desarrollo:</p>
+<pre><code class="language-bash">python serve.py                                  # http://127.0.0.1:5000
+HOST=0.0.0.0 PORT=8080 python serve.py           # accesible desde la red
+</code></pre>
+<ul>
+<li>Si la base de datos no existe, <code>serve.py</code> la genera automáticamente en el primer arranque.</li>
+<li><strong>Este manual</strong> está siempre disponible en <strong><code>/manual</code></strong> (y su fuente Markdown en <code>/manual/fuente</code>).</li>
+<li>En Windows, para que arranque solo y se reinicie si falla:</li>
+</ul>
+<p><code>powershell
+  powershell -ExecutionPolicy Bypass -File deploy\windows\instalar_arranque_automatico.ps1 -Puerto 8080</code></p>
+<ul>
+<li>Para publicarlo en Internet (VPS con dominio y HTTPS, o plataforma gestionada) siga la guía
+  <code>docs/DESPLIEGUE.md</code>, que incluye la <strong>lista de verificación de seguridad</strong> — entre otros puntos,
+  cambiar las contraseñas de demostración con <code>python deploy/cambiar_credenciales.py</code>.</li>
+<li><strong>Hostinger VPS</strong> (Ubuntu 22.04/24.04): el instalador automático configura servidor, Nginx,
+  HTTPS, servicio systemd y respaldos en un solo comando:</li>
+</ul>
+<p><code>bash
+  sudo bash deploy/hostinger/instalar_vps.sh --dominio contabilidad.midominio.com --correo docente@utm.edu.ec</code></p>
+<p>(Recuerde: en Hostinger solo los planes <strong>VPS</strong> pueden ejecutar una aplicación Flask; los planes
+  de Web/Cloud hosting no lo permiten.)
+* Comprobación de un despliegue publicado:</p>
+<p><code>bash
+  python deploy/verificar_despliegue.py --url http://127.0.0.1:8080</code></p>
+<p><strong>Regenerar los datos de demostración</strong> (borra y reconstruye la base; útil para volver al estado
+inicial después de una clase):</p>
+<pre><code class="language-bash">python database/seed_data.py
+</code></pre>
+<p><strong>Ejecutar las pruebas automáticas:</strong></p>
+<pre><code class="language-bash">python -m pytest tests -q
+</code></pre>
+<blockquote>
+<p>La <strong>fecha de trabajo</strong> de la simulación no depende del reloj de tu computador: la controla el
+sistema desde el panel de Administración (ver <a href="#9-fecha-de-trabajo-y-períodos">sección 9</a>).</p>
+</blockquote>
+<hr>
+<h2 id="4-usuarios-contraseñas-y-roles">4. Usuarios, contraseñas y roles</h2>
+<table>
+<thead>
+<tr>
+<th>Rol</th>
+<th>Usuario</th>
+<th>Contraseña</th>
+<th>Nombre en el sistema</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Administrador</td>
+<td><code>admin</code></td>
+<td><code>admin123</code></td>
+<td>Ing. Marco Morales</td>
+</tr>
+<tr>
+<td>Docente</td>
+<td><code>docente</code></td>
+<td><code>docente123</code></td>
+<td>Dr. Carlos Mendoza</td>
+</tr>
+<tr>
+<td>Estudiante</td>
+<td><code>estudiante</code></td>
+<td><code>estudiante123</code></td>
+<td>Ana Lucía Morales</td>
+</tr>
+<tr>
+<td>Auditor</td>
+<td><code>auditor</code></td>
+<td><code>auditor123</code></td>
+<td>Lic. Roberto Vaca</td>
+</tr>
+</tbody>
+</table>
+<p>Las contraseñas se almacenan <strong>con hash seguro</strong> (nunca en texto plano).</p>
+<h3 id="matriz-de-permisos">Matriz de permisos</h3>
+<table>
+<thead>
+<tr>
+<th>Módulo</th>
+<th style="text-align: center;">Administrador</th>
+<th style="text-align: center;">Docente</th>
+<th style="text-align: center;">Estudiante</th>
+<th style="text-align: center;">Auditor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboard, libros, balance, estados financieros</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅ (solo lectura)</td>
+</tr>
+<tr>
+<td>Documentos fuente y trazabilidad</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅ (solo lectura)</td>
+</tr>
+<tr>
+<td>Registrar ventas, servicios, compras, cobros, pagos, tesorería, ajustes</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>Simulador de casos y evaluaciones</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>Panel de analítica docente</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>Cierre contable</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td>Administración: usuarios, parámetros, impuestos, auditoría</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Solo auditoría (lectura)</td>
+</tr>
+</tbody>
+</table>
+<p>Si un usuario intenta entrar a un módulo sin permiso, recibe la página <strong>403 – Acceso restringido</strong>
+con el mensaje del rol requerido y la lista de roles autorizados.</p>
+<hr>
+<h2 id="5-recorrido-guiado-de-15-minutos">5. Recorrido guiado de 15 minutos</h2>
+<ol>
+<li><strong>Inicia sesión</strong> con <code>estudiante / estudiante123</code>.</li>
+<li>Entra a <strong>Simulador de Casos</strong> y pulsa <em>Iniciar</em> en <strong>Nivel 1 — Básico</strong>.</li>
+<li>Lee el enunciado y el documento fuente del caso. En la tabla de líneas contables selecciona las
+   cuentas, escribe los importes en <strong>Debe</strong> y <strong>Haber</strong> y añade líneas si necesitas más.
+   <em>Si te trabas, pulsa </em><em>Pedir pista al Tutor IA</em><em> (cada pista resta 5 puntos).</em></li>
+<li>Pulsa <strong>Enviar Asiento y Evaluar</strong>. Verás tu puntuación sobre 100, la rúbrica desglosada y una
+   retroalimentación concreta línea por línea.</li>
+<li>Ve a <strong>Contabilidad → Libro Diario</strong> y localiza los asientos que generaste.</li>
+<li>Ve a <strong>Ventas → Nueva venta</strong>, registra una venta a crédito por 20 unidades del producto que
+   prefieras (forma de pago <em>Crédito</em>, 30 días) y guárdala.</li>
+<li>Revisa en <strong>Cuentas por Cobrar</strong> que apareció el documento; registra un <strong>cobro parcial</strong>.</li>
+<li>Revisa <strong>Caja</strong>, <strong>Bancos</strong> y <strong>Documentos Fuente</strong> para ver los movimientos y respaldos creados.</li>
+<li>Abre <strong>Estados Financieros → Situación Financiera</strong>: debe aparecer el banner verde
+   <strong>“Activo = Pasivo + Patrimonio ✓”</strong>.</li>
+<li>Cierra con <strong>Contabilidad → Balance de Comprobación</strong>: los totales de débitos y créditos, y los
+    saldos deudor y acreedor, deben coincidir.</li>
+</ol>
+<hr>
+<h2 id="6-mapa-de-navegación">6. Mapa de navegación</h2>
+<p>El menú lateral se organiza así:</p>
+<table>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Módulos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dashboard General</strong></td>
+<td>Indicadores, gráficos, alertas, actividad reciente</td>
+</tr>
+<tr>
+<td><strong>Contabilidad Central</strong></td>
+<td>Plan de Cuentas · Libro Diario · Libro Mayor · Balance de Comprobación · Ajustes Contables · Cierre de Período</td>
+</tr>
+<tr>
+<td><strong>Operaciones Comerciales</strong></td>
+<td>Ventas de Bienes · Servicios Prestados · Compras a Proveedores</td>
+</tr>
+<tr>
+<td><strong>Inventario &amp; Kardex</strong></td>
+<td>Catálogo de Productos · Kardex (FIFO / Promedio) · Existencias &amp; Alertas</td>
+</tr>
+<tr>
+<td><strong>Tesorería &amp; Cartera</strong></td>
+<td>Caja &amp; Arqueos · Cuentas Bancarias · Conciliación Bancaria · Clientes · Cuentas por Cobrar · Proveedores · Cuentas por Pagar · Documentos Fuente · Tributación</td>
+</tr>
+<tr>
+<td><strong>Informes Financieros NIIF</strong></td>
+<td>Estado de Resultados · Situación Financiera · Flujo de Efectivo</td>
+</tr>
+<tr>
+<td><strong>Entorno Universitario &amp; IA</strong></td>
+<td>Simulador de Casos · Mis Evaluaciones · Panel Analítica Docente · Tutor Contable IA · Centro de Reportes</td>
+</tr>
+<tr>
+<td><strong>Administración del Sistema</strong></td>
+<td>Parámetros &amp; Config · Gestión Usuarios · Parámetros Tributarios · Auditoría &amp; Trazabilidad</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Barra superior:</strong> período contable activo, fecha de trabajo, buscador global (busca cuentas,
+productos, clientes, asientos y simulaciones), acceso rápido al simulador y al Tutor IA, y menú del
+usuario (ver resultados, ir al sistema contable, cerrar sesión).</p>
+<hr>
+<h2 id="7-módulos-del-sistema">7. Módulos del sistema</h2>
+<h3 id="71-dashboard">7.1 Dashboard</h3>
+<p><strong>Para qué sirve:</strong> vista ejecutiva de la empresa simulada.</p>
+<p><strong>Qué muestra</strong></p>
+<ul>
+<li><strong>Indicadores financieros:</strong> saldo de caja, bancos, ventas de bienes, ingresos por servicios,
+  inventario valorizado, cuentas por cobrar, cuentas por pagar y utilidad del período.</li>
+<li><strong>Gráficos:</strong> evolución semanal de ventas, servicios, compras y gastos (con conmutador
+  <em>Barras / Líneas</em>) y composición financiera (disponibilidad vs cartera vs inventario).</li>
+<li><strong>Alertas operativas:</strong> stock bajo mínimo, cartera vencida (con monto), cuentas por pagar
+  pendientes y <strong>asientos descuadrados</strong> (control permanente de la partida doble).</li>
+<li><strong>Actividad reciente:</strong> últimos asientos contabilizados y últimos documentos fuente.</li>
+<li><strong>Inventario por categoría</strong> (con filtro por categoría) y <strong>cartera por estado</strong>.</li>
+<li><strong>Resultados de simulación:</strong> intentos, completados, promedio general y por nivel.</li>
+<li><strong>Accesos rápidos:</strong> nueva venta, nueva compra, facturar servicio, caja, estado de resultados y
+  Tutor IA.</li>
+</ul>
+<blockquote>
+<p>Todos los valores se calculan en vivo desde el libro mayor. No hay cifras decorativas.</p>
+</blockquote>
+<hr>
+<h3 id="72-plan-de-cuentas">7.2 Plan de cuentas</h3>
+<p><strong>Ruta:</strong> Contabilidad → Plan de Cuentas</p>
+<p><strong>Qué muestra:</strong> las <strong>43 cuentas</strong> del plan contable con estructura jerárquica y clasificación en
+seis grupos: <strong>1 Activo · 2 Pasivo · 3 Patrimonio · 4 Ingresos · 5 Costos · 6 Gastos</strong>.</p>
+<p>Cada cuenta tiene código, nombre, <strong>naturaleza</strong> (deudora/acreedora), clasificación, cuenta padre,
+nivel, si <strong>acepta movimiento</strong> y su <strong>saldo actual calculado desde el libro mayor</strong>.</p>
+<p><strong>Cómo se usa</strong></p>
+<ul>
+<li><strong>Crear cuenta:</strong> botón <em>Nueva cuenta</em> → código, nombre, naturaleza, clasificación, cuenta padre,
+  nivel y si acepta movimiento. Ejemplo: <code>1.1.09 Anticipo a Proveedores</code>.</li>
+<li><strong>Editar cuenta:</strong> botón de edición por fila (nombre, naturaleza, clasificación, estado activo).</li>
+<li><strong>Desactivar:</strong> desde la edición (estado = inactivo); las cuentas inactivas no aparecen en los
+  formularios de registro.</li>
+<li><strong>Buscar y filtrar:</strong> por código, nombre, clasificación o naturaleza.</li>
+</ul>
+<p><strong>Reglas:</strong> el código debe ser único; una cuenta con movimientos no debería desactivarse para no
+descuadrar informes históricos.</p>
+<hr>
+<h3 id="73-libro-diario">7.3 Libro Diario</h3>
+<p><strong>Ruta:</strong> Contabilidad → Libro Diario</p>
+<p><strong>Qué muestra:</strong> todos los asientos con número, fecha, glosa, tipo y número de documento, módulo de
+origen, usuario, y sus líneas con cuenta, <strong>Debe</strong>, <strong>Haber</strong> y referencia. Cada asiento indica su
+total y si está cuadrado.</p>
+<p><strong>Cómo se usa</strong></p>
+<ol>
+<li>Pulsa <strong>Nuevo asiento</strong>.</li>
+<li>Escribe <strong>fecha</strong> (dentro del período abierto), <strong>glosa</strong>, tipo y número de documento.</li>
+<li>Agrega líneas: selecciona la cuenta y escribe el importe en <strong>Debe</strong> o en <strong>Haber</strong>. Usa
+   <em>Agregar línea</em> para partidas con más de dos cuentas.</li>
+<li>El sistema muestra en vivo los totales y la diferencia.</li>
+<li>Guarda. <strong>Si el asiento no cuadra, no se contabiliza</strong> y recibirás un mensaje con la diferencia
+   exacta (ver <a href="#8-reglas-contables-y-validaciones">sección 8</a>).</li>
+</ol>
+<p><strong>Anulación (reversión):</strong> ningún asiento contabilizado se borra. El botón <em>Revertir</em> genera
+automáticamente el <strong>contra-asiento</strong> con las líneas invertidas, marca el original como <em>REVERTIDO</em> y
+conserva ambos en el diario para mantener la trazabilidad. El efecto contable neto de la pareja es
+cero.</p>
+<p><strong>Filtros:</strong> por rango de fechas. El buscador global de la barra superior también localiza asientos
+por número o glosa.</p>
+<hr>
+<h3 id="74-libro-mayor">7.4 Libro Mayor</h3>
+<p><strong>Ruta:</strong> Contabilidad → Libro Mayor</p>
+<p><strong>Qué muestra:</strong> para cada cuenta seleccionada (o todas las que tienen movimientos), el detalle
+cronológico de fecha, número de asiento, concepto, <strong>Debe</strong>, <strong>Haber</strong> y <strong>saldo acumulado</strong>, más
+los totales y el saldo final según la naturaleza de la cuenta.</p>
+<p><strong>Cómo se usa:</strong> selecciona la cuenta por <strong>buscador</strong>, por <strong>código</strong> o desde el filtro por
+categoría, y opcionalmente acota el rango de fechas. Los saldos se recalculan en cada consulta,
+por lo que siempre reflejan el estado real del diario.</p>
+<hr>
+<h3 id="75-balance-de-comprobación">7.5 Balance de Comprobación</h3>
+<p><strong>Ruta:</strong> Contabilidad → Balance de Comprobación</p>
+<p><strong>Qué muestra:</strong> una línea por cuenta con movimiento: <strong>saldo inicial</strong>, <strong>débitos</strong>, <strong>créditos</strong>,
+<strong>saldo deudor</strong> y <strong>saldo acreedor</strong>, con totales generales.</p>
+<p><strong>Validación automática:</strong> el módulo confirma dos igualdades:</p>
+<ul>
+<li><strong>Total Débitos = Total Créditos</strong></li>
+<li><strong>Total Saldo Deudor = Total Saldo Acreedor</strong></li>
+</ul>
+<p>Si alguna no se cumple, se muestra como alerta con la diferencia exacta. Puedes filtrar por fecha de
+corte.</p>
+<hr>
+<h3 id="76-ajustes-contables">7.6 Ajustes contables</h3>
+<p><strong>Ruta:</strong> Contabilidad → Ajustes Contables</p>
+<p><strong>Para qué sirve:</strong> registrar al cierre del período las operaciones que no provienen de una
+transacción comercial: <strong>depreciación</strong>, <strong>amortización</strong>, <strong>provisiones</strong>, <strong>cuentas
+incobrables</strong>, <strong>gastos e ingresos acumulados</strong>, <strong>gastos pagados por anticipado</strong>, <strong>ingresos
+diferidos</strong> y <strong>ajuste de inventario</strong>.</p>
+<p><strong>Cómo se usa</strong></p>
+<ol>
+<li>Pulsa <em>Nuevo ajuste</em> y elige el tipo (por ejemplo <strong>Depreciación</strong> o <strong>Incobrables</strong>).</li>
+<li>Escribe la fecha (por defecto, la fecha de trabajo), la glosa y el monto.</li>
+<li>El sistema construye el asiento con las cuentas correctas (gasto contra depreciación acumulada o
+   provisión), lo contabiliza y genera su <strong>comprobante de ajuste</strong> en Documentos Fuente.</li>
+</ol>
+<p>El listado muestra los ajustes del período. Puedes verificar el efecto en el mayor de las cuentas
+<code>6.1.04</code>, <code>1.2.02</code>, <code>1.2.04</code>, <code>1.2.06</code>, <code>1.1.05</code> y <code>6.2.01</code>.</p>
+<hr>
+<h3 id="77-cierre-contable">7.7 Cierre contable</h3>
+<p><strong>Ruta:</strong> Contabilidad → Cierre de Período <em>(Administrador y Docente)</em></p>
+<p><strong>Proceso guiado</strong></p>
+<pre><code>Revisión de saldos → Ajustes → Balance ajustado → Cierre de ingresos →
+Cierre de gastos → Resultado del período → Transferencia al patrimonio → Cierre del período
+</code></pre>
+<p>La pantalla muestra el estado de resultados y el balance antes de cerrar. Al pulsar <strong>Ejecutar cierre</strong>:</p>
+<ol>
+<li>Se cancelan todas las cuentas de <strong>ingresos</strong> contra la cuenta de resultado <code>3.3.02</code>.</li>
+<li>Se cancelan todas las cuentas de <strong>costos y gastos</strong> contra <code>3.3.02</code>.</li>
+<li>El resultado queda reflejado en el <strong>patrimonio</strong>.</li>
+<li>El <strong>período se marca como CERRADO</strong> y <strong>no admite nuevas operaciones ordinarias</strong>: cualquier
+   intento de registrar una venta, compra, cobro o pago será rechazado con el mensaje
+   <em>“El periodo contable esta CERRADO: no se pueden registrar nuevas operaciones.”</em></li>
+<li>Se genera el <strong>comprobante de cierre</strong> en Documentos Fuente.</li>
+</ol>
+<blockquote>
+<p>Recomendación académica: registra primero todos los ajustes (depreciación, provisión, IVA), revisa
+el balance de comprobación y <strong>recién entonces</strong> ejecuta el cierre.</p>
+</blockquote>
+<hr>
+<h3 id="78-ventas">7.8 Ventas</h3>
+<p><strong>Rutas:</strong> Operaciones → Ventas de Bienes · <strong>Nueva venta:</strong> <code>/ventas/nueva</code></p>
+<p>Funciona como un <strong>punto de venta profesional</strong>.</p>
+<p><strong>Cómo registrar una venta</strong></p>
+<ol>
+<li>Elige el <strong>cliente</strong>.</li>
+<li>Agrega líneas con <strong>producto</strong>, <strong>cantidad</strong>, <strong>precio</strong> y <strong>descuento</strong>. El sistema muestra el
+   stock disponible y el subtotal por línea.</li>
+<li>Elige la <strong>forma de pago</strong>: <strong>Efectivo</strong>, <strong>Transferencia</strong> (seleccionando el banco) o <strong>Crédito</strong>
+   (con días de crédito).</li>
+<li>Selecciona el <strong>método de valoración del inventario</strong> para el costo de ventas:
+   <strong>Promedio ponderado</strong> o <strong>FIFO</strong>.</li>
+<li>Pulsa <em>Registrar venta</em>.</li>
+</ol>
+<p><strong>Cálculo automático:</strong> subtotal, descuento, <strong>IVA</strong> (según la tabla de impuestos), total y <strong>costo
+de ventas</strong> (según el método elegido).</p>
+<p><strong>Al confirmar, el sistema actualiza simultáneamente</strong></p>
+<table>
+<thead>
+<tr>
+<th>Elemento</th>
+<th>Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inventario / Kardex</td>
+<td>Disminuye el stock y registra el lote consumido</td>
+</tr>
+<tr>
+<td>Costo de ventas</td>
+<td><code>5.1.01</code> al Debe contra <code>1.1.06</code> Inventario al Haber</td>
+</tr>
+<tr>
+<td>Ingresos</td>
+<td><code>4.1.01</code> Ingresos por ventas al Haber</td>
+</tr>
+<tr>
+<td>Impuestos</td>
+<td><code>2.1.02</code> IVA Ventas (débito fiscal) al Haber</td>
+</tr>
+<tr>
+<td>Caja / Banco</td>
+<td>Movimiento de ingreso en caja o transferencia recibida en el banco</td>
+</tr>
+<tr>
+<td>Cartera</td>
+<td>Si es a crédito, nace la <strong>cuenta por cobrar</strong> y sube el saldo del cliente</td>
+</tr>
+<tr>
+<td>Libro Diario</td>
+<td>Asiento de la venta + asiento del costo de ventas</td>
+</tr>
+<tr>
+<td>Libro Mayor y Balance</td>
+<td>Mayorización y saldos actualizados</td>
+</tr>
+<tr>
+<td>Estados financieros</td>
+<td>Ventas, costo de ventas y resultado del período</td>
+</tr>
+<tr>
+<td>Documentos</td>
+<td>Se emite la <strong>factura</strong> con su detalle</td>
+</tr>
+<tr>
+<td>Auditoría</td>
+<td>Registro de la operación con usuario, fecha y datos</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Listado de ventas:</strong> muestra factura, fecha, cliente, forma de pago, subtotal, IVA, total, costo de
+ventas y estado.</p>
+<p><strong>Validaciones:</strong> no se permite vender sin stock suficiente ni a un cliente inválido; la cantidad
+debe ser mayor que cero y el precio no negativo.</p>
+<hr>
+<h3 id="79-servicios">7.9 Servicios</h3>
+<p><strong>Ruta:</strong> Operaciones → Servicios Prestados</p>
+<p><strong>Cómo registrar un servicio</strong></p>
+<ol>
+<li>Elige <strong>cliente</strong> y <strong>servicio</strong> (entrega, transporte, asesoría, mantenimiento, instalación…).</li>
+<li>Indica <strong>cantidad</strong>, <strong>tarifa</strong> (viene sugerida), <strong>descripción</strong>, <strong>impuestos</strong>, <strong>descuento</strong>,
+   <strong>fecha</strong> y <strong>forma de pago</strong>.</li>
+</ol>
+<p><strong>Qué genera automáticamente</strong></p>
+<ul>
+<li>Ingreso en la cuenta <strong><code>4.1.02</code> Ingresos por Prestación de Servicios</strong> (separado de la venta de
+  bienes <code>4.1.01</code>).</li>
+<li><strong>Cuenta por cobrar</strong> cuando la forma de pago es <em>Crédito</em>.</li>
+<li><strong>Movimiento de caja o bancos</strong> cuando el cobro es inmediato.</li>
+<li><strong>Asiento contable</strong> con IVA, <strong>factura de servicio</strong> y registro de auditoría.</li>
+</ul>
+<blockquote>
+<p>Los servicios no generan costo de mercaderías vendidas porque no implican salida de inventario:
+su margen es directo.</p>
+</blockquote>
+<hr>
+<h3 id="710-compras">7.10 Compras</h3>
+<p><strong>Ruta:</strong> Operaciones → Compras a Proveedores · <strong>Nueva compra:</strong> <code>/compras/nueva</code></p>
+<p><strong>Cómo registrar una compra</strong></p>
+<ol>
+<li>Elige <strong>proveedor</strong>, escribe el <strong>número de factura</strong> del proveedor y elige la <strong>forma de pago</strong>
+   (Efectivo, Transferencia o Crédito con días).</li>
+<li>Agrega líneas con <strong>producto</strong>, <strong>cantidad</strong>, <strong>costo unitario</strong> y <strong>descuento</strong>.</li>
+<li>Guarda.</li>
+</ol>
+<p><strong>Al confirmar, el sistema</strong></p>
+<ul>
+<li><strong>Incrementa el inventario</strong> y recalcula el <strong>costo promedio ponderado</strong> del producto, creando su
+  lote para FIFO y su movimiento de Kardex (<code>ENTRADA_COMPRA</code>).</li>
+<li>Registra el <strong>IVA Compras (crédito tributario)</strong> en <code>1.1.07</code>.</li>
+<li>Genera la <strong>cuenta por pagar</strong> si la compra es a crédito (o el <strong>egreso de caja/banco</strong> si es de
+  contado).</li>
+<li>Contabiliza el asiento (Inventario + IVA al Debe; Caja/Banco/CxP al Haber), emite el documento
+  fuente de la factura de compra y registra la auditoría.</li>
+</ul>
+<p><strong>Validaciones:</strong> factura no duplicada, proveedor válido, cantidad mayor que cero y costo no
+negativo.</p>
+<hr>
+<h3 id="711-productos">7.11 Productos</h3>
+<p><strong>Ruta:</strong> Inventario &amp; Kardex → Catálogo de Productos</p>
+<p><strong>Qué muestra:</strong> los <strong>20 productos</strong> de primera necesidad con <strong>código</strong>, <strong>categoría</strong>,
+<strong>descripción</strong>, <strong>unidad</strong>, <strong>costo</strong>, <strong>precio de venta</strong>, <strong>existencias</strong>, <strong>stock mínimo</strong>,
+<strong>stock máximo</strong> y <strong>proveedor principal</strong>, además del valor total del inventario y el número de
+alertas de stock.</p>
+<p><strong>Filtros:</strong> por categoría (Alimentos, Bebidas, Limpieza, Higiene).</p>
+<blockquote>
+<p>Los datos maestros de productos se administran desde el panel de Administración.</p>
+</blockquote>
+<hr>
+<h3 id="712-kardex">7.12 Kardex</h3>
+<p><strong>Ruta:</strong> Inventario &amp; Kardex → Kardex</p>
+<p><strong>Qué muestra:</strong> el kardex del producto seleccionado con <strong>fecha</strong>, <strong>documento</strong>,
+<strong>descripción</strong>, <strong>entradas</strong>, <strong>salidas</strong>, <strong>saldo</strong>, <strong>costo unitario</strong> y <strong>costo total</strong> en cada
+movimiento, más los totales de entradas/salidas, el stock final y el <strong>valor total del inventario</strong>.</p>
+<p><strong>Métodos soportados</strong></p>
+<ul>
+<li><strong>Promedio ponderado:</strong> el costo unitario se recalcula con cada entrada.</li>
+<li><strong>FIFO (primero entrado, primero salido):</strong> cada salida consume los lotes más antiguos.</li>
+</ul>
+<p>El método se elige por operación (al registrar la venta) y se puede analizar comparativamente
+cambiando el selector del módulo.</p>
+<p><strong>Regla de integridad verificada:</strong> el saldo del Kardex coincide con las existencias del producto y
+con el saldo de la cuenta contable <code>1.1.06 Inventario de Mercaderías</code>.</p>
+<hr>
+<h3 id="713-existencias-y-alertas">7.13 Existencias y alertas</h3>
+<p><strong>Ruta:</strong> Inventario &amp; Kardex → Existencias &amp; Alertas</p>
+<p><strong>Qué muestra:</strong> el valorizado del inventario (unidades, valor al costo, valor a precio de venta y
+<strong>margen potencial</strong>), un gráfico del valor por producto y la tabla de existencias con <strong>semáforo</strong>:</p>
+<ul>
+<li>🔴 <strong>Reponer:</strong> existencias iguales o por debajo del <strong>stock mínimo</strong>.</li>
+<li>🟡 <strong>Exceso:</strong> existencias por encima del <strong>stock máximo</strong>.</li>
+<li>🟢 <strong>Óptimo:</strong> dentro del rango definido.</li>
+</ul>
+<p>Cada fila enlaza al <strong>Kardex</strong> del producto.</p>
+<hr>
+<h3 id="714-caja-y-arqueos">7.14 Caja y arqueos</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Caja &amp; Arqueos</p>
+<p><strong>Qué muestra:</strong> el estado de la caja (responsable, saldo según sistema vs <strong>saldo real del libro
+mayor</strong> y su diferencia), los movimientos de caja con signo contable y el historial de arqueos.</p>
+<p><strong>Registrar un movimiento de caja</strong></p>
+<ol>
+<li>Pulsa <em>Movimiento de caja</em>.</li>
+<li>Elige el tipo: <strong>Ingreso</strong>, <strong>Egreso</strong>, <strong>Depósito al banco</strong> o <strong>Retiro del banco</strong>.</li>
+<li>Escribe monto, concepto y comprobante (si es depósito o retiro, debes indicar la cuenta bancaria).</li>
+</ol>
+<p>El sistema contabiliza el asiento correspondiente, registra el movimiento y <strong>sincroniza el saldo de
+la caja con el libro mayor</strong>.</p>
+<p><strong>Arqueo de caja</strong></p>
+<ol>
+<li>Pulsa <em>Realizar arqueo</em> (o el botón de la fila de la caja).</li>
+<li>El sistema muestra el <strong>saldo contable</strong> (libro mayor) y te pide el <strong>saldo físico contado</strong>.</li>
+<li>Al guardar, el resultado se clasifica como <strong>CUADRADO</strong>, <strong>SOBRANTE</strong> o <strong>FALTANTE</strong> con la
+   diferencia en valor absoluto.</li>
+</ol>
+<p><strong>Regularizar la diferencia:</strong> si el arqueo no cuadra, el historial ofrece el botón
+<strong>Regularizar</strong>, que genera el asiento de ajuste y lo vincula al arqueo:</p>
+<ul>
+<li><strong>Faltante</strong> → Debe <code>6.2.01</code> Gastos financieros y comisiones / Haber Caja.</li>
+<li><strong>Sobrante</strong> → Debe Caja / Haber <code>4.2.01</code> Otros ingresos.</li>
+</ul>
+<p>El arqueo queda marcado como <em>Regularizado</em> con el número de asiento, y el saldo de la caja vuelve a
+coincidir con la realidad física.</p>
+<hr>
+<h3 id="715-bancos">7.15 Bancos</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Cuentas Bancarias</p>
+<p><strong>Qué muestra:</strong> las <strong>2 cuentas bancarias</strong> (Banco Pichincha, cuenta corriente 2100874521 y Banco
+Guayaquil, ahorros 10458932) con su saldo según el libro mayor, gráfico comparativo y el detalle de
+movimientos con filtros por banco, estado (conciliado/pendiente) y texto.</p>
+<p><strong>Registrar movimientos bancarios</strong></p>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Efecto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Depósito</strong></td>
+<td>Aumenta el banco</td>
+</tr>
+<tr>
+<td><strong>Transferencia recibida</strong></td>
+<td>Aumenta el banco</td>
+</tr>
+<tr>
+<td><strong>Nota de crédito</strong></td>
+<td>Aumenta el banco (otros ingresos)</td>
+</tr>
+<tr>
+<td><strong>Interés</strong></td>
+<td>Aumenta el banco (otros ingresos)</td>
+</tr>
+<tr>
+<td><strong>Transferencia emitida</strong></td>
+<td>Disminuye el banco (pago)</td>
+</tr>
+<tr>
+<td><strong>Cheque</strong></td>
+<td>Disminuye el banco (pago)</td>
+</tr>
+<tr>
+<td><strong>Nota de débito</strong></td>
+<td>Disminuye el banco (gasto financiero)</td>
+</tr>
+<tr>
+<td><strong>Comisión</strong></td>
+<td>Disminuye el banco (gasto financiero)</td>
+</tr>
+</tbody>
+</table>
+<p>Cada movimiento genera su asiento, su referencia y queda disponible para la conciliación.</p>
+<hr>
+<h3 id="716-conciliación-bancaria">7.16 Conciliación bancaria</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Conciliación Bancaria</p>
+<p><strong>Cómo se usa</strong></p>
+<ol>
+<li>Selecciona la <strong>cuenta bancaria</strong> (el sistema conoce su saldo según libros).</li>
+<li>Escribe el <strong>saldo según el extracto bancario</strong> y, si existen, los conceptos pendientes:
+   <strong>depósitos en tránsito</strong>, <strong>cheques en tránsito</strong>, <strong>notas de débito</strong> y <strong>notas de crédito</strong> no
+   registradas, la <strong>fecha de corte</strong> y observaciones.</li>
+<li>El panel de cálculo <strong>en vivo</strong> muestra:</li>
+</ol>
+<pre><code>Saldo extracto + Depósitos en tránsito − Cheques en tránsito = Saldo extracto ajustado
+Saldo libros  + Notas de crédito − Notas de débito            = Saldo libros ajustado
+Diferencia = |Saldo extracto ajustado − Saldo libros ajustado|
+</code></pre>
+<ol start="4">
+<li>Si la diferencia es menor a 0,05 el resultado se marca <strong>CONCILIADO</strong> (verde); en caso contrario
+   queda en <strong>BORRADOR</strong> (rojo) con la diferencia pendiente.</li>
+<li>El historial conserva cada conciliación con su detalle aritmético y permite desplegarlo.</li>
+</ol>
+<blockquote>
+<p>Buena práctica: registra primero las notas bancarias reales en el módulo <strong>Bancos</strong>; recién después
+concilia, para que la diferencia llegue a cero.</p>
+</blockquote>
+<hr>
+<h3 id="717-clientes">7.17 Clientes</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Clientes</p>
+<p><strong>Qué muestra:</strong> las <strong>10 fichas</strong> de clientes con identificación (RUC/cédula), nombre o razón
+social, correo, teléfono, dirección, <strong>límite de crédito</strong>, días de crédito y <strong>saldo pendiente</strong>,
+más indicadores de cartera total, cupo otorgado y cupos excedidos.</p>
+<p><strong>Cómo se usa</strong></p>
+<ul>
+<li><strong>Nuevo cliente:</strong> botón <em>Nuevo cliente</em> → identificación, nombre/razón social, correo, teléfono,
+  dirección, límite y días de crédito.</li>
+<li><strong>Ficha / historial:</strong> botón por fila que abre el historial del cliente con sus <strong>compras</strong>,
+  <strong>servicios</strong>, <strong>pagos (cobros)</strong> y <strong>cuentas por cobrar</strong>, cada uno en su pestaña y con totales.</li>
+<li><strong>Filtros y orden:</strong> búsqueda por RUC/nombre/correo/teléfono/dirección, filtro por estado, interruptor
+  <em>solo con saldo</em> y orden por nombre, saldo o días de crédito.</li>
+</ul>
+<hr>
+<h3 id="718-cuentas-por-cobrar">7.18 Cuentas por cobrar</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Cuentas por Cobrar</p>
+<p><strong>Qué muestra:</strong> cliente, documento, fecha de emisión, <strong>vencimiento</strong>, valor inicial, pagos, saldo y
+<strong>estado</strong>: <strong>PENDIENTE</strong>, <strong>PARCIAL</strong>, <strong>PAGADA</strong> o <strong>VENCIDA</strong>, con semáforo de vencimientos,
+banner que concilia el total del módulo y gráficos por estado y por cliente.</p>
+<p><strong>Registrar un cobro</strong></p>
+<ol>
+<li>Pulsa <em>Registrar cobro</em> en la fila del documento (o el botón general).</li>
+<li>El importe aparece precargado con el saldo; puedes modificarlo para registrar un <strong>abono parcial</strong>.</li>
+<li>Elige <strong>medio de pago</strong> (Efectivo, Transferencia, Cheque) y, si corresponde, el <strong>banco</strong> y el
+   número de comprobante.</li>
+</ol>
+<p>El sistema descuenta el saldo, actualiza el estado (PARCIAL o PAGADA), <strong>reduce el saldo pendiente del
+cliente</strong>, genera el <strong>comprobante de ingreso</strong>, contabiliza el asiento (Debe Caja/Banco — Haber
+<code>1.1.04</code> Cuentas por Cobrar) y registra el movimiento de tesorería.</p>
+<p><strong>Validación:</strong> no se puede cobrar un importe mayor al saldo pendiente.</p>
+<hr>
+<h3 id="719-proveedores">7.19 Proveedores</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Proveedores</p>
+<p><strong>Qué muestra:</strong> los <strong>8 proveedores</strong> con datos generales, plaza de pago y saldo pendiente, más el
+historial por proveedor: <strong>compras</strong>, <strong>facturas</strong>, <strong>pagos</strong> y <strong>saldo pendiente</strong>.</p>
+<p><strong>Cómo se usa:</strong> <em>Nuevo proveedor</em> (identificación, razón social, contacto, dirección, días de
+crédito) y <strong>Ficha / historial</strong> por fila con las pestañas de compras, pagos y obligaciones.</p>
+<hr>
+<h3 id="720-cuentas-por-pagar">7.20 Cuentas por pagar</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Cuentas por Pagar</p>
+<p><strong>Qué muestra:</strong> proveedor, factura, fecha de emisión, <strong>vencimiento</strong>, valor, saldo y <strong>estado</strong>,
+con filtro de <em>solo vencidas</em>, banner de control y gráficos.</p>
+<p><strong>Registrar un pago:</strong> botón por fila (<em>Registrar pago</em>) → importe (total o <strong>parcial</strong>), medio de
+pago, banco y número de comprobante. El sistema reduce la obligación, actualiza el estado, genera el
+<strong>comprobante de egreso</strong>, contabiliza (Debe <code>2.1.01</code> Cuentas por Pagar — Haber Caja/Banco) y
+registra el egreso en tesorería.</p>
+<p><strong>Validación:</strong> el pago no puede superar la deuda pendiente.</p>
+<hr>
+<h3 id="721-documentos-fuente">7.21 Documentos fuente</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Documentos Fuente</p>
+<p><strong>Qué muestra:</strong> los documentos simulados que <strong>respaldan cada operación</strong>, filtrables por tipo y por
+rango de fechas, con el asiento contable vinculado y su detalle estructurado.</p>
+<p><strong>Tipos soportados:</strong> factura de venta, factura de compra, factura de servicio, comprobante de
+ingreso, comprobante de egreso, comprobante de caja, comprobante de cierre, nota de crédito, nota de
+débito, papeleta de depósito, nota bancaria, arqueo de caja, rol de pagos, orden de compra,
+comprobante de ajuste y documento interno.</p>
+<p>El botón <strong>Ver</strong> abre el detalle del documento con sus datos estructurados y el asiento que generó:
+es la evidencia que cierra la cadena <em>documento → transacción → asiento → diario → mayor → estados
+financieros</em>.</p>
+<hr>
+<h3 id="722-tributación">7.22 Tributación</h3>
+<p><strong>Ruta:</strong> Tesorería &amp; Cartera → Tributación</p>
+<p><strong>Qué muestra</strong></p>
+<ul>
+<li>La <strong>configuración tributaria vigente</strong>: código, nombre, porcentaje, tipo, cuenta contable y
+  vigencia, con su estado activo/inactivo.</li>
+<li>La <strong>determinación de IVA del período</strong> calculada con el libro mayor: <strong>IVA en ventas (débito
+  fiscal)</strong>, <strong>IVA en compras (crédito tributario)</strong>, <strong>IVA por pagar</strong> o <strong>crédito a favor</strong>, y las
+  <strong>retenciones</strong> acumuladas.</li>
+<li>Las <strong>cuentas contables</strong> asociadas a cada impuesto.</li>
+<li>Una <strong>calculadora tributaria</strong> que ejecuta el cálculo real del sistema: base imponible + impuesto +
+  total.</li>
+</ul>
+<p><strong>Regla de oro:</strong> el sistema <strong>nunca inventa tasas</strong>. Los porcentajes provienen exclusivamente de la
+tabla de impuestos configurada por el Administrador. Si falta configuración para un tipo de
+impuesto, la operación se rechaza con un mensaje explícito.</p>
+<p><strong>Edición de tasas:</strong> solo el rol <strong>Administrador</strong>, desde <em>Administración → Parámetros Tributarios</em>.</p>
+<hr>
+<h3 id="723-estado-de-resultados">7.23 Estado de Resultados</h3>
+<p><strong>Ruta:</strong> Informes Financieros NIIF → Estado de Resultados</p>
+<p><strong>Estructura escalonada</strong></p>
+<pre><code>Ingresos por ventas de bienes (4.1.01)
++ Ingresos por prestación de servicios (4.1.02)
+= Total ingresos operacionales
+− Costo de mercaderías vendidas (5.1.01)
+= Utilidad bruta en ventas
+− Gastos administrativos (sueldos, arriendo, servicios básicos, depreciación, mantenimiento)
+− Gastos de ventas (publicidad y marketing)
+= Utilidad operacional
++ Otros ingresos (4.2.01: intereses ganados…)
+− Gastos financieros y comisiones (6.2.01)
+= Utilidad / (Pérdida) neta del período
+</code></pre>
+<p>Incluye análisis vertical (porcentaje sobre ventas), gráfico comparativo y filtro por rango de
+fechas. <strong>Todos los valores provienen de los movimientos contables</strong>, no de estimaciones.</p>
+<hr>
+<h3 id="724-estado-de-situación-financiera">7.24 Estado de Situación Financiera</h3>
+<p><strong>Ruta:</strong> Informes Financieros NIIF → Situación Financiera</p>
+<p><strong>Qué muestra:</strong> <strong>Activos corrientes y no corrientes</strong>, <strong>Pasivos corrientes y no corrientes</strong> y
+<strong>Patrimonio</strong>, en dos columnas que se apilan en móvil, con las cuentas de valuación
+(depreciación acumulada y provisión de incobrables) presentadas restando.</p>
+<p><strong>Validación:</strong> en la parte superior aparece un banner que confirma la ecuación fundamental:</p>
+<ul>
+<li><strong>Verde:</strong> <code>Activo = Pasivo + Patrimonio ✓</code></li>
+<li><strong>Rojo:</strong> alerta con la <strong>diferencia</strong> detectada y accesos directos a Ajustes y al Balance de
+  Comprobación para localizar el problema.</li>
+</ul>
+<p>Añade indicadores de apoyo: razón corriente, capital de trabajo, endeudamiento y autonomía.</p>
+<blockquote>
+<p>Mientras el período no se cierre, el resultado del ejercicio se incorpora automáticamente al
+patrimonio.</p>
+</blockquote>
+<hr>
+<h3 id="725-estado-de-flujo-de-efectivo">7.25 Estado de Flujo de Efectivo</h3>
+<p><strong>Ruta:</strong> Informes Financieros NIIF → Flujo de Efectivo</p>
+<p><strong>Qué muestra:</strong> los movimientos de efectivo (caja y bancos) clasificados en <strong>actividades de
+operación</strong>, <strong>inversión</strong> y <strong>financiamiento</strong>, con el total de cada actividad, el gráfico de
+barras comparativo y la <strong>variación neta del efectivo</strong> del período.</p>
+<hr>
+<h3 id="726-simulador-de-casos">7.26 Simulador de Casos</h3>
+<p><strong>Ruta:</strong> Entorno Universitario &amp; IA → Simulador de Casos</p>
+<p><strong>Los cuatro niveles</strong></p>
+<table>
+<thead>
+<tr>
+<th>Nivel</th>
+<th>Nombre</th>
+<th>Contenidos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1</strong></td>
+<td>Básico</td>
+<td>Compras y ventas de contado, servicios, cobros y pagos</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>Intermedio</td>
+<td>Crédito, inventarios, IVA, descuentos, devoluciones, bancos</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>Avanzado</td>
+<td>Ajustes, conciliación, depreciación, provisiones, cierre, estados financieros</td>
+</tr>
+<tr>
+<td><strong>4</strong></td>
+<td>Caso Empresarial Integral</td>
+<td>Gestión completa del período y asiento de cierre</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cómo resolver un caso</strong></p>
+<ol>
+<li>Pulsa <em>Iniciar</em> en la simulación elegida (se crea tu <strong>intento</strong>).</li>
+<li>Lee el <strong>enunciado</strong>: fecha, descripción, documento fuente, cantidades, precios, condiciones y
+   forma de pago. <strong>La solución no se muestra.</strong></li>
+<li>Decide <strong>qué ocurrió</strong>, <strong>qué cuentas intervienen</strong>, <strong>cuál va al Debe</strong>, <strong>cuál al Haber</strong> y
+   <strong>qué monto</strong> se registra.</li>
+<li>Arma las líneas en la tabla (cuenta, Debe, Haber). Puedes agregar o quitar líneas.</li>
+<li>Si necesitas ayuda, pulsa <strong>Pedir pista al Tutor IA</strong>: recibirás ayuda progresiva
+   (orientación → pista → explicación conceptual) con <strong>penalización de 5 puntos por pista</strong>.</li>
+<li>Pulsa <strong>Enviar Asiento y Evaluar</strong>.</li>
+</ol>
+<p><strong>Puntuación (rúbrica)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>Puntos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cuentas seleccionadas correctamente</td>
+<td>40</td>
+</tr>
+<tr>
+<td>Posición correcta en Debe/Haber</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Importes correctos</td>
+<td>20</td>
+</tr>
+<tr>
+<td>Partida doble cuadrada</td>
+<td>10</td>
+</tr>
+<tr>
+<td><strong>Penalización</strong></td>
+<td><strong>−5 por cada pista utilizada</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Resultado</strong></p>
+<ul>
+<li><strong>≥ 85 puntos:</strong> CORRECTO</li>
+<li><strong>50 – 84,99:</strong> PARCIALMENTE CORRECTO</li>
+<li><strong>&lt; 50:</strong> INCORRECTO</li>
+</ul>
+<p>La retroalimentación es <strong>específica</strong>, por ejemplo:
+<em>“La cuenta ‘Caja General’ está correctamente seleccionada, pero su movimiento debe registrarse en el
+Debe porque aumenta un activo.”</em> Al final se muestra también el <strong>fundamento teórico</strong> del caso.
+Quedan registrados el intento, las respuestas, los errores, las pistas, el tiempo y la puntuación.</p>
+<p><strong>Casos disponibles:</strong> los cuatro niveles suman <strong>19 casos</strong>. Los de Nivel 4 incluyen el asiento de
+<strong>cierre contable</strong> del período. Cada caso se generó a partir de los <strong>asientos reales</strong> del sistema,
+por lo que su solución esperada coincide exactamente con la contabilidad del período.</p>
+<hr>
+<h3 id="727-evaluaciones">7.27 Evaluaciones</h3>
+<p><strong>Ruta:</strong> Entorno Universitario &amp; IA → Mis Evaluaciones</p>
+<p><strong>Qué muestra:</strong> todos tus intentos con simulación, fecha de inicio y fin, <strong>puntuación</strong>,
+<strong>tiempo utilizado</strong> y estado; el <strong>promedio</strong> de los intentos completados, gráfico de evolución y el
+botón para <strong>reintentar</strong> cada simulación. El semáforo de puntuación te indica de un vistazo tu nivel
+de dominio.</p>
+<p>El docente ve en esta misma pantalla los intentos de todos los estudiantes.</p>
+<hr>
+<h3 id="728-panel-de-analítica-docente">7.28 Panel de Analítica Docente</h3>
+<p><strong>Ruta:</strong> Entorno Universitario &amp; IA → Panel Analítica Docente <em>(Docente y Administrador)</em></p>
+<p><strong>Qué muestra</strong></p>
+<ul>
+<li>Estudiantes registrados, intentos totales y completados, <strong>nota promedio</strong> general.</li>
+<li><strong>Errores frecuentes</strong> y su distribución (correcto / parcial / incorrecto).</li>
+<li><strong>Promedio por nivel</strong> (gráfico de barras) para detectar en qué nivel se concentra la dificultad.</li>
+<li><strong>Progreso individual</strong> por estudiante (intentos y promedio).</li>
+<li>Listado de <strong>simulaciones del curso</strong> con su nivel, duración y puntuación mínima.</li>
+</ul>
+<p>Es la herramienta para decidir qué tema reforzar antes de avanzar al siguiente nivel.</p>
+<hr>
+<h3 id="729-tutor-contable-ia">7.29 Tutor Contable IA</h3>
+<p><strong>Ruta:</strong> Entorno Universitario &amp; IA → Tutor Contable IA</p>
+<p><strong>Para qué sirve:</strong> acompañar el razonamiento contable sin dar la respuesta de inmediato.</p>
+<p><strong>Cómo se usa:</strong> escribe tu pregunta (o usa las preguntas de ejemplo) y elige el <strong>nivel de ayuda</strong>:</p>
+<ol>
+<li><strong>Orientación</strong> — por dónde empezar a razonar.</li>
+<li><strong>Pista</strong> — un paso concreto hacia la solución.</li>
+<li><strong>Explicación conceptual</strong> — el fundamento contable (partida doble, costo de ventas, IVA,
+   arqueo, depreciación…).</li>
+<li><strong>Solución guiada</strong> — disponible siempre que no estés en Modo Examen.</li>
+</ol>
+<p><strong>Consultas que responde</strong></p>
+<ul>
+<li>“¿Por qué esta cuenta se debita?”</li>
+<li>“¿Qué tipo de cuenta debería revisar?”</li>
+<li>“¿Cómo afecta esta transacción al inventario?”</li>
+<li>“¿Por qué se genera costo de ventas?”</li>
+<li>“¿Qué significa este saldo?”</li>
+<li>Auditoría: <em>“auditar descuadres e inconsistencias”</em>.</li>
+<li>Tributaria: <em>“¿cuál es la tasa de IVA vigente?”</em> (responde con la configuración real).</li>
+<li>Inventarios: <em>“revisa el Kardex y el stock”</em>.</li>
+<li>Contable: <em>“dame el balance y el resultado del período”</em>.</li>
+</ul>
+<p><strong>En Modo Examen</strong> el Tutor <strong>restringe pistas y soluciones</strong> para preservar la validez de la
+evaluación: la restricción se activa automáticamente cuando el caso pertenece a una simulación
+marcada como examen.</p>
+<p>El Tutor entiende las preguntas con o sin tildes y responde en español, citando los datos reales del
+sistema.</p>
+<hr>
+<h3 id="730-centro-de-reportes">7.30 Centro de Reportes</h3>
+<p><strong>Ruta:</strong> Entorno Universitario &amp; IA → Centro de Reportes</p>
+<p><strong>16 informes</strong>, cada uno en tres formatos (<strong>CSV</strong>, <strong>Excel</strong> y <strong>versión imprimible para PDF</strong>):</p>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Informes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Contabilidad</strong></td>
+<td>Libro Diario · Libro Mayor · Balance de Comprobación</td>
+</tr>
+<tr>
+<td><strong>Operaciones</strong></td>
+<td>Ventas · Compras · Servicios</td>
+</tr>
+<tr>
+<td><strong>Inventarios</strong></td>
+<td>Inventario y existencias · Kardex consolidado</td>
+</tr>
+<tr>
+<td><strong>Tesorería y Cartera</strong></td>
+<td>Movimientos de caja · Movimientos bancarios · Cartera por cobrar · Cuentas por pagar</td>
+</tr>
+<tr>
+<td><strong>Estados Financieros</strong></td>
+<td>Estado de Resultados · Situación Financiera · Flujo de Efectivo</td>
+</tr>
+<tr>
+<td><strong>Académico</strong></td>
+<td>Resultados académicos de las simulaciones</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>CSV:</strong> se abre en Excel directamente (incluye BOM para acentos).</li>
+<li><strong>Excel (XLSX):</strong> hoja con encabezado de empresa, período y fecha de trabajo, columnas ajustadas.</li>
+<li><strong>Versión imprimible:</strong> página limpia lista para <em>Imprimir → Guardar como PDF</em>, con el balance de
+  comprobación incluyendo el control de integridad (sumas y saldos).</li>
+</ul>
+<hr>
+<h3 id="731-administración">7.31 Administración</h3>
+<p><strong>Ruta:</strong> Administración del Sistema <em>(solo Administrador)</em></p>
+<p><strong>a) Parámetros &amp; Configuración</strong></p>
+<ul>
+<li>Actualiza la <strong>fecha de trabajo</strong> de la simulación (debe estar dentro del período abierto) y los
+  <strong>datos de la empresa</strong>: razón social, nombre comercial, RUC, dirección, teléfono, correo,
+  actividades (comercial y de servicios) y <strong>método de valoración por defecto</strong> (Promedio o FIFO).</li>
+<li>Muestra los <strong>períodos contables</strong> con su estado (ABIERTO / CERRADO).</li>
+<li>Lista los <strong>parámetros del sistema</strong> vigentes.</li>
+<li>Expone los <strong>últimos registros de auditoría</strong>.</li>
+</ul>
+<p><strong>b) Gestión de Usuarios:</strong> crear usuarios indicando nombre de usuario, contraseña (se almacena con
+hash), nombre completo, correo y <strong>rol</strong>; lista de usuarios con su rol y estado.</p>
+<p><strong>c) Parámetros Tributarios:</strong> edición de cada impuesto (nombre, porcentaje, tipo, cuenta contable y
+estado). Aquí se ajustan las tasas cuando la cátedra lo requiera; el resto del sistema las toma
+automáticamente.</p>
+<p><strong>d) Auditoría &amp; Trazabilidad:</strong> registro <strong>inmutable</strong> de cada acción con usuario, módulo, acción,
+registro afectado, <strong>valor anterior</strong> y <strong>valor nuevo</strong>, <strong>dirección IP</strong>, <strong>agente</strong> y <strong>herramienta
+ejecutada</strong> (por ejemplo <code>AgenteContable</code> / <code>create_sale</code>). Filtrable por módulo. Es la evidencia de
+control interno y de auditoría para el curso.</p>
+<hr>
+<h2 id="8-reglas-contables-y-validaciones">8. Reglas contables y validaciones</h2>
+<p>El sistema aplica y comunica estas reglas; ninguna operación que las viole se contabiliza.</p>
+<table>
+<thead>
+<tr>
+<th>Regla</th>
+<th>Comportamiento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Partida doble obligatoria</strong></td>
+<td>Si Total Debe ≠ Total Haber se rechaza: <em>“El asiento no cuadra: Total Debe ($100.00) != Total Haber ($90.00). Diferencia: $10.00.”</em></td>
+</tr>
+<tr>
+<td><strong>Al menos dos cuentas por asiento</strong></td>
+<td>Se exige un mínimo de dos líneas</td>
+</tr>
+<tr>
+<td><strong>Importe mayor que cero</strong></td>
+<td>No se admiten asientos por valor nulo</td>
+</tr>
+<tr>
+<td><strong>Cantidad &gt; 0 y precio/costo ≥ 0</strong></td>
+<td>Validación en ventas y compras</td>
+</tr>
+<tr>
+<td><strong>Stock suficiente</strong></td>
+<td><em>“Stock insuficiente para ‘Arroz Flor…’. Existencias: 40, solicitadas: 60.”</em></td>
+</tr>
+<tr>
+<td><strong>Período abierto</strong></td>
+<td><em>“El periodo contable esta CERRADO: no se pueden registrar nuevas operaciones.”</em></td>
+</tr>
+<tr>
+<td><strong>Fecha dentro del período</strong></td>
+<td><em>“La fecha 2026-08-01 esta fuera del periodo abierto ‘Período Académico Abril 2026’ (2026-04-01 a 2026-04-30).”</em></td>
+</tr>
+<tr>
+<td><strong>Factura no duplicada</strong></td>
+<td>Control de documentos repetidos de proveedor</td>
+</tr>
+<tr>
+<td><strong>Cuenta activa</strong></td>
+<td>Las cuentas inactivas no se ofrecen en los formularios</td>
+</tr>
+<tr>
+<td><strong>Cliente / proveedor válido</strong></td>
+<td><em>“Cliente no encontrado.”</em> / <em>“Proveedor no encontrado.”</em></td>
+</tr>
+<tr>
+<td><strong>Cobro/pago no mayor al saldo</strong></td>
+<td><em>“El monto a cobrar ($800.00) no puede ser mayor al saldo pendiente ($420.00).”</em></td>
+</tr>
+<tr>
+<td><strong>No se borran asientos contabilizados</strong></td>
+<td>Solo <strong>reversión</strong> con contra-asiento</td>
+</tr>
+<tr>
+<td><strong>Tasas tributarias configurables</strong></td>
+<td>Si no hay configuración, el cálculo se rechaza (nunca se inventa un porcentaje)</td>
+</tr>
+<tr>
+<td><strong>Operaciones atómicas</strong></td>
+<td>Si algo falla, no queda ningún registro a medias</td>
+</tr>
+<tr>
+<td><strong>Agentes sin acceso directo a la base</strong></td>
+<td>Los agentes solo operan a través de herramientas estructuradas</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Regla de oro de la partida doble (para consultar al Tutor IA):</strong></p>
+<ul>
+<li>Se <strong>DEBITAN</strong>: aumentos de Activo, aumentos de Gastos y Costos, disminuciones de Pasivo y
+  Patrimonio.</li>
+<li>Se <strong>ACREDITAN</strong>: aumentos de Pasivo, aumentos de Patrimonio, aumentos de Ingresos, disminuciones
+  de Activo.</li>
+</ul>
+<hr>
+<h2 id="9-fecha-de-trabajo-y-períodos">9. Fecha de trabajo y períodos</h2>
+<p>El simulador <strong>no usa el reloj de tu computador</strong> para fechar las operaciones: usa la <strong>fecha de
+trabajo</strong> de la simulación (por defecto <strong>2026-04-30</strong>), lo que permite reproducir un período
+académico completo aunque estés practicando en otra fecha real.</p>
+<ul>
+<li>El <strong>período activo</strong> es <em>Período Académico Abril 2026</em> (2026-04-01 a 2026-04-30), en estado
+  <strong>ABIERTO</strong>.</li>
+<li>La fecha de trabajo se cambia en <em>Administración → Parámetros &amp; Config</em>, siempre <strong>dentro del
+  período abierto</strong>; si escribes una fecha fuera de rango, el sistema lo informa y no la aplica.</li>
+<li>Si el período se <strong>cierra</strong> (módulo Cierre contable), el sistema deja de aceptar operaciones
+  ordinarias y muestra el período como CERRADO.</li>
+<li>Para volver al estado inicial en cualquier momento: <code>python database/seed_data.py</code>.</li>
+</ul>
+<hr>
+<h2 id="10-modo-examen-y-evaluación">10. Modo Examen y evaluación</h2>
+<p><strong>Modo Práctica (por defecto).</strong> El estudiante recibe pistas progresivas, explicaciones y la solución
+guiada del Tutor IA; la retroalimentación es inmediata y detallada.</p>
+<p><strong>Modo Examen</strong> (la simulación de Nivel 4 está configurada como examen). Durante un examen:</p>
+<ul>
+<li>La <strong>solución inmediata queda desactivada</strong>.</li>
+<li>Las <strong>pistas quedan restringidas</strong>: el Tutor responde con orientación general y no entrega la
+  solución ni el paso clave.</li>
+<li>Se <strong>registran los intentos</strong>, el tiempo y los resultados para el docente.</li>
+<li>La puntuación se calcula con la misma rúbrica (40/30/20/10 − 5 por pista) y se exige la
+  <strong>puntuación mínima</strong> definida en la simulación (70 puntos en Nivel 1, 75 en Nivel 2, 80 en Niveles
+  3 y 4).</li>
+</ul>
+<p>El docente configura duración, número de ejercicios, dificultad, intentos y puntuación mínima al
+crear la simulación, y puede generar nuevos escenarios coherentes para su curso con el <strong>Agente
+Generador de Casos</strong>.</p>
+<hr>
+<h2 id="11-agentes-de-ia-y-api-interna">11. Agentes de IA y API interna</h2>
+<p>El sistema está preparado para trabajar con <strong>agentes especializados</strong> que operan exclusivamente a
+través de herramientas estructuradas (nunca escriben en la base con texto libre).</p>
+<table>
+<thead>
+<tr>
+<th>Agente</th>
+<th>Responsabilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orquestador</strong></td>
+<td>Analiza la solicitud e identifica la intención para enrutarla al agente correcto</td>
+</tr>
+<tr>
+<td><strong>Contable</strong></td>
+<td>Cuentas, débitos, créditos, partida doble, diario, mayor, estados financieros</td>
+</tr>
+<tr>
+<td><strong>Inventarios</strong></td>
+<td>Entradas, salidas, stock, Kardex, costo de ventas, FIFO y promedio</td>
+</tr>
+<tr>
+<td><strong>Tributario</strong></td>
+<td>Consulta la configuración tributaria real (nunca inventa porcentajes)</td>
+</tr>
+<tr>
+<td><strong>Auditor</strong></td>
+<td>Detecta descuadres, duplicidades, inconsistencias, fechas incorrectas y anomalías</td>
+</tr>
+<tr>
+<td><strong>Tutor</strong></td>
+<td>Explicaciones, pistas, preguntas y retroalimentación con andamiaje progresivo</td>
+</tr>
+<tr>
+<td><strong>Evaluador</strong></td>
+<td>Analiza intentos, errores, puntuaciones y nivel de dominio</td>
+</tr>
+<tr>
+<td><strong>Generador de Casos</strong></td>
+<td>Crea escenarios coherentes según los parámetros del docente</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cómo usarlos desde el sistema:</strong> escribe tu consulta en el <strong>Tutor Contable IA</strong>; el Orquestador
+decide qué agente responde.</p>
+<p><strong>API interna (JSON)</strong> — para integración con modelos de IA, scripts o frontends:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Método</th>
+<th>Para qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/health</code></td>
+<td>GET</td>
+<td>Estado del sistema, período y fecha de trabajo</td>
+</tr>
+<tr>
+<td><code>/api/dashboard</code></td>
+<td>GET</td>
+<td>Indicadores y estado de resultados</td>
+</tr>
+<tr>
+<td><code>/api/accounts</code> · <code>/api/accounts/&lt;id&gt;/balance</code></td>
+<td>GET</td>
+<td>Plan de cuentas y saldo de una cuenta</td>
+</tr>
+<tr>
+<td><code>/api/journal/validate</code> · <code>/api/journal/create</code></td>
+<td>POST</td>
+<td>Validar y crear asientos</td>
+</tr>
+<tr>
+<td><code>/api/products</code> · <code>/api/inventory</code> · <code>/api/inventory/&lt;id&gt;</code> · <code>/api/inventory/alerts</code></td>
+<td>GET</td>
+<td>Inventario y alertas</td>
+</tr>
+<tr>
+<td><code>/api/sales</code> · <code>/api/purchases</code> · <code>/api/services</code></td>
+<td>POST/GET</td>
+<td>Registrar ventas, compras y servicios</td>
+</tr>
+<tr>
+<td><code>/api/customers</code> · <code>/api/customers/&lt;id&gt;/history</code></td>
+<td>GET</td>
+<td>Clientes y su historial</td>
+</tr>
+<tr>
+<td><code>/api/suppliers</code> · <code>/api/suppliers/&lt;id&gt;/history</code></td>
+<td>GET</td>
+<td>Proveedores y su historial</td>
+</tr>
+<tr>
+<td><code>/api/receivables</code> · <code>/api/payables</code></td>
+<td>GET</td>
+<td>Cartera y obligaciones</td>
+</tr>
+<tr>
+<td><code>/api/collections</code> · <code>/api/payments</code></td>
+<td>POST</td>
+<td>Cobros y pagos</td>
+</tr>
+<tr>
+<td><code>/api/treasury</code></td>
+<td>GET</td>
+<td>Cajas y bancos con saldos reales</td>
+</tr>
+<tr>
+<td><code>/api/taxes</code> · <code>/api/taxes/calculate</code></td>
+<td>GET/POST</td>
+<td>Configuración y cálculo tributario</td>
+</tr>
+<tr>
+<td><code>/api/statements?tipo=…</code></td>
+<td>GET</td>
+<td>Estados financieros</td>
+</tr>
+<tr>
+<td><code>/api/documents</code> · <code>/api/documents/&lt;id&gt;</code></td>
+<td>GET</td>
+<td>Documentos fuente</td>
+</tr>
+<tr>
+<td><code>/api/simulations</code> · <code>/api/simulations/&lt;id&gt;</code> · <code>/api/evaluate</code></td>
+<td>GET/POST</td>
+<td>Casos y evaluación</td>
+</tr>
+<tr>
+<td><code>/api/progress/&lt;estudiante_id&gt;</code></td>
+<td>GET</td>
+<td>Progreso del estudiante</td>
+</tr>
+<tr>
+<td><code>/api/periods</code></td>
+<td>GET</td>
+<td>Períodos y fecha de trabajo</td>
+</tr>
+<tr>
+<td><code>/api/audit</code></td>
+<td>GET</td>
+<td>Trazabilidad</td>
+</tr>
+<tr>
+<td><code>/api/search?q=…</code></td>
+<td>GET</td>
+<td>Buscador global agrupado</td>
+</tr>
+<tr>
+<td><code>/api/tools</code></td>
+<td>GET</td>
+<td><strong>37 herramientas</strong> disponibles para los agentes</td>
+</tr>
+</tbody>
+</table>
+<p>Ejemplo: <code>GET /api/tools</code> devuelve <code>faltantes: []</code>, lo que confirma que las 37 herramientas
+existen y son invocables.</p>
+<hr>
+<h2 id="12-datos-de-demostración">12. Datos de demostración</h2>
+<p>La base se genera con <code>python database/seed_data.py</code> e incluye:</p>
+<ul>
+<li>Empresa <strong>Comercial y Servicios Nueva Esperanza S.A.</strong> (RUC 1792345678001) con sus dos actividades.</li>
+<li><strong>43 cuentas</strong> contables jerárquicas, <strong>6 impuestos</strong> configurables, <strong>1 caja</strong> y <strong>2 bancos</strong>.</li>
+<li><strong>20 productos</strong> de primera necesidad con stock, mínimos, máximos y proveedor principal.</li>
+<li><strong>10 clientes</strong>, <strong>8 proveedores</strong> y <strong>5 servicios</strong>.</li>
+<li>Asiento de <strong>apertura de saldos iniciales</strong> + <strong>cartera inicial</strong> por cliente y proveedor.</li>
+<li><strong>30 operaciones del período Abril 2026</strong> ejecutadas por los servicios reales del sistema: compras
+  de contado y a crédito, ventas de contado, por transferencia y a crédito, servicios facturados,
+  cobros de cartera, pagos a proveedores, gastos operacionales, depósito bancario, arqueo de caja con
+  faltante, notas bancarias de débito y crédito, depreciación, provisión de incobrables y
+  compensación del IVA.</li>
+<li><strong>37 asientos contabilizados</strong>, <strong>31 documentos fuente</strong> y <strong>~50 movimientos</strong> de inventario.</li>
+<li><strong>4 simulaciones</strong> y <strong>19 casos</strong> con solución verificada.</li>
+</ul>
+<p><strong>Estado de integridad del período entregado:</strong> total débitos = total créditos = <strong>$92.778,50</strong>;
+total saldo deudor = total saldo acreedor = <strong>$74.724,21</strong>; <strong>Activo $63.541,05 = Pasivo +
+Patrimonio $63.541,05 (diferencia $0,00)</strong>; utilidad del período <strong>$750,67</strong>; <strong>0 asientos
+descuadrados</strong>.</p>
+<blockquote>
+<p>Recuerda: son datos <strong>de demostración</strong> con fines académicos; las tasas tributarias son
+configurables y no constituyen una afirmación sobre la normativa vigente.</p>
+</blockquote>
+<hr>
+<h2 id="13-solución-de-problemas">13. Solución de problemas</h2>
+<table>
+<thead>
+<tr>
+<th>Síntoma</th>
+<th>Causa probable</th>
+<th>Solución</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No abre <code>http://127.0.0.1:5000</code></td>
+<td>El servidor no está corriendo</td>
+<td>Ejecuta <code>python app.py</code> y espera el mensaje <em>“Servidor Flask disponible…”</em></td>
+</tr>
+<tr>
+<td><em>“Address already in use”</em></td>
+<td>Ya hay otro servidor en el puerto 5000</td>
+<td>Cierra el proceso anterior (<code>taskkill /PID &lt;pid&gt; /F</code>) o cambia el puerto en <code>app.py</code></td>
+</tr>
+<tr>
+<td><em>“ModuleNotFoundError: flask”</em></td>
+<td>Dependencias no instaladas</td>
+<td><code>pip install -r requirements.txt</code> (o activa el entorno virtual <code>.venv</code>)</td>
+</tr>
+<tr>
+<td><em>“no such table: …”</em></td>
+<td>Base de datos sin inicializar</td>
+<td><code>python database/seed_data.py</code></td>
+</tr>
+<tr>
+<td><em>“El periodo contable esta CERRADO…”</em></td>
+<td>Se ejecutó el cierre del período</td>
+<td>Regenera los datos en una base de práctica: <code>python database/seed_data.py</code></td>
+</tr>
+<tr>
+<td><em>“La fecha … esta fuera del periodo abierto”</em></td>
+<td>La fecha usada no pertenece al período</td>
+<td>Cambia la <strong>fecha de trabajo</strong> en Administración o usa una fecha dentro del período</td>
+</tr>
+<tr>
+<td><em>“El asiento no cuadra…”</em></td>
+<td>Debe ≠ Haber</td>
+<td>Revisa la diferencia que indica el mensaje y corrige la línea con el error</td>
+</tr>
+<tr>
+<td><em>“Stock insuficiente…”</em></td>
+<td>No hay existencias suficientes</td>
+<td>Registra primero una <strong>compra</strong> del producto</td>
+</tr>
+<tr>
+<td><em>“No existe configuración tributaria activa…”</em></td>
+<td>Falta el impuesto en la configuración</td>
+<td>El Administrador debe crearlo/activarlo en <em>Parámetros Tributarios</em></td>
+</tr>
+<tr>
+<td>Página en blanco o sin estilos</td>
+<td>El navegador bloqueó el CDN</td>
+<td>Recarga con <code>Ctrl + F5</code>; el sistema funciona igual, con estilo base</td>
+</tr>
+<tr>
+<td>El 403 aparece al entrar a Administración</td>
+<td>Rol sin permisos</td>
+<td>Ingresa con <code>admin</code> o usa un módulo permitido a tu rol</td>
+</tr>
+<tr>
+<td>Quiero volver todo al estado inicial</td>
+<td>Datos modificados por las prácticas</td>
+<td><code>python database/seed_data.py</code> (borra y regenera)</td>
+</tr>
+<tr>
+<td>Quiero verificar que todo está bien</td>
+<td>Control de integridad</td>
+<td><code>python -m pytest tests -q</code> (113 pruebas) y revisar el <strong>Balance de Comprobación</strong></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="14-preguntas-frecuentes">14. Preguntas frecuentes</h2>
+<p><strong>¿Puedo usar mis propios productos, clientes y servicios?</strong>
+Sí: agrégalos desde Clientes, Proveedores y el panel de Administración; los productos se administran
+en el catálogo (módulo Productos) y el catálogo de servicios desde la base de datos
+(<code>catalogo_servicios</code>).</p>
+<p><strong>¿Qué pasa si me equivoco en un asiento ya contabilizado?</strong>
+Registra una <strong>reversión</strong> desde el Libro Diario. El sistema crea el contra-asiento y conserva ambos
+para la trazabilidad; nunca se borra información.</p>
+<p><strong>¿Por qué mi venta no generó costo de ventas?</strong>
+Porque revise el método elegido: con <strong>FIFO</strong> el costo se toma de los lotes más antiguos y con
+<strong>Promedio</strong> del costo promedio ponderado. Ambos generan el asiento <code>5.1.01</code> contra <code>1.1.06</code>.</p>
+<p><strong>¿Por qué el estado de situación financiera muestra una diferencia?</strong>
+Solo puede ocurrir si existe un asiento descuadrado o una cuenta mal clasificada. Revisa el módulo
+<strong>Ajustes</strong>, el <strong>Balance de Comprobación</strong> y el aviso de <em>asientos descuadrados</em> del Dashboard.</p>
+<p><strong>¿El sistema guarda quién hizo cada cosa?</strong>
+Sí. El <strong>Registro de Auditoría</strong> guarda usuario, acción, módulo, registro, valor anterior, valor
+nuevo, IP, agente y herramienta, además de fecha y hora.</p>
+<p><strong>¿Cómo sé qué nivel de simulador me corresponde?</strong>
+Empieza por el Nivel 1 y avanza cuando obtengas 85 puntos o más. El <strong>Panel de Analítica Docente</strong>
+del profesor muestra los promedios por nivel del curso.</p>
+<p><strong>¿Puedo exportar los libros?</strong>
+Sí, desde el <strong>Centro de Reportes</strong> en CSV, Excel o versión imprimible/PDF.</p>
+<p><strong>¿El Tutor IA me da la respuesta?</strong>
+Depende del nivel de ayuda que elijas y del modo: en <strong>práctica</strong> entrega explicación y solución
+guiada; en <strong>examen</strong> solo orientación.</p>
+<p><strong>¿Se pierde algo si cierro el navegador?</strong>
+No: todo se guarda en SQLite. Al volver a entrar, tus registros y resultados siguen ahí.</p>
+<hr>
+<h2 id="15-buenas-prácticas">15. Buenas prácticas</h2>
+<p><strong>Para el docente</strong></p>
+<ol>
+<li>Regenera la base antes de cada grupo para que todos trabajen sobre los mismos saldos iniciales.</li>
+<li>Asigna el Nivel 1 y 2 como práctica guiada y el Nivel 4 como examen con puntuación mínima.</li>
+<li>Revisa la <strong>analítica docente</strong> antes de avanzar de nivel: los errores frecuentes indican qué
+   cuentas conviene reforzar.</li>
+<li>Pide a los estudiantes que <strong>justifiquen</strong> cada débito y crédito usando el Tutor IA y que
+   verifiquen siempre el <strong>Balance de Comprobación</strong>.</li>
+<li>Usa el <strong>registro de auditoría</strong> para evidenciar el proceso de cada estudiante.</li>
+</ol>
+<p><strong>Para el estudiante</strong></p>
+<ol>
+<li>Antes de registrar cualquier operación, pregunta: <strong>¿qué cuentas intervienen, de qué naturaleza
+   son, aumentan o disminuyen, y cuál va al Debe y cuál al Haber?</strong></li>
+<li>No olvides el efecto del <strong>inventario perpetuo</strong>: en cada venta hay dos asientos (ingreso/cobro y
+   costo de ventas).</li>
+<li>Verifica cada tanto: <strong>Balance de Comprobación</strong> (sumas y saldos) y <strong>Situación Financiera</strong>
+   (<code>Activo = Pasivo + Patrimonio</code>).</li>
+<li>Registra la <strong>cartera</strong> y la <strong>tesorería</strong> en el mismo período: los cobros y pagos también deben
+   quedar contabilizados.</li>
+<li>Antes del cierre, completa los <strong>ajustes</strong> (depreciación, provisión, IVA) y recién entonces cierra
+   el período.</li>
+</ol>
+<hr>
+<h2 id="16-glosario">16. Glosario</h2>
+<table>
+<thead>
+<tr>
+<th>Término</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Asiento contable</strong></td>
+<td>Registro de una operación con líneas en Debe y Haber</td>
+</tr>
+<tr>
+<td><strong>Debe / Haber</strong></td>
+<td>Columnas de la partida doble; deben sumar siempre lo mismo</td>
+</tr>
+<tr>
+<td><strong>Partida doble</strong></td>
+<td>Principio por el cual todo cargo tiene un abono de igual valor</td>
+</tr>
+<tr>
+<td><strong>Mayorización</strong></td>
+<td>Traslado de los movimientos del diario a cada cuenta del mayor</td>
+</tr>
+<tr>
+<td><strong>Balance de comprobación</strong></td>
+<td>Prueba de que las sumas y saldos del mayor cuadran</td>
+</tr>
+<tr>
+<td><strong>Kardex</strong></td>
+<td>Registro detallado de entradas, salidas y saldos de un producto</td>
+</tr>
+<tr>
+<td><strong>Costo de ventas</strong></td>
+<td>Costo de las mercaderías entregadas, reconocido en la venta</td>
+</tr>
+<tr>
+<td><strong>Promedio ponderado</strong></td>
+<td>Método de valoración con costo promedio recalculado por entrada</td>
+</tr>
+<tr>
+<td><strong>FIFO</strong></td>
+<td>Método de valoración: primero entrado, primero salido</td>
+</tr>
+<tr>
+<td><strong>Cartera</strong></td>
+<td>Cuentas por cobrar a clientes</td>
+</tr>
+<tr>
+<td><strong>CxP</strong></td>
+<td>Cuentas por pagar a proveedores</td>
+</tr>
+<tr>
+<td><strong>Arqueo de caja</strong></td>
+<td>Conteo físico del efectivo contra el saldo contable</td>
+</tr>
+<tr>
+<td><strong>Conciliación bancaria</strong></td>
+<td>Comparación del saldo bancario y el saldo contable</td>
+</tr>
+<tr>
+<td><strong>Ajuste</strong></td>
+<td>Asiento de fin de período (depreciación, provisión, acumulaciones)</td>
+</tr>
+<tr>
+<td><strong>Cierre contable</strong></td>
+<td>Cancelación de ingresos/gastos y determinación del resultado</td>
+</tr>
+<tr>
+<td><strong>Débito fiscal / Crédito tributario</strong></td>
+<td>IVA cobrado en ventas / IVA pagado en compras</td>
+</tr>
+<tr>
+<td><strong>Retención</strong></td>
+<td>Porcentaje retenido de un tributo y declarado al fisco</td>
+</tr>
+<tr>
+<td><strong>NIIF</strong></td>
+<td>Normas Internacionales de Información Financiera</td>
+</tr>
+<tr>
+<td><strong>Fecha de trabajo</strong></td>
+<td>Fecha simulada con la que se registran las operaciones</td>
+</tr>
+<tr>
+<td><strong>Rúbrica</strong></td>
+<td>Criterios y puntajes con que se evalúa un asiento</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="17-anexos">17. Anexos</h2>
+<h3 id="a-rutas-de-la-aplicación-93">A. Rutas de la aplicación (93)</h3>
+<p><strong>Interfaz</strong></p>
+<pre><code>/                            GET            Página de inicio pública
+/login  /logout              GET/POST       Acceso y cierre de sesión
+/dashboard                   GET            Dashboard general
+/contabilidad/cuentas        GET/POST       Plan de cuentas (+ /cuentas/&lt;id&gt;/editar)
+/contabilidad/diario         GET/POST       Libro diario (+ /diario/&lt;id&gt;/revertir)
+/contabilidad/mayor          GET            Libro mayor
+/contabilidad/balance        GET            Balance de comprobación
+/contabilidad/ajustes        GET/POST       Ajustes contables
+/contabilidad/cierre         GET/POST       Cierre de período (Admin/Docente)
+/ventas  /ventas/nueva       GET/POST       Ventas y punto de venta
+/servicios                   GET/POST       Prestación de servicios
+/compras/  /compras/nueva    GET/POST       Compras y registro de facturas
+/inventarios/  /productos    GET            Catálogo de productos
+/inventarios/kardex[/&lt;id&gt;]   GET            Kardex (Promedio / FIFO)
+/inventarios/stock           GET            Existencias y alertas
+/caja  /caja/movimiento      GET/POST       Caja, arqueos y movimientos
+/caja/regularizar/&lt;id&gt;       POST           Regularizar diferencia de arqueo
+/bancos  /bancos/movimiento  GET/POST       Bancos y movimientos
+/conciliacion                GET/POST       Conciliación bancaria
+/clientes  /proveedores      GET/POST       Terceros
+/cuentas-cobrar              GET/POST       Cartera y cobros
+/cuentas-pagar               GET/POST       Obligaciones y pagos
+/documentos/[/&lt;id&gt;]          GET            Documentos fuente
+/impuestos/                  GET            Tributación (configuración + determinación)
+/estados-financieros/resultados              GET   Estado de resultados
+/estados-financieros/situacion-financiera    GET   Estado de situación financiera
+/estados-financieros/flujo-efectivo          GET   Flujo de efectivo
+/simulador [/&lt;id&gt;/iniciar|/jugar]  GET/POST  Simulador y evaluación
+/evaluaciones  /docente/panel      GET       Resultados y analítica docente
+/tutor/  /tutor/preguntar          GET/POST  Tutor Contable IA
+/reportes/  /reportes/exportar/{csv,excel}/&lt;tipo&gt;  GET  Informes y exportaciones
+/reportes/imprimible/&lt;tipo&gt;        GET       Versión imprimible / PDF
+/admin/  /admin/usuarios  /admin/impuestos  /admin/auditoria   GET/POST
+/manual                      GET            Este manual dentro del sistema
+</code></pre>
+<p><strong>API JSON:</strong> 35 endpoints de <code>/api/*</code> (ver <a href="#11-agentes-de-ia-y-api-interna">sección 11</a>).</p>
+<h3 id="b-herramientas-de-los-agentes-37">B. Herramientas de los agentes (37)</h3>
+<pre><code>get_chart_of_accounts        get_account                  get_account_balance
+validate_journal_entry       create_journal_entry         reverse_journal_entry
+close_accounting_period      get_product                  get_inventory
+register_inventory_entry     register_inventory_exit      calculate_weighted_average
+calculate_fifo               calculate_cost_of_goods_sold create_sale
+create_purchase              create_service_transaction   create_receivable
+create_payable               register_collection          register_payment
+get_customer_balance         get_supplier_balance         get_cash_balance
+get_bank_balance             reconcile_bank               get_tax_configuration
+calculate_tax                generate_trial_balance       generate_income_statement
+generate_balance_sheet       generate_cash_flow           create_simulation_case
+evaluate_student_attempt     generate_feedback            get_student_progress
+audit_transaction
+</code></pre>
+<h3 id="c-modelo-de-datos-38-tablas">C. Modelo de datos (38 tablas)</h3>
+<p><strong>Seguridad y organización:</strong> <code>roles</code>, <code>usuarios</code>, <code>empresas</code>, <code>periodos</code>, <code>parametros</code>,
+<code>cursos</code>, <code>matriculas</code>.</p>
+<p><strong>Contabilidad:</strong> <code>cuentas</code>, <code>asientos</code>, <code>detalle_asientos</code>.</p>
+<p><strong>Impuestos:</strong> <code>impuestos</code>.</p>
+<p><strong>Inventarios:</strong> <code>productos</code>, <code>movimientos_inventario</code>, <code>kardex_lotes</code>.</p>
+<p><strong>Terceros:</strong> <code>clientes</code>, <code>proveedores</code>.</p>
+<p><strong>Operaciones:</strong> <code>ventas</code>, <code>detalle_ventas</code>, <code>compras</code>, <code>detalle_compras</code>,
+<code>catalogo_servicios</code>, <code>transacciones_servicios</code>.</p>
+<p><strong>Cartera y tesorería:</strong> <code>cuentas_cobrar</code>, <code>cobros</code>, <code>cuentas_pagar</code>, <code>pagos</code>, <code>cajas</code>,
+<code>movimientos_caja</code>, <code>arqueos_caja</code>, <code>bancos</code>, <code>movimientos_bancarios</code>, <code>conciliaciones_bancarias</code>.</p>
+<p><strong>Documentos y trazabilidad:</strong> <code>documentos_fuente</code>, <code>auditoria</code>.</p>
+<p><strong>Simulación académica:</strong> <code>simulaciones</code>, <code>casos_simulacion</code>, <code>intentos_estudiante</code>,
+<code>detalle_intentos</code>.</p>
+<h3 id="d-verificación-rápida-del-sistema">D. Verificación rápida del sistema</h3>
+<pre><code class="language-bash">python -m pytest tests -q          # 113 pruebas automáticas
+python database/seed_data.py       # regenerar datos de demostración
+python deploy/verificar_despliegue.py --url http://127.0.0.1:8080   # verificar el despliegue
+curl http://127.0.0.1:5000/api/health   # estado del sistema
+</code></pre>
+<hr>
+<p><em>Manual de usuario del Simulador Integral de Sistema Contable · Servicios y Comercialización de
+Productos · Comercial y Servicios Nueva Esperanza S.A. · Documento académico con datos de
+demostración.</em></p>
+</main>
+</body>
+</html>

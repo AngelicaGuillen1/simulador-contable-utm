@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+{% block title %}Panel de Analítica Docente - Simulador Contable{% endblock %}
+
+{# ---------- Macros de apoyo ---------- #}
+{% macro nivel_nombre(nivel) %}
+  {%- if nivel == 1 -%}Básico
+  {%- elif nivel == 2 -%}Intermedio
+  {%- elif nivel == 3 -%}Avanzado
+  {%- elif nivel == 4 -%}Caso Empresarial Integral
+  {%- else -%}Nivel {{ nivel }}{%- endif -%}
+{% endmacro %}
+
+{% macro nivel_badge(nivel) %}
+  {% if nivel == 1 %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle">Básico</span>
+  {% elif nivel == 2 %}
+    <span class="badge bg-info-subtle text-info border border-info-subtle">Intermedio</span>
+  {% elif nivel == 3 %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Avanzado</span>
+  {% elif nivel == 4 %}
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Integral</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border">Nivel {{ nivel }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro nota_badge(nota) %}
+  {% if nota is none or nota is undefined %}
+    <span class="badge bg-secondary-subtle text-secondary border">Sin calificar</span>
+  {% elif nota >= 85 %}
+    <span class="badge bg-success">{{ "%.2f"|format(nota) }} · Correcto</span>
+  {% elif nota >= 50 %}
+    <span class="badge bg-warning text-dark">{{ "%.2f"|format(nota) }} · Parcial</span>
+  {% else %}
+    <span class="badge bg-danger">{{ "%.2f"|format(nota) }} · Incorrecto</span>
+  {% endif %}
+{% endmacro %}
+
+{# ---------- Datos derivados ---------- #}
+{% set niveles_stats = (analytics.niveles_stats if analytics else []) or [] %}
+{% set errores_distribucion = (analytics.errores_distribucion if analytics else []) or [] %}
+{% set total_estudiantes = analytics.total_estudiantes if analytics else 0 %}
+{% set total_intentos = analytics.total_intentos if analytics else 0 %}
+{% set intentos_completados = analytics.intentos_completados if analytics else 0 %}
+{% set promedio_general = analytics.promedio_general if analytics else 0 %}
+{% set tasa_finalizacion = ((intentos_completados / total_intentos) * 100) if total_intentos > 0 else 0 %}
+{% set estudiantes_con_intentos = estudiantes|selectattr('total_intentos', 'greaterthan', 0)|list %}
+{% set simulaciones_activas = simulaciones|selectattr('activo', 'equalto', 1)|list %}
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+  <div class="card-body p-4 p-md-5">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-info text-dark px-3 py-2 rounded-pill mb-2 fw-bold">
+          <i class="bi bi-mortarboard-fill me-1"></i> Analítica Académica
+        </span>
+        <h2 class="fw-bold mb-2">Panel de Analítica Docente</h2>
+        <p class="lead fs-6 text-white-50 mb-4">
+          Seguimiento del desempeño por nivel pedagógico, distribución de resultados de la rúbrica IA
+          y consolidado de calificaciones de la empresa <em>Comercial y Servicios Nueva Esperanza S.A.</em>
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-3">
+            <i class="bi bi-joystick me-1"></i> Ver Simulador
+          </a>
+          <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-award me-1"></i> Historial de Evaluaciones
+          </a>
+          <a href="{{ url_for('reports.index') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+            <i class="bi bi-printer me-1"></i> Centro de Reportes
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+        <div class="d-inline-block bg-white bg-opacity-10 p-4 rounded-4 border border-white border-opacity-10">
+          <div class="small text-uppercase text-white-50 fw-bold">Promedio General del Curso</div>
+          <div class="display-6 fw-bold {% if promedio_general >= 85 %}text-success{% elif promedio_general >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ "%.2f"|format(promedio_general) }}
+          </div>
+          <span class="badge bg-primary bg-opacity-75 mt-1">
+            <i class="bi bi-people-fill me-1"></i> {{ total_estudiantes }} estudiantes activos
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indicadores globales -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Estudiantes Activos</div>
+          <div class="kpi-value">{{ total_estudiantes }}</div>
+          <div class="small text-muted mt-1">{{ estudiantes_con_intentos|length }} con intentos registrados</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-people-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Intentos Totales</div>
+          <div class="kpi-value">{{ total_intentos }}</div>
+          <div class="small text-muted mt-1">Incluye intentos en progreso</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-list-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Intentos Completados</div>
+          <div class="kpi-value text-success">{{ intentos_completados }}</div>
+          <div class="small text-muted mt-1">Tasa de finalización: {{ "%.1f"|format(tasa_finalizacion) }}%</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-patch-check-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Promedio General</div>
+          <div class="kpi-value {% if promedio_general >= 85 %}text-success{% elif promedio_general >= 50 %}text-warning{% else %}text-danger{% endif %}">
+            {{ "%.2f"|format(promedio_general) }}
+          </div>
+          <div class="small text-muted mt-1">Sobre intentos COMPLETADO</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-graph-up-arrow"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos analíticos -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-1"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Promedio por Nivel Pedagógico</h6>
+          <small class="text-muted">Calificación media (sobre 100 pts) de cada nivel del simulador</small>
+        </div>
+        <span class="badge bg-light text-dark border">Barras</span>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <canvas id="nivelesPromedioChart" style="max-height: 280px;"></canvas>
+        <div class="text-center text-muted py-5 d-none" id="nivelesChartEmpty">
+          <i class="bi bi-bar-chart fs-1 d-block mb-2 text-secondary"></i>
+          Sin registros para mostrar. Aún no existen intentos evaluados.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-1"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Distribución de Resultados</h6>
+          <small class="text-muted">Resultados registrados por el Agente Evaluador IA</small>
+        </div>
+        <span class="badge bg-light text-dark border">Doughnut</span>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <canvas id="erroresDistribucionChart" style="max-height: 280px;"></canvas>
+        <div class="text-center text-muted py-5 d-none" id="erroresChartEmpty">
+          <i class="bi bi-pie-chart fs-1 d-block mb-2 text-secondary"></i>
+          Sin registros para mostrar. Aún no hay casos evaluados con rúbrica.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detalle por nivel -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-layers-fill text-primary me-2"></i>Rendimiento por Nivel</h6>
+        <small class="text-muted">Intentos y promedio agrupados por complejidad del caso</small>
+      </div>
+      <div class="card-body p-0">
+        {% if niveles_stats %}
+        <div class="table-responsive">
+          <table class="table table-custom table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Nivel</th>
+                <th class="text-center">Intentos</th>
+                <th class="text-end">Promedio</th>
+                <th class="text-center pe-4" style="width: 140px;">Desempeño</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for n in niveles_stats %}
+              {% set prom = n.promedio_nivel or 0 %}
+              <tr>
+                <td class="ps-4">
+                  {{ nivel_badge(n.nivel) }}
+                  <div class="small text-muted mt-1">{{ nivel_nombre(n.nivel) }}</div>
+                </td>
+                <td class="text-center fw-bold">{{ n.total_intentos }}</td>
+                <td class="text-end">
+                  <span class="fw-bold {% if prom >= 85 %}text-success{% elif prom >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                    {{ "%.2f"|format(prom) }}
+                  </span>
+                </td>
+                <td class="pe-4">
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar {% if prom >= 85 %}bg-success{% elif prom >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                         role="progressbar" style="width: {{ prom|round(1) if prom <= 100 else 100 }}%;"></div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-bar-chart-steps fs-1 d-block mb-3 text-secondary"></i>
+          Sin registros para mostrar.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-clipboard-data-fill text-primary me-2"></i>Distribución de Resultados IA</h6>
+        <small class="text-muted">Conteo consolidado de la rúbrica aplicada a cada caso</small>
+      </div>
+      <div class="card-body p-0">
+        {% if errores_distribucion %}
+        <div class="table-responsive">
+          <table class="table table-custom table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4">Resultado de la Rúbrica</th>
+                <th class="text-center">Casos Evaluados</th>
+                <th class="text-end pe-4">Participación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set total_errores = errores_distribucion|map(attribute='cnt')|select('number')|sum %}
+              {% for e in errores_distribucion %}
+              <tr>
+                <td class="ps-4">
+                  {% if e.resultado == 'CORRECTO' %}
+                    <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Correcto</span>
+                  {% elif e.resultado == 'PARCIALMENTE_CORRECTO' %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Parcialmente Correcto</span>
+                  {% elif e.resultado == 'INCORRECTO' %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Incorrecto</span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border">{{ e.resultado }}</span>
+                  {% endif %}
+                </td>
+                <td class="text-center fw-bold">{{ e.cnt }}</td>
+                <td class="text-end pe-4 text-muted small">
+                  {% if total_errores > 0 %}{{ "%.1f"|format((e.cnt / total_errores) * 100) }}%{% else %}0.0%{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-clipboard-x fs-1 d-block mb-3 text-secondary"></i>
+          Sin registros para mostrar.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estudiantes -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold mb-1"><i class="bi bi-person-lines-fill text-primary me-2"></i>Rendimiento por Estudiante</h6>
+      <small class="text-muted">Promedio calculado únicamente sobre intentos con estado COMPLETADO</small>
+    </div>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+      {{ estudiantes|length }} estudiante(s) en el curso
+    </span>
+  </div>
+  <div class="card-body p-0">
+    {% if estudiantes %}
+    <div class="table-responsive">
+      <table class="table table-custom table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Estudiante</th>
+            <th>Correo Institucional</th>
+            <th class="text-center">Intentos</th>
+            <th class="text-center">Promedio</th>
+            <th class="text-center pe-4" style="width: 180px;">Nivel de Logro</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in estudiantes %}
+          {% set prom = e.promedio_nota or 0 %}
+          <tr>
+            <td class="ps-4">
+              <div class="d-flex align-items-center">
+                <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                     style="width: 32px; height: 32px; font-size: 0.75rem;">
+                  {{ (e.nombre_completo or 'NA')[:2]|upper }}
+                </div>
+                <span class="fw-semibold text-dark">{{ e.nombre_completo }}</span>
+              </div>
+            </td>
+            <td class="text-muted small">{{ e.email }}</td>
+            <td class="text-center">
+              {% if e.total_intentos and e.total_intentos > 0 %}
+                <span class="badge bg-light text-dark border">{{ e.total_intentos }}</span>
+              {% else %}
+                <span class="text-muted small">0</span>
+              {% endif %}
+            </td>
+            <td class="text-center">{{ nota_badge(e.promedio_nota) }}</td>
+            <td class="text-center pe-4">
+              {% if not e.promedio_nota %}
+                <span class="text-muted small">Sin evaluaciones</span>
+              {% else %}
+                <div class="progress" style="height: 8px;">
+                  <div class="progress-bar {% if prom >= 85 %}bg-success{% elif prom >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                       role="progressbar" style="width: {{ prom|round(1) if prom <= 100 else 100 }}%;"></div>
+                </div>
+                <div class="small text-muted mt-1">{{ "%.1f"|format(prom) }} pts</div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-5 text-center text-muted">
+      <i class="bi bi-people fs-1 d-block mb-3 text-secondary"></i>
+      Sin registros para mostrar.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Simulaciones publicadas -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold mb-1"><i class="bi bi-journal-code text-primary me-2"></i>Simulaciones del Docente</h6>
+      <small class="text-muted">Escenarios publicados con su configuración pedagógica y de examen</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-success-subtle text-success border border-success-subtle">{{ simulaciones_activas|length }} activa(s)</span>
+      <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i> Gestionar en el simulador
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    {% if simulaciones %}
+    <div class="table-responsive">
+      <table class="table table-custom table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Simulación</th>
+            <th class="text-center">Nivel</th>
+            <th class="text-center">Casos</th>
+            <th class="text-center">Duración</th>
+            <th class="text-center">Nota Mínima</th>
+            <th class="text-center">Tipo</th>
+            <th class="text-center pe-4">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in simulaciones %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-semibold text-dark">{{ s.titulo }}</div>
+              <div class="small text-muted">{{ s.descripcion or 'Caso práctico de contabilidad aplicada.' }}</div>
+            </td>
+            <td class="text-center">{{ nivel_badge(s.nivel) }}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">{{ s.total_casos }}</span></td>
+            <td class="text-center small text-muted">{{ s.duracion_minutos }} min</td>
+            <td class="text-center fw-semibold">{{ "%.2f"|format(s.puntuacion_minima or 0) }}</td>
+            <td class="text-center">
+              {% if s.modo_examen == 1 %}
+                <span class="badge bg-dark"><i class="bi bi-shield-lock-fill me-1"></i>Modo Examen</span>
+              {% else %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-pencil me-1"></i>Práctica</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              {% if s.activo == 1 %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Activa</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-slash-circle me-1"></i>Inactiva</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-5 text-center text-muted">
+      <i class="bi bi-journal-x fs-1 d-block mb-3 text-secondary"></i>
+      Sin registros para mostrar. Aún no has publicado simulaciones.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  if (typeof Chart === "undefined") return;
+
+  const nivelNombres = {1: "Básico", 2: "Intermedio", 3: "Avanzado", 4: "Caso Empresarial Integral"};
+  const filasNivel = {{ niveles_stats|tojson }};
+  const filasErrores = {{ errores_distribucion|tojson }};
+
+  // Promedio por nivel (barras)
+  const canvasNiveles = document.getElementById("nivelesPromedioChart");
+  if (canvasNiveles) {
+    if (!filasNivel.length) {
+      canvasNiveles.classList.add("d-none");
+      const vacio = document.getElementById("nivelesChartEmpty");
+      if (vacio) vacio.classList.remove("d-none");
+    } else {
+      const etiquetas = filasNivel.map(function (f) {
+        return "Nivel " + f.nivel + " · " + (nivelNombres[f.nivel] || "Nivel");
+      });
+      const valores = filasNivel.map(function (f) {
+        const v = (f.promedio_nivel === null || f.promedio_nivel === undefined) ? 0 : f.promedio_nivel;
+        return Math.round(v * 100) / 100;
+      });
+      const colores = valores.map(function (v) {
+        return v >= 85 ? "rgba(5, 150, 105, 0.8)" : (v >= 50 ? "rgba(217, 119, 6, 0.8)" : "rgba(225, 29, 72, 0.8)");
+      });
+
+      new Chart(canvasNiveles, {
+        type: "bar",
+        data: {
+          labels: etiquetas,
+          datasets: [{
+            label: "Promedio por nivel (sobre 100 pts)",
+            data: valores,
+            backgroundColor: colores,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) { return ctx.parsed.y + " / 100 pts"; }
+              }
+            }
+          },
+          scales: { y: { beginAtZero: true, max: 100, ticks: { stepSize: 25 } } }
+        }
+      });
+    }
+  }
+
+  // Distribución de resultados (doughnut)
+  const canvasErrores = document.getElementById("erroresDistribucionChart");
+  if (canvasErrores) {
+    if (!filasErrores.length) {
+      canvasErrores.classList.add("d-none");
+      const vacio = document.getElementById("erroresChartEmpty");
+      if (vacio) vacio.classList.remove("d-none");
+    } else {
+      const paleta = {
+        CORRECTO: "#059669",
+        PARCIALMENTE_CORRECTO: "#d97706",
+        INCORRECTO: "#e11d48"
+      };
+      const etiquetas = filasErrores.map(function (f) {
+        return (f.resultado || "SIN RESULTADO").replace(/_/g, " ");
+      });
+      const datos = filasErrores.map(function (f) { return f.cnt || 0; });
+      const colores = filasErrores.map(function (f) { return paleta[f.resultado] || "#2563eb"; });
+
+      new Chart(canvasErrores, {
+        type: "doughnut",
+        data: {
+          labels: etiquetas,
+          datasets: [{ data: datos, backgroundColor: colores, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) {
+                  const total = datos.reduce(function (a, b) { return a + b; }, 0);
+                  const pct = total > 0 ? Math.round((ctx.parsed / total) * 1000) / 10 : 0;
+                  return ctx.label + ": " + ctx.parsed + " caso(s) (" + pct + "%)";
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+});
+</script>
+{% endblock %}

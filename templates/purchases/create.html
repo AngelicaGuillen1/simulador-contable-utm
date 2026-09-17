@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Nueva Compra - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-cart-plus-fill text-primary me-2"></i>Registrar Factura de Compra</h3>
+    <p class="text-muted small mb-0">Recepción de mercaderías con cálculo de costo promedio ponderado / FIFO e imputación contable</p>
+  </div>
+  <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Volver a Compras
+  </a>
+</div>
+
+<form method="POST" action="{{ url_for('purchases.create_purchase') }}" class="card border-0 shadow-sm rounded-4 p-4">
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <label class="form-label small fw-semibold">Proveedor</label>
+      <select name="proveedor_id" class="form-select" required>
+        <option value="">-- Seleccionar Proveedor --</option>
+        {% for pr in proveedores %}
+          <option value="{{ pr.id }}">{{ pr.razon_social }} (RUC: {{ pr.identificacion }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Número de Factura Proveedor</label>
+      <input type="text" name="numero_factura" class="form-control" placeholder="Ej: 001-002-000456" required>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">Forma de Pago</label>
+      <select name="forma_pago" class="form-select">
+        <option value="EFECTIVO">Efectivo (Caja 1.1.01)</option>
+        <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+        <option value="CREDITO">Crédito Comercial (CxP Proveedores 2.1.01)</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Plazo Crédito (Días)</label>
+      <input type="number" name="dias_credito" class="form-control" value="30" min="0">
+    </div>
+  </div>
+
+  <h5 class="fw-bold mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Ítems de la Compra</h5>
+
+  <div class="table-responsive mb-3">
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 40%;">Producto</th>
+          <th style="width: 15%;">Cantidad</th>
+          <th style="width: 20%;">Costo Unitario Facturado ($)</th>
+          <th style="width: 20%;">Subtotal ($)</th>
+          <th style="width: 5%;"></th>
+        </tr>
+      </thead>
+      <tbody id="purchaseItemsBody">
+        <tr class="purch-item-row">
+          <td>
+            <select name="producto_id[]" class="form-select form-select-sm prod-select" onchange="updatePurchCost(this)" required>
+              <option value="">-- Seleccione Producto --</option>
+              {% for p in productos %}
+                <option value="{{ p.id }}" data-cost="{{ p.costo_unitario }}">
+                  {{ p.codigo }} - {{ p.descripcion }} (Costo Actual: ${{ "{:,.2f}".format(p.costo_unitario) }})
+                </option>
+              {% endfor %}
+            </select>
+          </td>
+          <td>
+            <input type="number" step="1" min="1" name="cantidad[]" class="form-control form-control-sm cant-input text-end" value="10" oninput="calculatePurchTotals()" required>
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="costo[]" class="form-control form-control-sm cost-input text-end" value="0.00" oninput="calculatePurchTotals()" required>
+          </td>
+          <td>
+            <input type="text" class="form-control form-control-sm subtotal-display text-end fw-semibold" value="$0.00" readonly>
+          </td>
+          <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="this.closest('tr').remove(); calculatePurchTotals();"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addPurchRow()">
+      <i class="bi bi-plus-lg me-1"></i> Agregar Producto
+    </button>
+
+    <div class="card bg-light border p-3 rounded-3" style="width: 320px;">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Subtotal Mercaderías:</span>
+        <strong id="purchSubtotalDisplay">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">IVA Compras (15% Crédito Tributario):</span>
+        <strong id="purchIvaDisplay" class="text-primary">$0.00</strong>
+      </div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Total a Pagar/Acreditar:</span>
+        <span id="purchTotalDisplay" class="fs-4 fw-bold text-dark">$0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-end">
+    <button type="submit" class="btn btn-primary px-5 py-2 fw-bold rounded-3 shadow">
+      <i class="bi bi-check-circle-fill me-1"></i> Registrar Compra e Ingresar Stock
+    </button>
+  </div>
+</form>
+
+<div id="purchSelectTemplate" class="d-none">
+  {% for p in productos %}
+    <option value="{{ p.id }}" data-cost="{{ p.costo_unitario }}">
+      {{ p.codigo }} - {{ p.descripcion }} (Costo Actual: ${{ "{:,.2f}".format(p.costo_unitario) }})
+    </option>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addPurchRow() {
+  const tableBody = document.getElementById("purchaseItemsBody");
+  const optionsHtml = document.getElementById("purchSelectTemplate").innerHTML;
+
+  const row = document.createElement("tr");
+  row.className = "purch-item-row";
+  row.innerHTML = `
+    <td>
+      <select name="producto_id[]" class="form-select form-select-sm prod-select" onchange="updatePurchCost(this)" required>
+        <option value="">-- Seleccione Producto --</option>
+        ${optionsHtml}
+      </select>
+    </td>
+    <td>
+      <input type="number" step="1" min="1" name="cantidad[]" class="form-control form-control-sm cant-input text-end" value="10" oninput="calculatePurchTotals()" required>
+    </td>
+    <td>
+      <input type="number" step="0.01" min="0" name="costo[]" class="form-control form-control-sm cost-input text-end" value="0.00" oninput="calculatePurchTotals()" required>
+    </td>
+    <td>
+      <input type="text" class="form-control form-control-sm subtotal-display text-end fw-semibold" value="$0.00" readonly>
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="this.closest('tr').remove(); calculatePurchTotals();"><i class="bi bi-trash"></i></button>
+    </td>
+  `;
+  tableBody.appendChild(row);
+  calculatePurchTotals();
+}
+
+function updatePurchCost(selectEl) {
+  const row = selectEl.closest("tr");
+  const opt = selectEl.options[selectEl.selectedIndex];
+  const cost = opt.getAttribute("data-cost") || 0;
+  row.querySelector(".cost-input").value = parseFloat(cost).toFixed(2);
+  calculatePurchTotals();
+}
+
+function calculatePurchTotals() {
+  const rows = document.querySelectorAll(".purch-item-row");
+  let subtotal = 0;
+
+  rows.forEach((r) => {
+    const cant = parseFloat(r.querySelector(".cant-input").value || 0);
+    const cost = parseFloat(r.querySelector(".cost-input").value || 0);
+    const itemSub = Math.round(cant * cost * 100) / 100;
+    r.querySelector(".subtotal-display").value = `$${itemSub.toFixed(2)}`;
+    subtotal += itemSub;
+  });
+
+  subtotal = Math.round(subtotal * 100) / 100;
+  const iva = Math.round(subtotal * 0.15 * 100) / 100;
+  const total = Math.round((subtotal + iva) * 100) / 100;
+
+  document.getElementById("purchSubtotalDisplay").textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById("purchIvaDisplay").textContent = `$${iva.toFixed(2)}`;
+  document.getElementById("purchTotalDisplay").textContent = `$${total.toFixed(2)}`;
+}
+</script>
+{% endblock %}

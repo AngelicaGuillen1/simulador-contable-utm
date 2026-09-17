@@ -1,0 +1,26 @@
+# Despliegue 24/7 en Render (https://render.com) con disco persistente.
+# El disco persistente exige un plan de pago; en el plan gratuito el archivo SQLite
+# se pierde en cada reinicio/despliegue y la base se regenera con los datos demo.
+services:
+  - type: web
+    name: simulador-contable-utm
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python serve.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: HOST
+        value: 0.0.0.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/datos/simulator.db
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+    disk:
+      name: datos-simulador
+      mountPath: /var/datos
+      sizeGB: 1

@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% set niveles_nombres = {1: 'Básico', 2: 'Intermedio', 3: 'Avanzado', 4: 'Caso Empresarial Integral'} %}
+
+{% block title %}
+{% if simulacion %}Resolviendo: {{ simulacion.titulo }}{% else %}Simulación no disponible{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if not simulacion %}
+
+<!-- Simulación inexistente -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-exclamation-octagon-fill text-danger display-5 d-block mb-3"></i>
+    <h5 class="fw-bold">La simulación solicitada no está disponible</h5>
+    <p class="text-muted small mb-4">Puede que el caso haya sido desactivado por el docente o que la ruta sea incorrecta.</p>
+    <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-primary">
+      <i class="bi bi-arrow-left me-1"></i> Volver al listado de simulaciones
+    </a>
+  </div>
+</div>
+
+{% else %}
+
+<!-- Encabezado del caso -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Simulador
+          </a>
+          {% if simulacion.nivel == 1 %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-1-circle-fill me-1"></i>Nivel 1 · Básico</span>
+          {% elif simulacion.nivel == 2 %}
+            <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-2-circle-fill me-1"></i>Nivel 2 · Intermedio</span>
+          {% elif simulacion.nivel == 3 %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-3-circle-fill me-1"></i>Nivel 3 · Avanzado</span>
+          {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-4-circle-fill me-1"></i>Nivel 4 · Caso Empresarial Integral</span>
+          {% endif %}
+          {% if simulacion.modo_examen == 1 %}
+            <span class="badge bg-dark"><i class="bi bi-shield-lock-fill me-1"></i>Modo Examen</span>
+          {% endif %}
+          <span class="badge bg-light text-dark border"><i class="bi bi-hash me-1"></i>Intento {{ intento_id }}</span>
+        </div>
+        <h4 class="fw-bold mb-1">{{ simulacion.titulo }}</h4>
+        <p class="text-muted small mb-0">{{ simulacion.descripcion or 'Caso práctico de contabilidad aplicada.' }}</p>
+      </div>
+      <div class="text-end">
+        <div class="small text-muted">Nota mínima para aprobar</div>
+        <div class="fw-bold fs-5 text-primary">{{ "%.2f"|format(simulacion.puntuacion_minima or 0) }} / 100</div>
+        <div class="small text-muted mt-1">
+          <i class="bi bi-clock-history me-1"></i>Duración sugerida: {{ simulacion.duracion_minutos }} min
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de progreso de casos -->
+    <div class="mt-4">
+      <div class="d-flex justify-content-between small fw-semibold text-muted mb-1">
+        <span>Progreso de la simulación</span>
+        <span>
+          Caso {{ caso_index + 1 if caso_actual else 0 }} de {{ total_casos }}
+        </span>
+      </div>
+      <div class="progress" style="height: 10px;">
+        {% if total_casos > 0 %}
+          <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
+               role="progressbar"
+               style="width: {{ (((caso_index + 1) / total_casos) * 100)|round(1) }}%;"
+               aria-valuenow="{{ caso_index + 1 }}" aria-valuemin="0" aria-valuemax="{{ total_casos }}">
+          </div>
+        {% else %}
+          <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%;"></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not caso_actual %}
+
+<!-- Sin casos cargados -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-inboxes-fill text-warning display-5 d-block mb-3"></i>
+    <h5 class="fw-bold">Esta simulación no tiene casos cargados</h5>
+    <p class="text-muted small mb-4">
+      El docente aún no ha publicado los casos de este escenario. Selecciona otra simulación disponible en el listado.
+    </p>
+    <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-primary">
+      <i class="bi bi-grid-3x3-gap-fill me-1"></i> Volver al listado de simulaciones
+    </a>
+  </div>
+</div>
+
+{% else %}
+
+<div class="row g-4">
+  <!-- Columna principal: enunciado y registro contable -->
+  <div class="col-xl-8">
+
+    <!-- Enunciado del caso -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary text-white p-2 rounded-3 me-3">
+            <i class="bi bi-file-earmark-text-fill"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-0">Caso {{ caso_actual.orden }} · {{ caso_actual.titulo }}</h5>
+            <small class="text-muted">
+              <i class="bi bi-calendar3 me-1"></i>{{ caso_actual.fecha_transaccion or 'Fecha no especificada' }}
+            </small>
+          </div>
+        </div>
+        <span class="badge bg-light text-dark border">
+          <i class="bi bi-journal-bookmark me-1"></i>{{ niveles_nombres.get(simulacion.nivel, 'Nivel ' ~ simulacion.nivel) }}
+        </span>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <div class="alert alert-light border mb-4">
+          <div class="fw-bold text-uppercase small text-muted mb-1">Enunciado del caso</div>
+          <p class="mb-0" style="white-space: pre-line;">{{ caso_actual.enunciado }}</p>
+        </div>
+
+        <div class="row g-3">
+          <!-- Documento fuente -->
+          <div class="col-md-5">
+            <div class="border rounded-3 p-3 h-100 bg-light">
+              <div class="kpi-label mb-2">Documento Fuente</div>
+              <div class="d-flex align-items-center">
+                <div class="kpi-icon bg-white text-primary border me-3" style="width: 42px; height: 42px; font-size: 1.1rem;">
+                  <i class="bi bi-receipt-cutoff"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">{{ caso_actual.documento_fuente_tipo or 'Documento' }}</div>
+                  <div class="small text-muted">
+                    N° <span class="fw-semibold">{{ caso_actual.documento_fuente_numero or 'S/N' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Datos de la transacción -->
+          <div class="col-md-7">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="kpi-label mb-2">Datos de la Transacción</div>
+              {% if caso_actual.datos_transaccion %}
+              <ul class="list-unstyled mb-0 small">
+                {% for clave, valor in caso_actual.datos_transaccion.items() %}
+                <li class="d-flex justify-content-between border-bottom py-1">
+                  <span class="text-muted">{{ clave|replace('_', ' ')|capitalize }}</span>
+                  <span class="fw-semibold text-end">
+                    {% if valor is number and valor is not boolean %}
+                      $ {{ "{:,.2f}".format(valor) }}
+                    {% elif valor is mapping %}
+                      {% for k2, v2 in valor.items() %}
+                        <span class="badge bg-light text-dark border me-1">
+                          {{ k2|replace('_', ' ')|capitalize }}:
+                          {% if v2 is number and v2 is not boolean %}$ {{ "{:,.2f}".format(v2) }}{% else %}{{ v2 }}{% endif %}
+                        </span>
+                      {% endfor %}
+                    {% elif valor is sequence and valor is not string %}
+                      {% for item in valor %}
+                        {% if item is mapping %}
+                          <span class="badge bg-light text-dark border me-1 text-wrap">
+                            {% for k2, v2 in item.items() %}{{ k2|replace('_', ' ')|capitalize }}:
+                              {% if v2 is float %}$ {{ "{:,.2f}".format(v2) }}{% else %}{{ v2 }}{% endif %}{% if not loop.last %} &middot; {% endif %}
+                            {% endfor %}
+                          </span>
+                        {% else %}
+                          <span class="badge bg-light text-dark border me-1">{{ item }}</span>
+                        {% endif %}
+                      {% endfor %}
+                    {% elif valor is sameas true %}
+                      Sí
+                    {% elif valor is sameas false %}
+                      No
+                    {% else %}
+                      {{ valor }}
+                    {% endif %}
+                  </span>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <div class="text-muted small fst-italic">Sin datos adicionales para este caso.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning border-0 mt-3 mb-0 small">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          Analiza el documento y registra el asiento contable aplicando la <strong>partida doble</strong> según el
+          catálogo de cuentas de Nueva Esperanza S.A. El deber ser y el haber deben cuadrar.
+        </div>
+      </div>
+    </div>
+
+    <!-- Registro del asiento contable -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h5 class="fw-bold mb-1"><i class="bi bi-pencil-square text-primary me-2"></i>Registro del Asiento Contable</h5>
+          <p class="text-muted small mb-0">Selecciona la cuenta, digita los valores en Debe o Haber y verifica el cuadre</p>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          <i class="bi bi-clipboard-data me-1"></i>Rúbrica de 100 pts
+        </span>
+      </div>
+      <div class="card-body px-4">
+
+        <div class="balance-banner unbalanced" id="simBalanceBanner">
+          <span><i class="bi bi-exclamation-triangle-fill me-2"></i>Partida doble pendiente de cuadre</span>
+          <span class="small">Debe = Haber</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-custom align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-4" style="min-width: 280px;">Cuenta Contable</th>
+                <th class="text-end" style="width: 160px;">Debe ($)</th>
+                <th class="text-end" style="width: 160px;">Haber ($)</th>
+                <th class="text-center pe-4" style="width: 80px;">Quitar</th>
+              </tr>
+            </thead>
+            <tbody id="simLinesBody">
+              <tr class="sim-row">
+                <td class="ps-4">
+                  <select class="form-select form-select-sm sim-cuenta" required>
+                    <option value="">-- Seleccionar Cuenta --</option>
+                    {% for c in cuentas %}
+                    <option value="{{ c.id }}">{{ c.codigo }} - {{ c.nombre }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="number" step="0.01" min="0" class="form-control form-control-sm sim-debe text-end" value="0.00" oninput="calculateSimTotals()">
+                </td>
+                <td>
+                  <input type="number" step="0.01" min="0" class="form-control form-control-sm sim-haber text-end" value="0.00" oninput="calculateSimTotals()">
+                </td>
+                <td class="text-center pe-4">
+                  <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="this.closest('tr').remove(); calculateSimTotals();">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="fw-bold bg-light">
+                <td class="ps-4 text-end text-uppercase small">Totales de Partida Doble</td>
+                <td class="text-end text-success" id="simTotalDebe">$0.00</td>
+                <th class="text-end text-success pe-4" id="simTotalHaber">$0.00</th>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="addSimRow()">
+            <i class="bi bi-plus-lg me-1"></i> Agregar línea
+          </button>
+          <button type="button" class="btn btn-outline-info btn-sm" onclick="requestHint({{ caso_actual.id }})">
+            <i class="bi bi-lightbulb-fill me-1"></i> Pedir pista al Tutor IA
+          </button>
+        </div>
+
+        <div id="hintDisplayBox" style="display:none" class="mt-3"></div>
+
+        <hr class="my-4">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div class="small text-muted">
+            <i class="bi bi-shield-check me-1"></i>
+            El Agente Evaluador IA califica cuentas (40 pts), posición Debe/Haber (30 pts), importes (20 pts) y
+            partida doble (10 pts).
+          </div>
+          <button id="btnSubmitCase" type="button" class="btn btn-success fw-semibold px-4"
+                  onclick="submitSimulationCase({{ intento_id }}, {{ caso_actual.id }})">
+            <i class="bi bi-send-check me-1"></i> Enviar Asiento y Evaluar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navegación entre casos -->
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-4">
+      <div>
+        {% if caso_index > 0 %}
+        <a href="{{ url_for('simulations.play_simulation', simulacion_id=simulacion.id, intento_id=intento_id, caso_index=caso_index - 1) }}"
+           class="btn btn-outline-secondary">
+          <i class="bi bi-chevron-left me-1"></i> Caso anterior
+        </a>
+        {% endif %}
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-outline-primary">
+          <i class="bi bi-award me-1"></i> Mis evaluaciones
+        </a>
+        {% if caso_index + 1 < total_casos %}
+        <a href="{{ url_for('simulations.play_simulation', simulacion_id=simulacion.id, intento_id=intento_id, caso_index=caso_index + 1) }}"
+           class="btn btn-primary">
+          Siguiente caso <i class="bi bi-chevron-right ms-1"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna lateral: casos, tiempo y ayuda -->
+  <div class="col-xl-4">
+
+    <!-- Temporizador del intento -->
+    <div class="kpi-card mb-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Tiempo del Intento</div>
+          <div class="kpi-value" id="simElapsedTimer">00:00:00</div>
+          <div class="small text-muted mt-1">Duración sugerida: {{ simulacion.duracion_minutos }} min</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-stopwatch"></i></div>
+      </div>
+    </div>
+
+    <!-- Avance por nivel -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Avance del Intento</h6>
+        <small class="text-muted">Intentos registrados en el simulador</small>
+      </div>
+      <div class="card-body px-4">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-muted">Casos resueltos</span>
+          <span class="fw-bold">{{ caso_index }} / {{ total_casos }}</span>
+        </div>
+        <div class="progress mb-4" style="height: 8px;">
+          {% if total_casos > 0 %}
+          <div class="progress-bar bg-success" role="progressbar" style="width: {{ ((caso_index / total_casos) * 100)|round(1) }}%;"></div>
+          {% else %}
+          <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%;"></div>
+          {% endif %}
+        </div>
+
+        <div class="list-group list-group-flush">
+          {% for c in simulacion.casos %}
+          <a href="{{ url_for('simulations.play_simulation', simulacion_id=simulacion.id, intento_id=intento_id, caso_index=loop.index0) }}"
+             class="list-group-item list-group-item-action px-0 d-flex justify-content-between align-items-center border-0 border-bottom">
+            <span class="small {% if loop.index0 == caso_index %}fw-bold text-primary{% else %}text-muted{% endif %}">
+              <i class="bi {% if loop.index0 == caso_index %}bi-record-circle-fill text-primary{% elif loop.index0 < caso_index %}bi-check-circle-fill text-success{% else %}bi-circle{% endif %} me-2"></i>
+              Caso {{ c.orden }} · {{ c.titulo }}
+            </span>
+            {% if loop.index0 == caso_index %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">En curso</span>
+            {% elif loop.index0 < caso_index %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Revisado</span>
+            {% else %}
+              <span class="badge bg-light text-muted border">Pendiente</span>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pistas sugeridas y ayuda -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-robot text-info me-2"></i>Apoyo Pedagógico</h6>
+        <small class="text-muted">Asistencia del Tutor Contable IA</small>
+      </div>
+      <div class="card-body px-4">
+        {% if caso_actual.pistas %}
+        <div class="small fw-bold text-uppercase text-muted mb-2">Puntos clave del caso</div>
+        <ul class="small text-muted ps-3 mb-3">
+          {% for pista in caso_actual.pistas %}
+          <li class="mb-1">{{ pista }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="small text-muted mb-3">
+          Este caso no incluye pistas precargadas. Solicita orientación al Tutor IA cuando lo necesites
+          (recuerda: cada pista resta 5 puntos de la calificación final).
+        </p>
+        {% endif %}
+        <a href="{{ url_for('tutor.chat') }}" class="btn btn-outline-info btn-sm w-100">
+          <i class="bi bi-chat-dots me-1"></i> Abrir Tutor Contable IA
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Plantilla de opciones de cuentas consumida por addSimRow() de simulation.js -->
+<template id="accountSelectTemplate">
+  {% for c in cuentas %}<option value="{{ c.id }}">{{ c.codigo }} - {{ c.nombre }}</option>{% endfor %}
+</template>
+
+<!-- Modal de resultado de la evaluación IA -->
+<div class="modal fade" id="evaluationResultModal" tabindex="-1" aria-labelledby="evaluationResultModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title" id="evaluationResultModalLabel">
+          <i class="bi bi-clipboard-check me-2"></i>Evaluación del Asiento Contable
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-4">
+          <span id="evalScoreBadge" class="badge fs-4 p-2 bg-secondary">0 / 100 pts</span>
+          <h4 class="fw-bold mt-3 mb-1" id="evalResultTitle">Resultado</h4>
+          <p class="text-muted small mb-0">Evaluación automática del Agente IA con rúbrica contable</p>
+        </div>
+
+        <div class="alert alert-light border" id="evalFeedbackContent">
+          Retroalimentación pedagógica del caso.
+        </div>
+
+        <h6 class="fw-bold text-uppercase small text-muted mb-3">Desglose de Rúbrica</h6>
+        <div class="row g-3">
+          <div class="col-6 col-md-3">
+            <div class="border rounded-3 p-3 text-center h-100">
+              <i class="bi bi-diagram-3 text-primary fs-4 d-block mb-2"></i>
+              <div class="small text-muted">Cuentas Correctas</div>
+              <div class="fw-bold fs-5" id="rubricAccounts">0 / 40</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded-3 p-3 text-center h-100">
+              <i class="bi bi-arrow-left-right text-info fs-4 d-block mb-2"></i>
+              <div class="small text-muted">Posición Debe/Haber</div>
+              <div class="fw-bold fs-5" id="rubricPosition">0 / 30</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded-3 p-3 text-center h-100">
+              <i class="bi bi-cash-coin text-warning fs-4 d-block mb-2"></i>
+              <div class="small text-muted">Importes</div>
+              <div class="fw-bold fs-5" id="rubricAmounts">0 / 20</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="border rounded-3 p-3 text-center h-100">
+              <i class="bi bi-scale text-success fs-4 d-block mb-2"></i>
+              <div class="small text-muted">Partida Doble</div>
+              <div class="fw-bold fs-5" id="rubricBalance">0 / 10</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer d-flex flex-wrap justify-content-between">
+        <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-outline-primary">
+          <i class="bi bi-award me-1"></i> Ver mis evaluaciones
+        </a>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"
+                  onclick="document.querySelectorAll('.sim-row .sim-debe, .sim-row .sim-haber').forEach(function (i) { i.value = '0.00'; }); calculateSimTotals();">
+            <i class="bi bi-arrow-repeat me-1"></i> Corregir asiento
+          </button>
+          {% if caso_index + 1 < total_casos %}
+          <a href="{{ url_for('simulations.play_simulation', simulacion_id=simulacion.id, intento_id=intento_id, caso_index=caso_index + 1) }}"
+             class="btn btn-primary">
+            Siguiente caso <i class="bi bi-chevron-right ms-1"></i>
+          </a>
+          {% else %}
+          <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-primary">
+            <i class="bi bi-flag-fill me-1"></i> Finalizar simulación
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/simulation.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // Garantiza que exista al menos una fila de asiento contable
+  const lineasBody = document.getElementById("simLinesBody");
+  if (lineasBody && lineasBody.querySelectorAll(".sim-row").length === 0) {
+    addSimRow();
+  } else if (typeof calculateSimTotals === "function") {
+    calculateSimTotals();
+  }
+
+  // Banner de cuadre de la partida doble
+  const banner = document.getElementById("simBalanceBanner");
+  function refrescarBanner() {
+    if (!banner) return;
+    const td = document.getElementById("simTotalDebe");
+    const th = document.getElementById("simTotalHaber");
+    const debe = td ? parseFloat(td.textContent.replace(/[^0-9.]/g, "") || 0) : 0;
+    const haber = th ? parseFloat(th.textContent.replace(/[^0-9.]/g, "") || 0) : 0;
+    const cuadrado = debe > 0 && Math.abs(debe - haber) < 0.005;
+    banner.classList.toggle("balanced", cuadrado);
+    banner.classList.toggle("unbalanced", !cuadrado);
+    banner.innerHTML = cuadrado
+      ? '<span><i class="bi bi-check-circle-fill me-2"></i>Partida doble cuadrada: asiento listo para enviar</span><span class="small">Debe = Haber</span>'
+      : '<span><i class="bi bi-exclamation-triangle-fill me-2"></i>Partida doble pendiente de cuadre</span><span class="small">Debe = Haber</span>';
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target && (e.target.classList.contains("sim-debe") || e.target.classList.contains("sim-haber"))) {
+      refrescarBanner();
+    }
+  });
+  document.addEventListener("click", function () { setTimeout(refrescarBanner, 50); });
+  refrescarBanner();
+
+  // Cronómetro del intento (independiente del envío al servidor)
+  const timerEl = document.getElementById("simElapsedTimer");
+  if (timerEl) {
+    const inicio = Date.now();
+    setInterval(function () {
+      const seg = Math.floor((Date.now() - inicio) / 1000);
+      const h = String(Math.floor(seg / 3600)).padStart(2, "0");
+      const m = String(Math.floor((seg % 3600) / 60)).padStart(2, "0");
+      const s = String(seg % 60).padStart(2, "0");
+      timerEl.textContent = h + ":" + m + ":" + s;
+    }, 1000);
+  }
+});
+</script>
+{% endblock %}

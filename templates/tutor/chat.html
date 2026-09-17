@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Tutor Contable IA - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-robot text-info me-2"></i>Tutor Contable IA</h3>
+    <p class="text-muted small mb-0">
+      Asistente pedagógico con ayuda progresiva para el ciclo contable, inventarios, impuestos y estados financieros NIIF.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-joystick me-1"></i> Ir al Simulador de Casos
+    </a>
+    <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-journal-text me-1"></i> Abrir Libro Diario
+    </a>
+  </div>
+</div>
+
+<!-- Aviso de política pedagógica del Tutor IA -->
+<div class="alert alert-info border-info-subtle shadow-sm d-flex align-items-start" role="alert">
+  <i class="bi bi-info-circle-fill fs-5 me-2"></i>
+  <div class="small">
+    <strong>Ayuda progresiva (aprendizaje guiado):</strong> el Tutor IA responde por niveles —
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">1. Orientación</span>
+    <span class="badge bg-info-subtle text-info border border-info-subtle">2. Pista</span>
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">3. Explicación conceptual</span>
+    <span class="badge bg-dark-subtle text-dark border border-dark-subtle">4. Solución guiada</span>.
+    Te recomendamos avanzar de nivel solo cuando ya hayas intentado resolver el ejercicio por tu cuenta.
+    <div class="mt-1 text-danger-emphasis">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+      <strong>Modo Examen:</strong> cuando una simulación está en modo examen, el nivel <em>Solución guiada</em> queda restringido
+      y el Tutor únicamente podrá entregar orientación, pistas y explicaciones conceptuales.
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Panel de conversación -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3 rounded-top-4">
+        <div class="d-flex align-items-center">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-info-subtle text-info me-2" style="width: 38px; height: 38px; font-size: 1.1rem;">
+            <i class="bi bi-chat-square-dots"></i>
+          </div>
+          <div>
+            <div class="fw-bold">Conversación con el Tutor</div>
+            <div class="text-muted small">Respuestas generadas por los agentes de IA del simulador contable</div>
+          </div>
+        </div>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">
+          <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i> Tutor en línea
+        </span>
+      </div>
+
+      <div class="card-body p-0">
+        <!-- Contenedor obligatorio consumido por static/js/tutor.js -->
+        <div id="tutorMessagesBox" class="p-3" style="height: 460px; overflow-y: auto; background-color: #f8fafc;">
+          <!-- Mensaje de bienvenida del Tutor IA -->
+          <div class="d-flex justify-content-start mb-3">
+            <div class="bg-white p-3 rounded-3 border shadow-sm" style="max-width: 85%;">
+              <div class="small fw-bold text-primary mb-1">
+                <i class="bi bi-robot me-1"></i> Tutor Contable IA
+                <span class="badge bg-light text-dark border ms-2">Bienvenida</span>
+              </div>
+              <div style="white-space: pre-line;">¡Hola! Soy tu Tutor Contable IA de Comercial y Servicios Nueva Esperanza S.A.
+
+Puedo ayudarte a razonar sobre el ciclo contable: registro de asientos (debe y haber), costo de ventas, kardex FIFO y promedio ponderado, IVA, retenciones, ajustes, cierre de período y estados financieros NIIF.
+
+Trabajo con <strong>ayuda progresiva</strong>: primero te doy orientación, luego una pista, después la explicación conceptual y, finalmente, la solución guiada paso a paso.
+
+Para comenzar, escribe tu pregunta abajo o pulsa una de las preguntas de ejemplo del panel lateral. También puedes elegir el nivel de ayuda que necesitas antes de enviar tu mensaje.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer bg-white border-top py-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-4 col-lg-3">
+            <label for="tutorNivelAyuda" class="form-label small fw-bold text-muted mb-1">
+              <i class="bi bi-layers me-1"></i> Nivel de ayuda
+            </label>
+            <select id="tutorNivelAyuda" class="form-select form-select-sm">
+              <option value="ORIENTACION">1. Orientación</option>
+              <option value="PISTA" selected>2. Pista</option>
+              <option value="EXPLICACION">3. Explicación conceptual</option>
+              <option value="SOLUCION">4. Solución guiada</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-5 col-lg-6">
+            <label for="tutorChatInput" class="form-label small fw-bold text-muted mb-1">
+              <i class="bi bi-pencil-square me-1"></i> Tu pregunta
+            </label>
+            <input type="text" id="tutorChatInput" class="form-control form-control-sm"
+                   placeholder="Ej: ¿Por qué se debita la cuenta de Inventario en una compra?"
+                   onkeydown="if (event.key === 'Enter') { event.preventDefault(); sendTutorMessage(); }">
+          </div>
+          <div class="col-12 col-md-3 col-lg-3">
+            <button type="button" class="btn btn-primary btn-sm w-100" onclick="sendTutorMessage()">
+              <i class="bi bi-send-fill me-1"></i> Enviar pregunta
+            </button>
+          </div>
+        </div>
+        <div class="text-muted small mt-2">
+          <i class="bi bi-lightbulb me-1"></i> Presiona <kbd>Enter</kbd> para enviar. Las respuestas son material de estudio:
+          contrasta siempre con la normativa NIIF y las políticas de la empresa.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel lateral: ayuda progresiva y preguntas de ejemplo -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-signpost-split text-primary me-2"></i>Ruta de ayuda del Tutor</h6>
+        <ol class="list-unstyled small mb-0">
+          <li class="d-flex align-items-start mb-2">
+            <span class="badge bg-primary rounded-pill me-2">1</span>
+            <div><strong>Orientación:</strong> te indica qué concepto o documento revisar.</div>
+          </li>
+          <li class="d-flex align-items-start mb-2">
+            <span class="badge bg-info text-dark rounded-pill me-2">2</span>
+            <div><strong>Pista:</strong> te señala el paso exacto donde suele estar el error.</div>
+          </li>
+          <li class="d-flex align-items-start mb-2">
+            <span class="badge bg-secondary rounded-pill me-2">3</span>
+            <div><strong>Explicación conceptual:</strong> fundamenta la norma contable aplicable.</div>
+          </li>
+          <li class="d-flex align-items-start">
+            <span class="badge bg-dark rounded-pill me-2">4</span>
+            <div><strong>Solución guiada:</strong> desarrollo completo del caso (restringido en Modo Examen).</div>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-bottom py-3 rounded-top-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-question-circle text-warning me-2"></i>Preguntas de ejemplo</h6>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Pulsa una pregunta para cargarla en el chat y enviarla al Tutor IA.</p>
+        <div class="d-grid gap-2">
+          <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+                  data-pregunta="¿Por qué se debita esta cuenta?"
+                  onclick="document.getElementById('tutorChatInput').value = this.getAttribute('data-pregunta'); sendTutorMessage();">
+            <i class="bi bi-chat-left-text me-1 text-primary"></i> ¿Por qué se debita esta cuenta?
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+                  data-pregunta="¿Por qué se genera costo de ventas?"
+                  onclick="document.getElementById('tutorChatInput').value = this.getAttribute('data-pregunta'); sendTutorMessage();">
+            <i class="bi bi-chat-left-text me-1 text-success"></i> ¿Por qué se genera costo de ventas?
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+                  data-pregunta="¿Cómo afecta esta transacción al inventario?"
+                  onclick="document.getElementById('tutorChatInput').value = this.getAttribute('data-pregunta'); sendTutorMessage();">
+            <i class="bi bi-chat-left-text me-1 text-info"></i> ¿Cómo afecta esta transacción al inventario?
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm text-start"
+                  data-pregunta="¿Qué significa este saldo?"
+                  onclick="document.getElementById('tutorChatInput').value = this.getAttribute('data-pregunta'); sendTutorMessage();">
+            <i class="bi bi-chat-left-text me-1 text-warning"></i> ¿Qué significa este saldo?
+          </button>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top">
+        <div class="small text-muted">
+          <i class="bi bi-shield-check me-1"></i> El nivel solicitado se envía como <code>nivel_ayuda</code> en cada consulta,
+          por lo que puedes cambiarlo antes de enviar tu pregunta.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/tutor.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Tributación - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="bi bi-percent me-2 text-primary"></i>Configuración Tributaria</h4>
+    <p class="text-muted small mb-0">
+      Parámetros tributarios vigentes del sistema. Las tasas <strong>nunca</strong> están fijadas en el código:
+      provienen de la tabla <code>impuestos</code> y, si no existe configuración para un tributo,
+      la operación que lo requiera se rechaza con un mensaje explícito.
+    </p>
+  </div>
+  <div class="text-end">
+    <div class="kpi-card">
+      <div class="kpi-label">Período en determinación</div>
+      <div class="kpi-value" style="font-size:1.1rem;">{% if periodo %}{{ periodo.nombre }}{% else %}Sin período{% endif %}</div>
+      <div class="small text-muted mt-1">
+        {% if fecha_inicio %}{{ fecha_inicio }} a {{ fecha_fin }}{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Determinación mensual de IVA (valores reales del Libro Mayor) -->
+<h6 class="text-uppercase text-muted fw-bold small mb-3">Determinación de IVA del período (datos del Libro Mayor)</h6>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-label">IVA en Ventas (Débito Fiscal)</div>
+      <div class="kpi-value text-danger">{{ determinacion.iva_ventas|money }}</div>
+      <div class="small text-muted mt-1">Cuenta 2.1.02</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-label">IVA en Compras (Crédito Tributario)</div>
+      <div class="kpi-value text-success">{{ determinacion.iva_compras|money }}</div>
+      <div class="small text-muted mt-1">Cuenta 1.1.07</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-label">IVA por Pagar</div>
+      <div class="kpi-value">{{ determinacion.iva_por_pagar|money }}</div>
+      <div class="small text-muted mt-1">Débito fiscal &minus; crédito tributario</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Crédito Tributario a Favor</div>
+      <div class="kpi-value">{{ determinacion.credito_a_favor|money }}</div>
+      <div class="small text-muted mt-1">Retenciones por pagar: {{ determinacion.retenciones|money }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Tabla de parámetros -->
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-0">Parámetros tributarios configurados</h6>
+          <small class="text-muted">Código, porcentaje, tipo, cuenta contable y vigencia</small>
+        </div>
+        {% if g.user and g.user.rol_nombre == 'Administrador' %}
+        <a href="{{ url_for('admin.taxes') }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-pencil-square me-1"></i> Editar tasas (Administrador)
+        </a>
+        {% else %}
+        <span class="badge bg-light text-dark border">Solo lectura para tu rol</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-4">Código</th>
+                <th>Nombre</th>
+                <th class="text-end">Porcentaje</th>
+                <th>Tipo</th>
+                <th>Vigencia</th>
+                <th class="text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in impuestos %}
+              <tr>
+                <td class="ps-4"><code>{{ i.codigo }}</code></td>
+                <td>{{ i.nombre }}</td>
+                <td class="text-end fw-semibold">{{ i.porcentaje }}%</td>
+                <td><span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ i.tipo }}</span></td>
+                <td class="text-nowrap small">{{ i.vigencia_desde or '—' }}</td>
+                <td class="text-center">
+                  {% if i.activo %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>
+                  {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Inactivo</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center text-muted py-4">Sin registros para mostrar.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculadora tributaria real (usa el motor del sistema) -->
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0">Calculadora tributaria del simulador</h6>
+        <small class="text-muted">El cálculo se ejecuta en el servidor con la configuración vigente</small>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Base imponible (USD)</label>
+          <input type="number" step="0.01" min="0" id="taxBase" class="form-control" value="100.00">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Impuesto aplicable</label>
+          <select id="taxCodigo" class="form-select">
+            <option value="">Automático por tipo (primer activo)</option>
+            {% for i in impuestos %}
+            {% if i.activo %}
+            <option value="{{ i.codigo }}">{{ i.nombre }} ({{ i.porcentaje }}%)</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Tipo de operación</label>
+          <select id="taxTipo" class="form-select">
+            <option value="IVA_VENTAS">IVA en ventas (débito fiscal)</option>
+            <option value="IVA_COMPRAS">IVA en compras (crédito tributario)</option>
+            <option value="RET_RENTA_BIENES">Retención renta bienes</option>
+            <option value="RET_RENTA_SERVICIOS">Retención renta servicios</option>
+            <option value="RET_IVA_BIENES">Retención IVA bienes</option>
+            <option value="RET_IVA_SERVICIOS">Retención IVA servicios</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary w-100" onclick="calcularImpuesto()">
+          <i class="bi bi-calculator me-1"></i> Calcular con el motor tributario
+        </button>
+
+        <div id="taxResult" class="mt-3"></div>
+
+        <div class="alert alert-light border mt-3 mb-0 small">
+          <i class="bi bi-shield-check me-1 text-success"></i>
+          <strong>Control de integridad:</strong> las tasas de este simulador son configurables con fines
+          académicos y no constituyen una afirmación sobre tasas tributarias vigentes en el Ecuador.
+          Nunca se inventa un porcentaje: si falta configuración, el cálculo se rechaza.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cuentas contables asociadas -->
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0">Cuentas contables utilizadas por la configuración tributaria</h6>
+    <small class="text-muted">Cada parámetro tributario se imputa a una cuenta del plan de cuentas</small>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Impuesto</th>
+            <th>Cuenta contable asignada</th>
+            <th class="text-end">Porcentaje</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in impuestos %}
+          <tr>
+            <td class="ps-4 small fw-semibold">{{ i.nombre }}</td>
+            <td>
+              {% set cta = cuentas | selectattr('id', 'equalto', i.cuenta_contable_id) | list %}
+              {% if cta %}<code>{{ cta[0].codigo }}</code> {{ cta[0].nombre }}{% else %}<span class="text-muted">Sin cuenta asignada</span>{% endif %}
+            </td>
+            <td class="text-end">{{ i.porcentaje }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-4">Sin registros para mostrar.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcularImpuesto() {
+  const base = parseFloat(document.getElementById("taxBase").value || 0);
+  const codigo = document.getElementById("taxCodigo").value || null;
+  const tipo = document.getElementById("taxTipo").value;
+  const cont = document.getElementById("taxResult");
+  cont.innerHTML = '<div class="text-muted small">Calculando...</div>';
+
+  fetch("/api/taxes/calculate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base: base, codigo: codigo, tipo: tipo })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        cont.innerHTML = '<div class="alert alert-danger mb-0 small">' + (data.error || "No se pudo calcular el impuesto.") + '</div>';
+        return;
+      }
+      cont.innerHTML = `
+        <div class="border rounded-3 p-3 bg-light">
+          <div class="d-flex justify-content-between small"><span>Base imponible</span><strong>$${Number(data.base).toLocaleString("es-EC",{minimumFractionDigits:2})}</strong></div>
+          <div class="d-flex justify-content-between small"><span>${data.nombre}</span><strong>${data.porcentaje}%</strong></div>
+          <div class="d-flex justify-content-between small"><span>Valor del tributo</span><strong class="text-danger">$${Number(data.valor).toLocaleString("es-EC",{minimumFractionDigits:2})}</strong></div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between"><span class="fw-semibold">Total con impuesto</span><span class="fw-bold text-primary">$${Number(data.total).toLocaleString("es-EC",{minimumFractionDigits:2})}</span></div>
+          <div class="small text-muted mt-2">Código aplicado: <code>${data.codigo}</code></div>
+        </div>`;
+    })
+    .catch(err => {
+      cont.innerHTML = '<div class="alert alert-danger mb-0 small">Error de conexión: ' + err + '</div>';
+    });
+}
+</script>
+{% endblock %}

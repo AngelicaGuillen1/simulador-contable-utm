@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+#  Archivos que NO se publican en GitHub
+# ---------------------------------------------------------------------------
+
+# Secretos y configuración local
+deploy/windows/entorno.local.cmd
+.env
+*.env.local
+secrets.env
+
+# Entorno virtual y cachés de Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Registros
+logs/
+*.log
+
+# Base de datos y respaldos (cada estudiante genera la suya con database/seed_data.py)
+database/*.db
+database/*.db-wal
+database/*.db-shm
+database/*.bak
+deploy/respaldos/
+
+# Paquetes de despliegue
+dist/
+*.tar.gz
+
+# Configuración de editores y del sistema operativo
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Configuración de servidor con rutas/dominios propios
+deploy/nginx/local/

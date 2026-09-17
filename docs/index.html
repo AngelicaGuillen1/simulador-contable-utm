@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador Integral de Sistema Contable — Comercial y Servicios Nueva Esperanza</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1f2933;
+         background:#f5f7fa; line-height:1.6; }
+  header { background:linear-gradient(135deg,#0f172a,#1d4ed8); color:#fff; padding:52px 24px 44px; }
+  .contenedor { max-width:960px; margin:0 auto; }
+  header h1 { margin:0 0 6px; font-size:clamp(24px,3.4vw,38px); line-height:1.2; }
+  header p { margin:6px 0 0; opacity:.92; font-size:17px; }
+  .etiqueta { display:inline-block; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35);
+              border-radius:999px; padding:4px 14px; font-size:13px; font-weight:600; margin-bottom:16px; }
+  main { max-width:960px; margin:0 auto; padding:34px 24px 70px; }
+  .acciones { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:36px; }
+  .tarjeta { background:#fff; border:1px solid #d9e2ec; border-radius:12px; padding:20px 22px;
+             box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  .tarjeta h3 { margin:0 0 6px; font-size:17px; }
+  .tarjeta p { margin:0 0 14px; font-size:14.5px; color:#52606d; }
+  a.boton { display:inline-block; background:#1d4ed8; color:#fff; text-decoration:none; font-weight:600;
+            font-size:14px; padding:10px 16px; border-radius:8px; }
+  a.boton.sec { background:#374151; }
+  a.boton:hover { filter:brightness(1.12); }
+  h2 { font-size:22px; margin:38px 0 12px; padding-bottom:6px; border-bottom:1px solid #d9e2ec; }
+  pre { background:#0f172a; color:#e5edff; padding:14px 16px; border-radius:8px; overflow:auto;
+        font-family:Consolas,"Courier New",monospace; font-size:13px; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14.5px; }
+  th,td { border:1px solid #d9e2ec; padding:8px 10px; text-align:left; }
+  th { background:#eef2f7; }
+  .nota { background:#f0f6ff; border-left:4px solid #1d4ed8; padding:12px 16px; border-radius:0 8px 8px 0; }
+  footer { text-align:center; color:#52606d; font-size:13.5px; padding:26px 24px 40px; }
+  code { background:#eef2f7; padding:1px 5px; border-radius:4px; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="contenedor">
+    <span class="etiqueta">Entorno Universitario de Simulación Contable</span>
+    <h1>Simulador Integral de Sistema Contable</h1>
+    <p>Servicios y Comercialización de Productos — <strong>Comercial y Servicios Nueva Esperanza S.A.</strong></p>
+  </div>
+</header>
+
+<main>
+  <div class="acciones">
+    <div class="tarjeta">
+      <h3>1. Descargar el sistema</h3>
+      <p>Botón <code>Code → Download ZIP</code> en GitHub, descomprima y siga la guía.</p>
+      <a class="boton" href="https://github.com/" target="_blank" rel="noopener">Ir al repositorio</a>
+    </div>
+    <div class="tarjeta">
+      <h3>2. Guía del estudiante</h3>
+      <p>Instalación paso a paso, usuarios de acceso, primer recorrido y solución de problemas.</p>
+      <a class="boton sec" href="GUIA_ESTUDIANTES.md">Abrir la guía</a>
+    </div>
+    <div class="tarjeta">
+      <h3>3. Manual de usuario</h3>
+      <p>Manual completo del sistema: los 31 módulos, reglas contables y anexos.</p>
+      <a class="boton sec" href="MANUAL_DE_USUARIO.html">Abrir el manual</a>
+    </div>
+  </div>
+
+  <h2>Ejecutar el simulador en su computador</h2>
+  <p>Requiere <strong>Python 3.11 o superior</strong>. Los comandos se ejecutan dentro de la carpeta
+     descomprimida:</p>
+<pre>python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # macOS / Linux
+pip install -r requirements.txt
+python serve.py</pre>
+  <p>Luego abra el navegador en <code>http://127.0.0.1:5000</code>. La primera vez tarda alrededor de
+     un minuto porque genera la empresa simulada con su período contable.</p>
+
+  <h2>Usuarios de acceso</h2>
+  <table>
+    <tr><th>Rol</th><th>Usuario</th><th>Contraseña</th><th>Para qué sirve</th></tr>
+    <tr><td>Estudiante</td><td><code>estudiante</code></td><td><code>estudiante123</code></td><td>Resolver casos, registrar operaciones, autoevaluarse</td></tr>
+    <tr><td>Docente</td><td><code>docente</code></td><td><code>docente123</code></td><td>Simulaciones del curso y analítica de resultados</td></tr>
+    <tr><td>Administrador</td><td><code>admin</code></td><td><code>admin123</code></td><td>Parámetros, usuarios, impuestos y auditoría</td></tr>
+    <tr><td>Auditor</td><td><code>auditor</code></td><td><code>auditor123</code></td><td>Consulta de libros, estados y trazabilidad</td></tr>
+  </table>
+
+  <div class="nota">
+    <strong>Sobre esta página:</strong> GitHub Pages solo publica contenido estático (esta portada, la
+    guía y el manual). El simulador es una aplicación con base de datos, por lo que se ejecuta en el
+    computador de cada estudiante o en un servidor propio; las instrucciones están en
+    <code>docs/DESPLIEGUE.md</code>.
+  </div>
+
+  <h2>Qué incluye el sistema</h2>
+  <table>
+    <tr><th>Área</th><th>Contenido</th></tr>
+    <tr><td>Contabilidad</td><td>Plan de cuentas (43), libro diario, libro mayor, balance de comprobación, ajustes y cierre del período</td></tr>
+    <tr><td>Operaciones</td><td>Ventas, servicios, compras con inventario perpetuo y costo de ventas</td></tr>
+    <tr><td>Inventarios</td><td>20 productos, Kardex con promedio ponderado y FIFO, existencias y alertas</td></tr>
+    <tr><td>Tesorería y cartera</td><td>Caja y arqueos con regularización, bancos, conciliación bancaria, clientes, cuentas por cobrar y por pagar, documentos fuente, tributación</td></tr>
+    <tr><td>Informes NIIF</td><td>Estado de resultados, situación financiera (con validación Activo = Pasivo + Patrimonio) y flujo de efectivo</td></tr>
+    <tr><td>Académico e IA</td><td>Simulador de 4 niveles y 19 casos, evaluaciones con rúbrica, panel docente, Tutor Contable IA, centro de reportes (CSV/Excel/PDF) y auditoría</td></tr>
+  </table>
+
+  <h2>Verificación del proyecto</h2>
+  <p>El repositorio incluye <strong>113 pruebas automáticas</strong> que se ejecutan en cada cambio:</p>
+<pre>python -m pytest tests -q          # 113 pruebas del motor contable y de la interfaz
+python database/seed_data.py       # regenerar los datos de demostración</pre>
+</main>
+
+<footer>
+  Uso académico con datos de demostración · Período Abril 2026 ·
+  Comercial y Servicios Nueva Esperanza S.A. (RUC 1792345678001)
+</footer>
+</body>
+</html>

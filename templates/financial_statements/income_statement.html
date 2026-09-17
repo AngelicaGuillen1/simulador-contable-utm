@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block title %}Estado de Resultados - Simulador Integral de Sistema Contable{% endblock %}
+
+{# --- Macros de presentación contable --- #}
+{% macro imp(v) %}{% if v < 0 %}({{ "{:,.2f}".format(v|abs) }}){% else %}{{ "{:,.2f}".format(v) }}{% endif %}{% endmacro %}
+{% macro ded(v) %}{% if v > 0 %}({{ "{:,.2f}".format(v) }}){% elif v < 0 %}{{ "{:,.2f}".format(v) }}{% else %}{{ "{:,.2f}".format(0) }}{% endif %}{% endmacro %}
+
+{% block content %}
+{# Periodo solicitado #}
+{% set periodo_txt = ('Todo el período registrado' if not fecha_inicio and not fecha_fin
+   else 'Del ' ~ (fecha_inicio if fecha_inicio else 'inicio de registros') ~ ' al ' ~ (fecha_fin if fecha_fin else 'último registro')) %}
+{% set pct_base = income.total_ingresos_operacionales %}
+{% set margen_bruto = (income.utilidad_bruta / pct_base * 100) if pct_base else 0 %}
+{% set margen_operacional = (income.utilidad_operacional / pct_base * 100) if pct_base else 0 %}
+{% set margen_neto = (income.utilidad_neta / pct_base * 100) if pct_base else 0 %}
+
+<!-- Encabezado del informe -->
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-file-earmark-spreadsheet text-primary me-2"></i>Estado de Resultados</h3>
+    <p class="text-muted small mb-0">
+      Estado de Resultados Integral &bull; NIC 1 / NIIF para Pymes &bull; Comercial y Servicios Nueva Esperanza S.A.
+    </p>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-2">
+      <i class="bi bi-calendar3 me-1"></i>{{ periodo_txt }}
+    </span>
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-2 ms-1">
+      <i class="bi bi-currency-dollar me-1"></i>Expresado en USD
+    </span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('financial_statements.balance_sheet') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-check me-1"></i> Situación Financiera
+    </a>
+    <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i> Centro de Reportes
+    </a>
+    <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i> Imprimir
+    </button>
+  </div>
+</div>
+
+<!-- Filtro de período -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <form method="get" action="{{ url_for('financial_statements.income_statement') }}" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label for="fecha_inicio" class="form-label small fw-semibold mb-1">Desde</label>
+        <input type="date" class="form-control form-control-sm" id="fecha_inicio" name="fecha_inicio"
+               value="{{ fecha_inicio if fecha_inicio else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label for="fecha_fin" class="form-label small fw-semibold mb-1">Hasta</label>
+        <input type="date" class="form-control form-control-sm" id="fecha_fin" name="fecha_fin"
+               value="{{ fecha_fin if fecha_fin else '' }}">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i> Aplicar período
+        </button>
+        <a href="{{ url_for('financial_statements.income_statement') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Indicadores clave del resultado -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Ingresos Operacionales</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(income.total_ingresos_operacionales) }}</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-graph-up-arrow"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">
+        Bienes: $ {{ "{:,.2f}".format(income.ventas_bienes) }} &bull; Servicios: $ {{ "{:,.2f}".format(income.ingresos_servicios) }}
+      </small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Utilidad Bruta</div>
+          <div class="kpi-value {% if income.utilidad_bruta < 0 %}text-danger{% endif %}">
+            $ {{ "{:,.2f}".format(income.utilidad_bruta) }}
+          </div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-box-seam"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">Margen bruto: {{ "{:,.2f}".format(margen_bruto) }}%</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Utilidad Operacional</div>
+          <div class="kpi-value {% if income.utilidad_operacional < 0 %}text-danger{% endif %}">
+            $ {{ "{:,.2f}".format(income.utilidad_operacional) }}
+          </div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-sliders2"></i></div>
+      </div>
+      <small class="text-muted d-block mt-2">Margen operacional: {{ "{:,.2f}".format(margen_operacional) }}%</small>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Utilidad / (Pérdida) Neta</div>
+          <div class="kpi-value {% if income.utilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+            $ {{ "{:,.2f}".format(income.utilidad_neta) }}
+          </div>
+        </div>
+        <div class="kpi-icon {% if income.utilidad_neta >= 0 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %}">
+          <i class="bi {% if income.utilidad_neta >= 0 %}bi-trophy-fill{% else %}bi-exclamation-triangle-fill{% endif %}"></i>
+        </div>
+      </div>
+      <small class="text-muted d-block mt-2">Margen neto: {{ "{:,.2f}".format(margen_neto) }}%</small>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Estado de resultados escalonado -->
+  <div class="col-xl-8">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-ol text-primary me-2"></i>Estado de Resultados Escalonado (Por Función del Gasto)</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-custom align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 62%;">Descripción</th>
+              <th class="text-end" style="width: 18%;">Código</th>
+              <th class="text-end" style="width: 20%;">Importe (USD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- INGRESOS DE ACTIVIDADES ORDINARIAS -->
+            <tr class="table-light">
+              <td class="fw-bold text-uppercase">Ingresos de Actividades Ordinarias</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="ps-4">Ventas de Bienes</td>
+              <td class="text-end text-muted">4.1.01</td>
+              <td class="text-end">{{ imp(income.ventas_bienes) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4">Prestación de Servicios</td>
+              <td class="text-end text-muted">4.1.02</td>
+              <td class="text-end">{{ imp(income.ingresos_servicios) }}</td>
+            </tr>
+            <tr class="border-top">
+              <td class="fw-bold">= Total Ingresos Operacionales</td>
+              <td></td>
+              <td class="text-end fw-bold">$ {{ "{:,.2f}".format(income.total_ingresos_operacionales) }}</td>
+            </tr>
+
+            <!-- COSTO DE VENTAS -->
+            <tr>
+              <td class="ps-4">(-) Costo de Ventas</td>
+              <td class="text-end text-muted">5.1.01</td>
+              <td class="text-end">{{ ded(income.costo_ventas) }}</td>
+            </tr>
+            <tr class="border-top">
+              <td class="fw-bold">= Utilidad Bruta en Ventas</td>
+              <td></td>
+              <td class="text-end fw-bold {% if income.utilidad_bruta < 0 %}text-danger{% endif %}">
+                $ {{ "{:,.2f}".format(income.utilidad_bruta) }}
+              </td>
+            </tr>
+
+            <!-- GASTOS OPERACIONALES -->
+            <tr class="table-light">
+              <td class="fw-bold text-uppercase">Gastos Operacionales</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="ps-4 fw-semibold">Gastos Administrativos</td>
+              <td class="text-end text-muted">6.1</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="ps-5">Sueldos, Salarios y Beneficios Sociales</td>
+              <td class="text-end text-muted">6.1.01</td>
+              <td class="text-end">{{ ded(income.gastos_administrativos.sueldos) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5">Arrendamiento de Locales</td>
+              <td class="text-end text-muted">6.1.02</td>
+              <td class="text-end">{{ ded(income.gastos_administrativos.arriendo) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5">Servicios Básicos (Energía, Agua, Telecomunicaciones)</td>
+              <td class="text-end text-muted">6.1.03</td>
+              <td class="text-end">{{ ded(income.gastos_administrativos.servicios_basicos) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5">Depreciación de Propiedad, Planta y Equipo</td>
+              <td class="text-end text-muted">6.1.04</td>
+              <td class="text-end">{{ ded(income.gastos_administrativos.depreciacion) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5">Mantenimiento y Reparaciones</td>
+              <td class="text-end text-muted">6.1.06</td>
+              <td class="text-end">{{ ded(income.gastos_administrativos.mantenimiento) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5 fw-semibold">Subtotal Gastos Administrativos</td>
+              <td></td>
+              <td class="text-end fw-semibold">{{ ded(income.gastos_administrativos.total) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4 fw-semibold mt-2">Gastos de Ventas y Distribución</td>
+              <td class="text-end text-muted">6.1.05</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="ps-5">Publicidad y Promoción</td>
+              <td class="text-end text-muted">6.1.05</td>
+              <td class="text-end">{{ ded(income.gastos_ventas.publicidad) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-5 fw-semibold">Subtotal Gastos de Ventas</td>
+              <td></td>
+              <td class="text-end fw-semibold">{{ ded(income.gastos_ventas.total) }}</td>
+            </tr>
+            <tr class="border-top">
+              <td class="fw-bold">= Total Gastos Operacionales</td>
+              <td></td>
+              <td class="text-end fw-bold">{{ ded(income.total_gastos_operacionales) }}</td>
+            </tr>
+            <tr class="border-top">
+              <td class="fw-bold">= Utilidad (Pérdida) Operacional</td>
+              <td></td>
+              <td class="text-end fw-bold {% if income.utilidad_operacional < 0 %}text-danger{% endif %}">
+                $ {{ "{:,.2f}".format(income.utilidad_operacional) }}
+              </td>
+            </tr>
+
+            <!-- PARTIDAS NO OPERACIONALES -->
+            <tr class="table-light">
+              <td class="fw-bold text-uppercase">Otros Ingresos y Gastos Financieros</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="ps-4">(+) Otros Ingresos y Ganancias</td>
+              <td class="text-end text-muted">4.2.01</td>
+              <td class="text-end">{{ imp(income.otros_ingresos) }}</td>
+            </tr>
+            <tr>
+              <td class="ps-4">(-) Gastos Financieros e Intereses</td>
+              <td class="text-end text-muted">6.2.01</td>
+              <td class="text-end">{{ ded(income.gastos_financieros) }}</td>
+            </tr>
+            <tr class="table-light border-top border-2">
+              <td class="fw-bold text-uppercase">Utilidad (Pérdida) Neta del Ejercicio</td>
+              <td></td>
+              <td class="text-end fw-bold fs-6 {% if income.utilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                $ {{ "{:,.2f}".format(income.utilidad_neta) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white border-top py-3">
+        <small class="text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          El importe expresado entre paréntesis representa una disminución del resultado. Los valores están libres de
+          impuestos por tratarse de un entorno de simulación; el impacto del IVA se registra en cuentas por pagar fiscales.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel de análisis vertical -->
+  <div class="col-xl-4">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-aspect-ratio text-primary me-2"></i>Análisis Vertical (% de Ventas)</h6>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-custom mb-0">
+          <tbody>
+            <tr>
+              <td>Ingresos Operacionales</td>
+              <td class="text-end fw-semibold">100.00%</td>
+            </tr>
+            <tr>
+              <td>Costo de Ventas</td>
+              <td class="text-end">{% if pct_base %}{{ "{:,.2f}".format(income.costo_ventas / pct_base * 100) }}%{% else %}0.00%{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Margen Bruto</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(margen_bruto) }}%</td>
+            </tr>
+            <tr>
+              <td>Gastos Operacionales</td>
+              <td class="text-end">{% if pct_base %}{{ "{:,.2f}".format(income.total_gastos_operacionales / pct_base * 100) }}%{% else %}0.00%{% endif %}</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Margen Operacional</td>
+              <td class="text-end fw-semibold">{{ "{:,.2f}".format(margen_operacional) }}%</td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Margen Neto</td>
+              <td class="text-end fw-semibold {% if income.utilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ "{:,.2f}".format(margen_neto) }}%
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-primary me-2"></i>Estructura del Resultado</h6>
+      </div>
+      <div class="card-body">
+        <canvas id="incomeChart" height="230"></canvas>
+      </div>
+      <div class="card-footer bg-white border-top py-3">
+        <small class="text-muted d-block">
+          <i class="bi bi-check-circle text-success me-1"></i>Generación del resultado conforme NIC 1, método de la función del gasto.
+        </small>
+        <small class="text-muted">
+          <i class="bi bi-check-circle text-success me-1"></i>Comparación de saldos antes y después de impuestos no aplicable en simulación.
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var canvas = document.getElementById('incomeChart');
+    if (!canvas || typeof Chart === 'undefined') { return; }
+
+    var etiquetas = ['Ingresos', 'Costo de Ventas', 'Gastos Operac.', 'Utilidad Neta'];
+    var datos = [
+      {{ income.total_ingresos_operacionales }},
+      {{ income.costo_ventas }},
+      {{ income.total_gastos_operacionales }},
+      {{ income.utilidad_neta }}
+    ];
+    var colores = datos.map(function (v) {
+      return v < 0 ? 'rgba(220, 38, 38, 0.75)' : 'rgba(13, 110, 253, 0.75)';
+    });
+    colores[3] = {{ income.utilidad_neta }} < 0 ? 'rgba(220, 38, 38, 0.75)' : 'rgba(25, 135, 84, 0.8)';
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: etiquetas,
+        datasets: [{
+          label: 'USD',
+          data: datos,
+          backgroundColor: colores,
+          borderColor: colores.map(function (c) { return c.replace('0.75', '1').replace('0.8', '1'); }),
+          borderWidth: 1,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return 'USD $ ' + Number(ctx.parsed.y).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#64748b', font: { size: 11 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              callback: function (value) { return '$ ' + Number(value).toLocaleString('es-EC'); }
+            }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

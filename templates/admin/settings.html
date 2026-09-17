@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% block title %}Parámetros & Configuración - Simulador Integral de Sistema Contable{% endblock %}
+
+{% macro accion_badge(accion) -%}
+  {%- set a = (accion or '')|upper -%}
+  <span class="badge border {% if a.startswith('CREAR') %}bg-success-subtle text-success border-success-subtle{% elif a.startswith('MODIFICAR') or a.startswith('ACTUALIZAR') %}bg-warning-subtle text-warning border-warning-subtle{% elif a.startswith('ANULAR') or a.startswith('REVERTIR') or a.startswith('ELIMINAR') %}bg-danger-subtle text-danger border-danger-subtle{% elif a.startswith('LOGIN') or a.startswith('LOGOUT') %}bg-info-subtle text-info border-info-subtle{% elif a.startswith('SIMULACION') %}bg-primary-subtle text-primary border-primary-subtle{% else %}bg-secondary-subtle text-secondary{% endif %}">{{ accion or '—' }}</span>
+{%- endmacro %}
+
+{% block content %}
+{% set empresa = empresa|default({}, true) %}
+{% set periodos = periodos|default([], true) %}
+{% set parametros = parametros|default([], true) %}
+{% set recent_audit = recent_audit|default([], true) %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-gear-fill text-primary me-2"></i>Parámetros & Configuración del Sistema</h3>
+    <p class="text-muted small mb-0">Datos de la empresa simulada, fecha de trabajo, períodos contables y parámetros globales de la simulación</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admin.audit') }}" class="btn btn-outline-primary">
+      <i class="bi bi-shield-check me-1"></i> Auditoría Completa
+    </a>
+    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-person-gear me-1"></i> Gestión de Usuarios
+    </a>
+  </div>
+</div>
+
+<!-- KPIs de configuración -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-4">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Usuarios del Sistema</div>
+          <div class="kpi-value">{{ total_users|default(0) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i> Cuentas registradas</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary">
+          <i class="bi bi-person-gear"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-4">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Registros de Auditoría</div>
+          <div class="kpi-value">{{ total_audit|default(0) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-shield-check me-1"></i> Trazabilidad inmutable</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success">
+          <i class="bi bi-shield-lock"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-4">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Empresas Simuladas</div>
+          <div class="kpi-value">{{ total_empresas|default(0) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-building me-1"></i> Entidades configuradas</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning">
+          <i class="bi bi-buildings"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not empresa %}
+<div class="alert alert-warning d-flex align-items-center rounded-4 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  No se encontró la empresa simulada registrada. Complete el formulario para definir sus datos.
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <!-- Formulario de datos de empresa y fecha de trabajo -->
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="fw-bold mb-1">Datos de la Empresa Simulada</h5>
+          <p class="text-muted small mb-0">Comercial y Servicios Nueva Esperanza S.A.</p>
+        </div>
+        {% if empresa.activo %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Empresa Activa</span>
+        {% else %}
+        <span class="badge bg-secondary-subtle text-secondary border">Empresa Inactiva</span>
+        {% endif %}
+      </div>
+      <div class="card-body px-4 pb-4">
+        <form method="POST" action="{{ url_for('admin.index') }}" id="settingsForm">
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-uppercase text-muted" for="fechaTrabajoInput">
+              <i class="bi bi-calendar-event me-1"></i> Fecha de Trabajo de la Simulación
+            </label>
+            <input type="date" class="form-control" id="fechaTrabajoInput" name="fecha_trabajo"
+                   value="{{ fecha_trabajo|default('', true) }}" required>
+            <div class="form-text">
+              La <strong>fecha de trabajo</strong> es la fecha con la que se registran las nuevas operaciones
+              (asientos, ventas, compras, cobros y pagos). Debe estar comprendida <strong>dentro del período abierto</strong>;
+              si se registra fuera de ese rango, el sistema rechazará la operación.
+            </div>
+            <div class="small text-danger mt-1 d-none" id="fechaTrabajoMsg"></div>
+          </div>
+
+          <hr class="my-4">
+          <h6 class="fw-bold text-muted text-uppercase small mb-3">Identificación Tributaria</h6>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold" for="razonSocialInput">Razón Social</label>
+              <input type="text" class="form-control" id="razonSocialInput" name="razon_social"
+                     value="{{ empresa.razon_social or '' }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold" for="rucInput">RUC</label>
+              <input type="text" class="form-control" id="rucInput" name="ruc"
+                     value="{{ empresa.ruc or '' }}" maxlength="13" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="nombreComercialInput">Nombre Comercial</label>
+              <input type="text" class="form-control" id="nombreComercialInput" name="nombre_comercial"
+                     value="{{ empresa.nombre_comercial or '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="direccionInput">Dirección Matriz</label>
+              <input type="text" class="form-control" id="direccionInput" name="direccion"
+                     value="{{ empresa.direccion or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="telefonoInput">Teléfono</label>
+              <input type="text" class="form-control" id="telefonoInput" name="telefono"
+                     value="{{ empresa.telefono or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="emailInput">Correo Electrónico</label>
+              <input type="email" class="form-control" id="emailInput" name="email"
+                     value="{{ empresa.email or '' }}">
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-muted text-uppercase small mb-3 mt-4">Actividad Económica</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="actComercialInput">Actividad Comercial</label>
+              <input type="text" class="form-control" id="actComercialInput" name="actividad_comercial"
+                     value="{{ empresa.actividad_comercial or '' }}">
+              <div class="form-text">Venta de bienes de primera necesidad.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="actServiciosInput">Actividad de Servicios</label>
+              <input type="text" class="form-control" id="actServiciosInput" name="actividad_servicios"
+                     value="{{ empresa.actividad_servicios or '' }}">
+              <div class="form-text">Prestación de servicios a terceros.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold" for="kardexSelect">Método de Valoración Kardex por Defecto</label>
+              <select class="form-select" id="kardexSelect" name="metodo_kardex_defecto" required>
+                <option value="PROMEDIO" {% if (empresa.metodo_kardex_defecto or 'PROMEDIO') == 'PROMEDIO' %}selected{% endif %}>
+                  PROMEDIO — Costo promedio ponderado
+                </option>
+                <option value="FIFO" {% if empresa.metodo_kardex_defecto == 'FIFO' %}selected{% endif %}>
+                  FIFO — Primeras entradas, primeras salidas
+                </option>
+              </select>
+              <div class="form-text">Se aplica por defecto al valorar las salidas de inventario en el Kardex.</div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button type="reset" class="btn btn-light border">
+              <i class="bi bi-arrow-counterclockwise me-1"></i> Restablecer
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-save me-1"></i> Guardar Configuración
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Parámetros globales -->
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h5 class="fw-bold mb-1">Parámetros Globales</h5>
+        <p class="text-muted small mb-0">Valores vigentes de la simulación</p>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-custom table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Clave</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in parametros %}
+              <tr>
+                <td>
+                  <code class="small">{{ p.clave }}</code>
+                  {% if p.descripcion %}<div class="text-muted" style="font-size: 0.72rem;">{{ p.descripcion }}</div>{% endif %}
+                </td>
+                <td class="fw-semibold">{{ p.valor }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="2" class="text-center py-4 text-muted">Sin registros para mostrar</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Períodos contables -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="fw-bold mb-1">Períodos Contables</h5>
+      <p class="text-muted small mb-0">Los registros contables solo pueden efectuarse dentro de un período en estado ABIERTO</p>
+    </div>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+      {{ periodos|selectattr('estado', 'equalto', 'ABIERTO')|list|length }} abierto(s)
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-custom table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Período</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+            <th class="text-center">Estado</th>
+            <th class="pe-4">Cerrado En</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for per in periodos %}
+          <tr>
+            <td class="ps-4 fw-semibold text-dark">{{ per.nombre }}</td>
+            <td>{{ per.fecha_inicio }}</td>
+            <td>{{ per.fecha_fin }}</td>
+            <td class="text-center">
+              {% if per.estado == 'ABIERTO' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3">ABIERTO</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border px-3">CERRADO</span>
+              {% endif %}
+            </td>
+            <td class="pe-4 text-muted small">{{ per.cerrado_en or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-4 text-muted">Sin registros para mostrar</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Últimos registros de auditoría -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <div class="bg-dark text-white p-2 rounded-3 me-2">
+        <i class="bi bi-shield-check"></i>
+      </div>
+      <div>
+        <h6 class="fw-bold mb-0">Últimos 10 Registros de Auditoría</h6>
+        <small class="text-muted">Trazabilidad de los cambios de configuración y operaciones del sistema</small>
+      </div>
+    </div>
+    <a href="{{ url_for('admin.audit') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-list-check me-1"></i> Ver Todo
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-custom table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">Fecha / Hora</th>
+            <th>Usuario</th>
+            <th>Acción</th>
+            <th>Módulo</th>
+            <th>Registro</th>
+            <th>Valor Anterior</th>
+            <th class="pe-4">Valor Nuevo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in recent_audit %}
+          <tr>
+            <td class="ps-4 text-muted small">{{ a.timestamp }}</td>
+            <td>
+              <div class="fw-semibold text-dark small">{{ a.username or 'sistema' }}</div>
+              <div class="text-muted" style="font-size: 0.72rem;">{{ a.ip_origen or '127.0.0.1' }}</div>
+            </td>
+            <td>{{ accion_badge(a.accion) }}</td>
+            <td><span class="badge bg-light text-dark border">{{ a.modulo or '—' }}</span></td>
+            <td class="small text-muted">{{ a.registro_id or '—' }}</td>
+            <td style="max-width: 220px;">
+              {% if a.valor_anterior %}
+              <div class="small text-truncate" title="{{ a.valor_anterior }}"><code>{{ a.valor_anterior }}</code></div>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td style="max-width: 220px;" class="pe-4">
+              {% if a.valor_nuevo %}
+              <div class="small text-truncate" title="{{ a.valor_nuevo }}"><code>{{ a.valor_nuevo }}</code></div>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">Sin registros para mostrar</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% set periodos_js = periodos|default([], true) %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("settingsForm");
+  const inputFecha = document.getElementById("fechaTrabajoInput");
+  const msg = document.getElementById("fechaTrabajoMsg");
+  if (!form || !inputFecha || !msg) return;
+
+  const periodos = {{ periodos_js|tojson }};
+  const abiertos = periodos.filter(function (p) { return p.estado === "ABIERTO"; });
+
+  form.addEventListener("submit", function (e) {
+    msg.classList.add("d-none");
+    if (!inputFecha.value) {
+      e.preventDefault();
+      msg.textContent = "Debe indicar la fecha de trabajo de la simulación.";
+      msg.classList.remove("d-none");
+      return;
+    }
+    if (abiertos.length === 0) return;
+
+    const dentro = abiertos.some(function (p) {
+      return inputFecha.value >= p.fecha_inicio && inputFecha.value <= p.fecha_fin;
+    });
+    if (!dentro) {
+      e.preventDefault();
+      const rangos = abiertos.map(function (p) {
+        return p.nombre + " (" + p.fecha_inicio + " a " + p.fecha_fin + ")";
+      }).join(", ");
+      msg.textContent = "La fecha de trabajo debe estar dentro de un período abierto: " + rangos + ".";
+      msg.classList.remove("d-none");
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,862 @@
+{% extends "base.html" %}
+{% block title %}Cuentas por Pagar - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# ====== Agregados calculados sobre las obligaciones reales entregadas por el servidor ====== #}
+{% set ns = namespace(
+     total_original=0.0, total_saldo=0.0, total_amortizado=0.0,
+     saldo_abiertos=0.0, docs_abiertos=0, docs_pagados=0, docs_vencidos=0,
+     saldo_pendiente=0.0, saldo_parcial=0.0, saldo_vencida=0.0,
+     vencimiento_actual='', proximo_proveedor='', proximo_factura='') %}
+{% for c in cxp_list %}
+  {% set m_orig = (c.monto_original or 0)|float %}
+  {% set m_saldo = (c.saldo_actual or 0)|float %}
+  {% set m_amort = m_orig - m_saldo %}
+  {% set ns.total_original = ns.total_original + m_orig %}
+  {% set ns.total_saldo = ns.total_saldo + m_saldo %}
+  {% if m_amort > 0 %}{% set ns.total_amortizado = ns.total_amortizado + m_amort %}{% endif %}
+  {% if c.estado == 'PAGADA' %}
+    {% set ns.docs_pagados = ns.docs_pagados + 1 %}
+  {% else %}
+    {% set ns.docs_abiertos = ns.docs_abiertos + 1 %}
+    {% set ns.saldo_abiertos = ns.saldo_abiertos + m_saldo %}
+    {% if c.estado == 'PARCIAL' %}
+      {% set ns.saldo_parcial = ns.saldo_parcial + m_saldo %}
+    {% elif c.estado == 'VENCIDA' %}
+      {% set ns.saldo_vencida = ns.saldo_vencida + m_saldo %}
+      {% set ns.docs_vencidos = ns.docs_vencidos + 1 %}
+    {% else %}
+      {% set ns.saldo_pendiente = ns.saldo_pendiente + m_saldo %}
+    {% endif %}
+    {% if c.fecha_vencimiento and (ns.vencimiento_actual == '' or c.fecha_vencimiento < ns.vencimiento_actual) %}
+      {% set ns.vencimiento_actual = c.fecha_vencimiento %}
+      {% set ns.proximo_proveedor = c.proveedor_nombre %}
+      {% set ns.proximo_factura = c.numero_factura %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+
+{% set total_obligaciones = (total_cxp or 0)|float %}
+{% set dif_control = total_obligaciones - ns.saldo_abiertos %}
+{% set conciliado = dif_control|abs < 0.01 %}
+{% set pct_cancelado = (ns.total_amortizado / ns.total_original * 100) if ns.total_original > 0 else 0 %}
+
+{% set abiertas = cxp_list|rejectattr('estado', 'equalto', 'PAGADA') %}
+{% set ns.top = [] %}
+{% for nombre, docs in abiertas|groupby('proveedor_nombre') %}
+  {% set sub = namespace(t=0.0) %}
+  {% for d in docs %}{% set sub.t = sub.t + (d.saldo_actual or 0) %}{% endfor %}
+  {% set ns.top = ns.top + [{'nombre': nombre or 'Sin nombre', 'total': sub.t|round(2), 'docs': docs|length}] %}
+{% endfor %}
+{% set top_proveedores = ns.top|sort(attribute='total', reverse=True) %}
+
+<!-- Encabezado de página -->
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-credit-card text-primary me-2"></i>Cuentas por Pagar</h3>
+    <p class="text-muted small mb-0">
+      Obligaciones con proveedores originadas en compras a crédito &bull; Control de vencimientos,
+      pagos parciales y registro contable del egreso de fondos
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('partners.suppliers') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-truck me-1"></i> Catálogo de Proveedores
+    </a>
+    <a href="{{ url_for('partners.receivables') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-receipt me-1"></i> Cuentas por Cobrar
+    </a>
+    <button type="button" id="btnExportarCxp" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-filetype-csv me-1"></i> Exportar CSV
+    </button>
+  </div>
+</div>
+
+<div id="cxpMensajeExportacion" class="alert alert-warning alert-dismissible fade show d-none" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <span id="cxpTextoExportacion"></span>
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+</div>
+
+<!-- Indicadores de obligaciones -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Obligaciones por Pagar</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(total_obligaciones) }}</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-files me-1"></i> {{ ns.docs_abiertos }} obligación(es) abierta(s) &bull; {{ ns.docs_pagados }} cancelada(s)
+          </div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary">
+          <i class="bi bi-credit-card"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Saldo Vencido</div>
+          <div class="kpi-value text-danger" id="cxpKpiVencido">$ {{ "{:,.2f}".format(ns.saldo_vencida) }}</div>
+          <div class="small text-muted mt-1" id="cxpKpiVencidoDetalle">
+            <i class="bi bi-exclamation-triangle me-1"></i> {{ ns.docs_vencidos }} obligación(es) con estado VENCIDA
+          </div>
+        </div>
+        <div class="kpi-icon bg-danger-subtle text-danger">
+          <i class="bi bi-alarm"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Pagado a Proveedores</div>
+          <div class="kpi-value text-success">$ {{ "{:,.2f}".format(ns.total_amortizado) }}</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-graph-up-arrow me-1"></i> {{ "{:.1f}%".format(pct_cancelado) }} de $ {{ "{:,.2f}".format(ns.total_original) }} comprado a crédito
+          </div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card h-100">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Próximo Vencimiento</div>
+          <div class="kpi-value" style="font-size: 1.25rem;">
+            {% if ns.vencimiento_actual %}{{ ns.vencimiento_actual }}{% else %}&mdash;{% endif %}
+          </div>
+          <div class="small text-muted mt-1">
+            {% if ns.vencimiento_actual %}
+              <i class="bi bi-file-earmark-text me-1"></i> {{ ns.proximo_factura }} &bull; {{ ns.proximo_proveedor }}
+            {% else %}
+              <i class="bi bi-check2-circle me-1"></i> Sin obligaciones por vencer
+            {% endif %}
+          </div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning">
+          <i class="bi bi-calendar-event"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Conciliación de control interno de las obligaciones -->
+<div class="balance-banner {{ 'balanced' if conciliado else 'unbalanced' }}">
+  <span>
+    <i class="bi {{ 'bi-check2-circle' if conciliado else 'bi-exclamation-octagon' }} me-2"></i>
+    Consolidado del módulo Cuentas por Pagar: <strong>$ {{ "{:,.2f}".format(total_obligaciones) }}</strong>
+    &nbsp;|&nbsp; Suma de saldos abiertos de las obligaciones detalladas: <strong>$ {{ "{:,.2f}".format(ns.saldo_abiertos) }}</strong>
+  </span>
+  <span class="badge {{ 'bg-success' if conciliado else 'bg-danger' }}">
+    {% if conciliado %}
+      Conciliado
+    {% else %}
+      Diferencia: $ {{ "{:,.2f}".format(dif_control) }}
+    {% endif %}
+  </span>
+</div>
+
+<!-- Filtros de trabajo -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-lg-5">
+        <label for="cxpFiltroTexto" class="form-label small fw-semibold text-muted mb-1">Buscar factura o proveedor</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="cxpFiltroTexto" placeholder="N.º de factura, proveedor o RUC...">
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <label for="cxpFiltroEstado" class="form-label small fw-semibold text-muted mb-1">Estado</label>
+        <select class="form-select form-select-sm" id="cxpFiltroEstado">
+          <option value="">Todos</option>
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="PARCIAL">PARCIAL</option>
+          <option value="VENCIDA">VENCIDA</option>
+          <option value="PAGADA">PAGADA</option>
+        </select>
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" value="" id="cxpSoloVencidas">
+          <label class="form-check-label small fw-semibold text-muted" for="cxpSoloVencidas">
+            Solo vencidas
+          </label>
+        </div>
+      </div>
+      <div class="col-lg-2 d-flex align-items-center gap-2">
+        <button type="button" id="btnLimpiarFiltrosCxp" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+        </button>
+        <span class="small text-muted ms-auto" id="cxpContador">Mostrando {{ cxp_list|length }} de {{ cxp_list|length }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detalle de las obligaciones -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Detalle de Obligaciones con Proveedores</h6>
+      <small class="text-muted">Ordenado por fecha de vencimiento ascendente (la más antigua primero)</small>
+    </div>
+    <span class="badge bg-light text-dark border">USD</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom table-hover align-middle mb-0" id="tablaCxp">
+        <thead>
+          <tr>
+            <th scope="col" class="ps-4">Factura Prov.</th>
+            <th scope="col">Proveedor</th>
+            <th scope="col">Emisión</th>
+            <th scope="col">Vencimiento</th>
+            <th scope="col" class="text-end">Total Factura</th>
+            <th scope="col" class="text-end">Pagado</th>
+            <th scope="col" class="text-end">Saldo Pendiente</th>
+            <th scope="col" class="text-center">Estado</th>
+            <th scope="col" class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cxp_list %}
+          {% set m_orig = (c.monto_original or 0)|float %}
+          {% set m_saldo = (c.saldo_actual or 0)|float %}
+          {% set m_amort = m_orig - m_saldo %}
+          {% set pct_doc = (m_amort / m_orig * 100) if m_orig > 0 else 0 %}
+          <tr class="cxp-row"
+              data-estado="{{ c.estado }}"
+              data-vencimiento="{{ c.fecha_vencimiento or '' }}"
+              data-saldo="{{ m_saldo }}"
+              data-vencido="0"
+              data-id="{{ c.id }}"
+              data-documento="{{ c.numero_factura }}"
+              data-proveedor="{{ c.proveedor_nombre }}"
+              data-ruc="{{ c.proveedor_ruc }}"
+              data-emision="{{ c.fecha_emision or '' }}">
+            <td class="ps-4">
+              <div class="fw-bold"><code>{{ c.numero_factura }}</code></div>
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Compra #{{ c.compra_id }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark">{{ c.proveedor_nombre }}</div>
+              <small class="text-muted">RUC: {{ c.proveedor_ruc }}</small>
+            </td>
+            <td class="text-muted">{{ c.fecha_emision or '—' }}</td>
+            <td>
+              <div class="fw-semibold">{{ c.fecha_vencimiento or '—' }}</div>
+              <span class="badge bg-light text-muted border js-dias"></span>
+            </td>
+            <td class="text-end">$ {{ "{:,.2f}".format(m_orig) }}</td>
+            <td class="text-end">
+              <div class="text-success fw-semibold">$ {{ "{:,.2f}".format(m_amort if m_amort > 0 else 0) }}</div>
+              <div class="progress mt-1" style="height: 4px; min-width: 70px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ "{:.1f}".format(pct_doc if pct_doc > 0 else 0) }}%"></div>
+              </div>
+            </td>
+            <td class="text-end fw-bold {{ 'text-muted' if m_saldo <= 0.01 else 'text-dark' }}">$ {{ "{:,.2f}".format(m_saldo) }}</td>
+            <td class="text-center">
+              {% if c.estado == 'PAGADA' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">PAGADA</span>
+              {% elif c.estado == 'VENCIDA' %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">VENCIDA</span>
+              {% elif c.estado == 'PARCIAL' %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle">PARCIAL</span>
+              {% else %}
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">{{ c.estado }}</span>
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              {% if c.estado == 'PAGADA' or m_saldo <= 0.01 %}
+              <span class="text-muted small"><i class="bi bi-check2-all me-1"></i>Obligación cancelada</span>
+              {% else %}
+              <button type="button" class="btn btn-primary btn-sm btn-registrar-pago"
+                      data-id="{{ c.id }}"
+                      data-saldo="{{ m_saldo }}"
+                      data-documento="{{ c.numero_factura }}"
+                      data-proveedor="{{ c.proveedor_nombre }}"
+                      data-ruc="{{ c.proveedor_ruc }}"
+                      data-emision="{{ c.fecha_emision or '' }}"
+                      data-vencimiento="{{ c.fecha_vencimiento or '' }}"
+                      data-estado="{{ c.estado }}"
+                      title="Registrar un pago total o parcial sobre esta obligación">
+                <i class="bi bi-credit-card-2-front me-1"></i> Registrar pago
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+              Sin registros para mostrar
+              <div class="small mt-1">Aún no existen cuentas por pagar registradas para la empresa.</div>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr id="cxpSinCoincidencias" style="display: none;">
+            <td colspan="9" class="text-center py-4 text-muted">
+              <i class="bi bi-search me-1"></i> Ninguna obligación coincide con los filtros aplicados.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if cxp_list %}
+<!-- Datos serializados para los gráficos, consumidos por el bloque scripts -->
+<script type="application/json" id="cxpDatosGraficos">{{ {'estado': [ns.saldo_pendiente|round(2), ns.saldo_parcial|round(2), ns.saldo_vencida|round(2)], 'top': top_proveedores[:5]}|tojson }}</script>
+
+<!-- Analítica de obligaciones -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1">Saldo Abierto por Estado</h6>
+        <small class="text-muted">Distribución del saldo pendiente según el estado registrado de la obligación</small>
+      </div>
+      <div class="card-body px-4 pb-4 d-flex align-items-center justify-content-center">
+        <canvas id="cxpEstadoChart" style="max-height: 250px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-1">Obligaciones Pendientes por Proveedor</h6>
+        <small class="text-muted">Primeros cinco proveedores con mayor saldo por pagar</small>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <canvas id="cxpProveedorChart" style="max-height: 250px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Tratamiento contable del pago -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <h6 class="fw-bold mb-3"><i class="bi bi-journal-check me-2 text-primary"></i>Tratamiento Contable del Pago a Proveedores</h6>
+    <div class="row g-3">
+      <div class="col-md-7">
+        <ul class="small text-muted mb-0 ps-3">
+          <li>El pago genera automáticamente un asiento de <strong>COMPROBANTE_EGRESO</strong> en el Libro Diario.</li>
+          <li>El monto pagado reduce el saldo de la obligación y la deuda acumulada del proveedor en el mismo acto.</li>
+          <li>Si el saldo llega a cero, la obligación cambia a <strong>PAGADA</strong>; en caso contrario, a <strong>PARCIAL</strong>.</li>
+          <li>En <strong>EFECTIVO</strong> el egreso sale de Caja General; en <strong>TRANSFERENCIA</strong> o <strong>CHEQUE</strong> se exige la cuenta bancaria afectada.</li>
+        </ul>
+      </div>
+      <div class="col-md-5">
+        <div class="border rounded-3 p-3 bg-light">
+          <div class="small fw-semibold text-muted text-uppercase mb-2">Asiento tipo del pago</div>
+          <div class="d-flex justify-content-between small fw-semibold text-primary">
+            <span><i class="bi bi-arrow-right-short"></i> Débito 2.1.01 Cuentas por Pagar Proveedores</span>
+            <span>Por el valor pagado</span>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span><i class="bi bi-arrow-left-short"></i> Crédito 1.1.01 Caja General</span>
+            <span class="text-muted">Efectivo</span>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span><i class="bi bi-arrow-left-short"></i> Crédito 1.1.02 / 1.1.03 Banco</span>
+            <span class="text-muted">Transferencia / Cheque</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: registrar pago -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <form id="formPago" method="post" action="{{ url_for('partners.payables') }}" novalidate>
+        <div class="modal-header bg-primary text-white">
+          <div>
+            <h5 class="modal-title fw-bold" id="modalPagoLabel">
+              <i class="bi bi-credit-card-2-front me-2"></i>Registrar Pago a Proveedor
+            </h5>
+            <small class="text-white-50">Factura <span id="pagoDocumento">&mdash;</span></small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <input type="hidden" name="cuenta_pagar_id" id="pagoCuentaId" value="">
+
+          <div class="alert alert-danger d-none" id="pagoAlerta" role="alert"></div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <div class="border rounded-3 p-3 h-100">
+                <div class="small fw-semibold text-muted text-uppercase mb-2">Proveedor</div>
+                <div class="fw-semibold" id="pagoProveedor">&mdash;</div>
+                <small class="text-muted d-block">RUC: <span id="pagoRuc">&mdash;</span></small>
+                <hr class="my-2">
+                <div class="small text-muted">Estado actual: <span class="badge bg-light text-dark border" id="pagoEstado">&mdash;</span></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded-3 p-3 h-100">
+                <div class="small fw-semibold text-muted text-uppercase mb-2">Condiciones de la obligación</div>
+                <div class="d-flex justify-content-between small">
+                  <span class="text-muted">Fecha de emisión</span>
+                  <span class="fw-semibold" id="pagoEmision">&mdash;</span>
+                </div>
+                <div class="d-flex justify-content-between small mt-1">
+                  <span class="text-muted">Fecha de vencimiento</span>
+                  <span class="fw-semibold" id="pagoVencimiento">&mdash;</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between">
+                  <span class="small text-muted">Saldo pendiente</span>
+                  <span class="fw-bold text-danger" id="pagoSaldo">$ 0,00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="pagoMonto" class="form-label fw-semibold">Monto a pagar (USD) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="pagoMonto" name="monto" step="0.01" min="0.01" placeholder="0.00" required>
+                <button type="button" class="btn btn-outline-secondary" id="btnSaldoTotalPago">Saldo total</button>
+              </div>
+              <div class="form-text" id="pagoMontoAyuda">Se precarga el saldo pendiente de la obligación; puede registrar valores parciales.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="pagoMedio" class="form-label fw-semibold">Medio de pago <span class="text-danger">*</span></label>
+              <select class="form-select" id="pagoMedio" name="medio_pago" required>
+                <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                <option value="EFECTIVO">EFECTIVO</option>
+                <option value="CHEQUE">CHEQUE</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="pagoBanco" class="form-label fw-semibold">Cuenta bancaria de origen</label>
+              {% if bancos %}
+              <select class="form-select" id="pagoBanco" name="banco_id">
+                <option value="">&mdash; Seleccione el banco &mdash;</option>
+                {% for b in bancos %}
+                <option value="{{ b.id }}">{{ b.nombre_banco }} &bull; {{ b.numero_cuenta }} ({{ b.tipo_cuenta }})</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Obligatoria para TRANSFERENCIA o CHEQUE; en EFECTIVO el egreso se registra desde Caja General.</div>
+              {% else %}
+              <select class="form-select" id="pagoBanco" name="banco_id" disabled>
+                <option value="">No hay cuentas bancarias activas</option>
+              </select>
+              <div class="form-text text-danger">
+                No existen cuentas bancarias activas:
+                <a href="{{ url_for('treasury.banks') }}" class="fw-semibold">registre una en Cuentas Bancarias</a>
+                para pagar por transferencia o cheque.
+              </div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label for="pagoComprobante" class="form-label fw-semibold">N.º de comprobante</label>
+              <input type="text" class="form-control" id="pagoComprobante" name="numero_comprobante" maxlength="40" placeholder="Ej.: CE-2026-00087">
+              <div class="form-text">Si se deja vacío, el sistema genera un comprobante de egreso automáticamente.</div>
+            </div>
+          </div>
+
+          <div class="alert alert-light border mt-3 mb-0 small">
+            <i class="bi bi-info-circle me-1 text-primary"></i>
+            Al confirmar se registra el pago, se actualiza el saldo de la obligación y se genera el asiento
+            <strong>Débito 2.1.01 Cuentas por Pagar Proveedores &mdash; Crédito Caja/Bancos</strong>.
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2-circle me-1"></i> Registrar pago
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var FECHA_REF = "{{ hoy if hoy is defined and hoy else '' }}";
+  var HOY = (function () {
+    var d = FECHA_REF ? new Date(FECHA_REF + "T00:00:00") : new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+
+  /* Formato USD identico al del servidor ("{:,.2f}"): miles con coma y decimales con punto. */
+  function fmtUSD(v) {
+    var n = Number(v || 0);
+    var partes = Math.abs(n).toFixed(2).split(".");
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (n < 0 ? "-$ " : "$ ") + partes.join(".");
+  }
+
+  function toDate(v) {
+    if (!v) { return null; }
+    var d = new Date(v + "T00:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  /* ---------- 1. Semáforo de vencimientos y saldo vencido ---------- */
+  var filas = Array.prototype.slice.call(document.querySelectorAll("tr.cxp-row"));
+  var saldoVencido = 0;
+  var docsVencidos = 0;
+
+  filas.forEach(function (tr) {
+    var span = tr.querySelector(".js-dias");
+    var venc = toDate(tr.dataset.vencimiento);
+    var saldo = Number(tr.dataset.saldo || 0);
+    var cancelada = tr.dataset.estado === "PAGADA" || saldo <= 0.01;
+
+    tr.dataset.vencido = "0";
+    if (!span) { return; }
+
+    if (!venc) {
+      span.className = "badge bg-light text-muted border js-dias";
+      span.textContent = "Sin fecha";
+      return;
+    }
+
+    var dias = Math.round((venc - HOY) / 86400000);
+
+    if (dias < 0) {
+      span.className = "badge bg-danger-subtle text-danger border border-danger-subtle js-dias";
+      span.textContent = "Venció hace " + Math.abs(dias) + " d";
+      if (!cancelada) {
+        saldoVencido += saldo;
+        docsVencidos += 1;
+        tr.dataset.vencido = "1";
+        tr.classList.add("table-danger");
+      }
+    } else if (dias === 0) {
+      span.className = "badge bg-warning-subtle text-warning border border-warning-subtle js-dias";
+      span.textContent = "Vence hoy";
+    } else {
+      span.className = "badge bg-success-subtle text-success border border-success-subtle js-dias";
+      span.textContent = "En " + dias + " d";
+    }
+  });
+
+  var kpiVencido = document.getElementById("cxpKpiVencido");
+  if (kpiVencido && filas.length) {
+    kpiVencido.textContent = fmtUSD(saldoVencido);
+  }
+  var kpiVencidoDetalle = document.getElementById("cxpKpiVencidoDetalle");
+  if (kpiVencidoDetalle && filas.length) {
+    kpiVencidoDetalle.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> ' +
+      docsVencidos + " obligación(es) con vencimiento superado al " +
+      HOY.toISOString().slice(0, 10);
+  }
+
+  /* ---------- 2. Filtros de la tabla ---------- */
+  var inTexto = document.getElementById("cxpFiltroTexto");
+  var selEstado = document.getElementById("cxpFiltroEstado");
+  var chkVencidas = document.getElementById("cxpSoloVencidas");
+  var contador = document.getElementById("cxpContador");
+  var filaSinCoincidencias = document.getElementById("cxpSinCoincidencias");
+  var btnLimpiar = document.getElementById("btnLimpiarFiltrosCxp");
+
+  function aplicarFiltros() {
+    var q = (inTexto ? inTexto.value : "").trim().toLowerCase();
+    var estado = selEstado ? selEstado.value : "";
+    var soloVencidas = chkVencidas ? chkVencidas.checked : false;
+    var visibles = 0;
+
+    filas.forEach(function (tr) {
+      var coincideTexto = !q || tr.textContent.toLowerCase().indexOf(q) !== -1;
+      var coincideEstado = !estado || tr.dataset.estado === estado;
+      var coincideVencida = !soloVencidas || tr.dataset.vencido === "1";
+      var visible = coincideTexto && coincideEstado && coincideVencida;
+      tr.style.display = visible ? "" : "none";
+      if (visible) { visibles += 1; }
+    });
+
+    if (contador) {
+      contador.textContent = "Mostrando " + visibles + " de " + filas.length;
+    }
+    if (filaSinCoincidencias) {
+      filaSinCoincidencias.style.display = (filas.length && visibles === 0) ? "" : "none";
+    }
+  }
+
+  [inTexto, selEstado, chkVencidas].forEach(function (el) {
+    if (el) { el.addEventListener("input", aplicarFiltros); el.addEventListener("change", aplicarFiltros); }
+  });
+
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener("click", function () {
+      if (inTexto) { inTexto.value = ""; }
+      if (selEstado) { selEstado.value = ""; }
+      if (chkVencidas) { chkVencidas.checked = false; }
+      aplicarFiltros();
+    });
+  }
+
+  /* ---------- 3. Exportación CSV de las filas visibles ---------- */
+  var btnExportar = document.getElementById("btnExportarCxp");
+  var alertaExport = document.getElementById("cxpMensajeExportacion");
+  var textoExport = document.getElementById("cxpTextoExportacion");
+
+  function avisoExportacion(mensaje) {
+    if (alertaExport && textoExport) {
+      textoExport.textContent = mensaje;
+      alertaExport.classList.remove("d-none");
+    }
+  }
+
+  if (btnExportar) {
+    btnExportar.addEventListener("click", function () {
+      var tabla = document.getElementById("tablaCxp");
+      if (!tabla || !filas.length) {
+        avisoExportacion("No existen cuentas por pagar para exportar.");
+        return;
+      }
+
+      var encabezados = Array.prototype.slice.call(tabla.querySelectorAll("thead th"))
+        .slice(0, 8)
+        .map(function (th) { return th.textContent.trim().replace(/\s+/g, " "); });
+
+      var seleccionadas = filas.filter(function (tr) { return tr.style.display !== "none"; });
+      if (!seleccionadas.length) {
+        avisoExportacion("Ninguna obligación coincide con los filtros aplicados; ajuste los filtros antes de exportar.");
+        return;
+      }
+
+      function celda(valor) {
+        return '"' + String(valor).replace(/"/g, '""') + '"';
+      }
+
+      var lineas = [encabezados.map(celda).join(";")];
+      seleccionadas.forEach(function (tr) {
+        var valores = Array.prototype.slice.call(tr.cells).slice(0, 8).map(function (td) {
+          return td.textContent.trim().replace(/\s+/g, " ");
+        });
+        lineas.push(valores.map(celda).join(";"));
+      });
+
+      var csv = "\ufeff" + lineas.join("\r\n");
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      var enlace = document.createElement("a");
+      var fechaArchivo = HOY.toISOString().slice(0, 10);
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = "obligaciones_cuentas_por_pagar_" + fechaArchivo + ".csv";
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+      URL.revokeObjectURL(enlace.href);
+    });
+  }
+
+  /* ---------- 4. Modal de registro de pago ---------- */
+  var modalEl = document.getElementById("modalPago");
+  var form = document.getElementById("formPago");
+  var inCuenta = document.getElementById("pagoCuentaId");
+  var inMonto = document.getElementById("pagoMonto");
+  var selMedio = document.getElementById("pagoMedio");
+  var selBanco = document.getElementById("pagoBanco");
+  var inComprobante = document.getElementById("pagoComprobante");
+  var alerta = document.getElementById("pagoAlerta");
+  var ayudaMonto = document.getElementById("pagoMontoAyuda");
+  var saldoFila = 0;
+
+  var hayBancos = selBanco ? Array.prototype.slice.call(selBanco.options).filter(function (o) {
+    return o.value !== "";
+  }).length > 0 : false;
+
+  if (selMedio && !hayBancos) {
+    Array.prototype.slice.call(selMedio.options).forEach(function (o) {
+      if (o.value !== "EFECTIVO") {
+        o.disabled = true;
+        o.textContent = o.textContent + " (requiere cuenta bancaria activa)";
+      }
+    });
+    selMedio.value = "EFECTIVO";
+  }
+
+  function sincronizarMedioPago() {
+    if (!selBanco) { return; }
+    var esEfectivo = !selMedio || selMedio.value === "EFECTIVO";
+    var aplica = !esEfectivo && hayBancos;
+    selBanco.disabled = !aplica;
+    selBanco.required = aplica;
+    if (!aplica) { selBanco.value = ""; }
+  }
+
+  function texto(id, valor) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = valor; }
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll(".btn-registrar-pago")).forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var d = this.dataset;
+      saldoFila = Number(d.saldo || 0);
+
+      if (inCuenta) { inCuenta.value = d.id || ""; }
+      if (inMonto) { inMonto.value = saldoFila.toFixed(2); }
+      if (inComprobante) { inComprobante.value = ""; }
+      if (alerta) { alerta.classList.add("d-none"); alerta.textContent = ""; }
+      if (form) { form.classList.remove("was-validated"); }
+
+      texto("pagoDocumento", d.documento || "—");
+      texto("pagoProveedor", d.proveedor || "—");
+      texto("pagoRuc", d.ruc || "—");
+      texto("pagoEmision", d.emision || "—");
+      texto("pagoVencimiento", d.vencimiento || "—");
+      texto("pagoEstado", d.estado || "—");
+      texto("pagoSaldo", fmtUSD(saldoFila));
+
+      if (ayudaMonto) {
+        ayudaMonto.textContent = "Saldo pendiente de la obligación: " + fmtUSD(saldoFila) +
+          ". Puede registrar pagos parciales iguales o menores a ese valor.";
+      }
+
+      sincronizarMedioPago();
+
+      if (modalEl && window.bootstrap) {
+        window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      }
+    });
+  });
+
+  if (selMedio) { selMedio.addEventListener("change", sincronizarMedioPago); }
+  sincronizarMedioPago();
+
+  var btnSaldoTotal = document.getElementById("btnSaldoTotalPago");
+  if (btnSaldoTotal) {
+    btnSaldoTotal.addEventListener("click", function () {
+      if (inMonto) { inMonto.value = saldoFila.toFixed(2); }
+    });
+  }
+
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      var monto = Number(inMonto ? inMonto.value : 0);
+      var mensaje = "";
+
+      if (!inCuenta || !inCuenta.value) {
+        mensaje = "No se identificó la obligación por pagar. Cierre el formulario e inténtelo nuevamente.";
+      } else if (!(monto > 0)) {
+        mensaje = "El monto del pago debe ser mayor a cero.";
+      } else if (monto > saldoFila + 0.01) {
+        mensaje = "El monto del pago (" + fmtUSD(monto) + ") no puede superar el saldo pendiente (" + fmtUSD(saldoFila) + ").";
+      } else if (selMedio && selMedio.value !== "EFECTIVO" && hayBancos && (!selBanco || !selBanco.value)) {
+        mensaje = "Seleccione la cuenta bancaria de origen del pago.";
+      }
+
+      if (!mensaje && !form.checkValidity()) {
+        mensaje = "Complete los campos obligatorios marcados en rojo.";
+        form.classList.add("was-validated");
+      }
+
+      if (mensaje) {
+        e.preventDefault();
+        if (alerta) { alerta.textContent = mensaje; alerta.classList.remove("d-none"); }
+        return;
+      }
+
+      var btnEnviar = form.querySelector('button[type="submit"]');
+      if (btnEnviar) {
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando pago...';
+      }
+    });
+  }
+
+  /* ---------- 5. Gráficos de obligaciones ---------- */
+  var nodoDatos = document.getElementById("cxpDatosGraficos");
+  var datosGraficos = nodoDatos ? JSON.parse(nodoDatos.textContent) : { estado: [], top: [] };
+  var datosEstado = datosGraficos.estado;
+  var topProveedores = datosGraficos.top;
+  var canvasEstado = document.getElementById("cxpEstadoChart");
+  if (canvasEstado && typeof Chart !== "undefined") {
+    new Chart(canvasEstado, {
+      type: "doughnut",
+      data: {
+        labels: ["Pendiente", "Parcial", "Vencida"],
+        datasets: [{
+          data: datosEstado,
+          backgroundColor: ["#f59e0b", "#0ea5e9", "#e11d48"],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return ctx.label + ": " + fmtUSD(ctx.parsed); }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  var canvasProveedor = document.getElementById("cxpProveedorChart");
+  if (canvasProveedor && typeof Chart !== "undefined" && topProveedores.length) {
+    new Chart(canvasProveedor, {
+      type: "bar",
+      data: {
+        labels: topProveedores.map(function (p) { return p.nombre; }),
+        datasets: [{
+          label: "Saldo por pagar (USD)",
+          data: topProveedores.map(function (p) { return p.total; }),
+          backgroundColor: "rgba(225, 29, 72, 0.7)",
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return fmtUSD(ctx.parsed.x); }
+            }
+          }
+        },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

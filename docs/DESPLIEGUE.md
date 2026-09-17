@@ -1,0 +1,372 @@
+# Guía de Despliegue 24/7
+## Simulador Integral de Sistema Contable
+
+Este documento explica cómo dejar el sistema **funcionando de forma continua**, con las tres
+opciones válidas según los recursos disponibles. El código ya está preparado para producción:
+configuración por variables de entorno, servidor WSGI `waitress`, generación automática de la base
+en el primer arranque, respaldos y arranque automático.
+
+---
+
+## 1. Antes de publicar: lista de verificación de seguridad
+
+| # | Acción | Por qué |
+|---|---|---|
+| 1 | **Cambiar las contraseñas de demostración** | `admin/admin123`, `docente/docente123`, `estudiante/estudiante123`, `auditor/auditor123` son públicas (están en el manual y en el código). Ejecute: `python deploy/cambiar_credenciales.py` |
+| 2 | **Definir `SECRET_KEY`** con una cadena aleatoria larga | Sin ella las sesiones se firman con la clave por defecto del código. `python -c "import secrets;print(secrets.token_urlsafe(48))"` |
+| 3 | **Servir por HTTPS** y poner `SESSION_COOKIE_SECURE=true` | Evita que la cookie de sesión viaje en claro |
+| 4 | **Programar respaldos** de la base (`deploy/backup_db.py`) | Todo el sistema vive en un archivo SQLite |
+| 5 | **No exponer** `database/`, `docs/`, `deploy/` como archivos estáticos | Ya no se sirven: Flask solo publica `static/` y las rutas de la aplicación |
+| 6 | **Revisar la carga de trabajo esperada** | SQLite soporta bien decenas de usuarios concurrentes de aula; para cientos simultáneos hay que migrar a PostgreSQL |
+
+---
+
+## 2. Variables de entorno
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `SECRET_KEY` | valor del código (inseguro) | Clave de firma de sesiones. **Obligatoria en producción** |
+| `DATABASE_PATH` | `database/simulator.db` | Ruta del archivo SQLite. Apunte a un disco persistente |
+| `HOST` | `127.0.0.1` | Dirección de escucha. Use `0.0.0.0` en contenedores/hosting |
+| `PORT` | `5000` | Puerto. Los PaaS lo inyectan automáticamente |
+| `THREADS` | `8` | Hilos del servidor de producción |
+| `SIMULADOR_DEBUG` | desactivado | `1` activa el modo desarrollo (no usar en producción) |
+| `SESSION_COOKIE_SECURE` | `false` | `true` cuando el sitio se sirve por HTTPS |
+| `SESSION_COOKIE_SAMESITE` | `Lax` | Política de la cookie de sesión |
+| `SESSION_HORAS` | `8` | Duración de la sesión |
+| `MAX_CONTENT_MB` | `16` | Tamaño máximo de petición |
+
+Ejemplo de archivo `/etc/simulador/secrets.env` (permisos `600`):
+
+```
+SECRET_KEY=pega-aqui-una-cadena-aleatoria-larga
+SESSION_COOKIE_SECURE=true
+```
+
+---
+
+## 3. Arranque del servidor de producción
+
+```bash
+python serve.py                     # waitress, HOST/PORT del entorno
+HOST=0.0.0.0 PORT=8080 python serve.py      # accesible desde la red
+```
+
+En el **primer arranque**, si no existe la base, `serve.py` ejecuta la generación de datos de
+demostración automáticamente: el sistema queda operativo sin pasos manuales.
+
+Para probar antes de publicar:
+
+```bash
+curl http://127.0.0.1:8080/api/health     # {"estado": "OPERATIVO", ...}
+curl -I http://127.0.0.1:8080/manual      # 200 OK
+```
+
+---
+
+## 4. Opción A — Este equipo Windows, encendido 24/7
+
+Es la vía más rápida: el simulador corre como tarea programada con waitress, arranca solo y se
+reinicia si falla.
+
+```powershell
+# 1) Dependencias de producción
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 2) Instalar el arranque automático (genera la SECRET_KEY aleatoria y arranca el servicio)
+powershell -ExecutionPolicy Bypass -File deploy\windows\instalar_arranque_automatico.ps1 -Puerto 8080
+
+# 3) Cambiar las contraseñas de demostración
+.venv\Scripts\python.exe deploy\cambiar_credenciales.py
+```
+
+* Acceso desde el propio equipo: `http://127.0.0.1:8080`
+* Acceso desde la red de la universidad: `http://<nombre-del-equipo>:8080`
+* Log: `logs\servidor.log`
+* Detener / desinstalar: `powershell -ExecutionPolicy Bypass -File deploy\windows\detener_servidor.ps1 -Desinstalar`
+
+**Para que sea accesible desde Internet** hace falta, además, abrir el puerto en el router
+(redirección de puertos) o publicar el equipo por un túnel. Limitaciones reales de esta opción:
+el servicio se cae si el equipo se apaga, duerme o cambia de red, y la dirección IP del hogar o de
+la oficina puede cambiar. Es adecuada para pruebas y para uso dentro de la misma red; para servicio
+público permanente conviene la opción B.
+
+---
+
+## 5. Opción B — VPS con dominio (recomendado para servicio público)
+
+Requisitos: un servidor Linux (Ubuntu 22.04+ o Debian 12+), 1 vCPU / 1 GB de RAM, y un subdominio
+(por ejemplo `contabilidad.utm.edu.ec`).
+
+```bash
+# 1) Usuario y dependencias del sistema
+sudo adduser --disabled-password --gecos "" simulador
+sudo apt update && sudo apt install -y python3-venv python3-pip nginx
+
+# 2) Código en /opt/simulador
+sudo mkdir -p /opt/simulador /var/datos /var/log/simulador
+sudo chown -R simulador:simulador /opt/simulador /var/datos /var/log/simulador
+# (copie el proyecto a /opt/simulador: git clone o rsync/scp)
+
+# 3) Entorno virtual y dependencias
+sudo -u simulador python3 -m venv /opt/simulador/.venv
+sudo -u simulador /opt/simulador/.venv/bin/pip install -r /opt/simulador/requirements.txt
+
+# 4) Secretos
+sudo mkdir -p /etc/simulador
+sudo tee /etc/simulador/secrets.env >/dev/null <<'EOF'
+SECRET_KEY=CAMBIE-ESTA-CADENA-POR-UNA-ALEATORIA-LARGA
+SESSION_COOKIE_SECURE=true
+EOF
+sudo chmod 600 /etc/simulador/secrets.env && sudo chown simulador:simulador /etc/simulador/secrets.env
+
+# 5) Primer arranque (crea la base en /var/datos)
+sudo -u simulador bash -c 'cd /opt/simulador && DATABASE_PATH=/var/datos/simulator.db .venv/bin/python serve.py' &
+sleep 45 && curl -s http://127.0.0.1:8080/api/health
+
+# 6) Servicio systemd
+sudo cp /opt/simulador/deploy/systemd/simulador-contable.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now simulador-contable
+sudo systemctl status simulador-contable --no-pager
+
+# 7) Nginx + HTTPS
+sudo cp /opt/simulador/deploy/nginx/simulador-contable.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/simulador-contable.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d contabilidad.utm.edu.ec     # HTTPS y renovación automática
+
+# 8) Respaldos diarios a las 22:00
+sudo -u simulador crontab -e
+# 0 22 * * * cd /opt/simulador && DATABASE_PATH=/var/datos/simulator.db .venv/bin/python deploy/backup_db.py --conservar 30 >> logs/respaldo.log 2>&1
+
+# 9) Contraseñas de demostración
+sudo -u simulador bash -c 'cd /opt/simulador && DATABASE_PATH=/var/datos/simulator.db .venv/bin/python deploy/cambiar_credenciales.py'
+```
+
+Operación diaria:
+
+```bash
+sudo systemctl restart simulador-contable       # reiniciar
+sudo journalctl -u simulador-contable -n 50     # ver registros del servicio
+tail -f /var/log/simulador/servidor.log         # log de la aplicación
+```
+
+---
+
+## 5.b Opción B2 — Hostinger VPS (paso a paso)
+
+> **Importante:** en Hostinger solo los planes **VPS** pueden servir esta aplicación. Los planes de
+> *Web hosting* y *Cloud hosting* están orientados a PHP/WordPress: allí no se puede mantener un
+> proceso Python en ejecución ni configurar un WSGI con proxy inverso. Si su plan es de Web o Cloud
+> hosting, el simulador no funcionará ahí y necesita contratar un VPS.
+
+**Requisitos**
+
+| Elemento | Valor recomendado |
+|---|---|
+| Plan | Hostinger **VPS** (KVM 1 o superior; KVM 2 para varias aulas simultáneas) |
+| Sistema operativo | **Ubuntu 24.04 LTS** (o 22.04 LTS) — se elige al crear el VPS |
+| Acceso | Terminal del navegador de hPanel (*VPS → Administrador* / *Terminal*) o SSH como `root` |
+| Dominio | Un dominio o subdominio apuntando al VPS (por ejemplo `contabilidad.utm.edu.ec`) |
+
+### Paso 1 — Crear el VPS y entrar
+
+1. En hPanel: *VPS → Crear* → plantilla **Ubuntu 24.04 LTS** → elija la ubicación más cercana
+   (Brasil/EE. UU. para Ecuador) → defina una contraseña de `root` robusta.
+2. Copie la **IP pública** del VPS.
+3. Entre por *Terminal* de hPanel o por SSH: `ssh root@<IP-DEL-VPS>`.
+
+### Paso 2 — Apuntar el dominio (DNS)
+
+En hPanel (o en el proveedor del dominio) cree un registro **A**:
+
+```
+Tipo: A    Nombre: contabilidad    Valor: <IP-DEL-VPS>    TTL: 300
+```
+
+Si todavía no tiene dominio configurado, puede probar primero con el subdominio que Hostinger le
+asigna al VPS (`srvXXXXXX.hostinger.com`) y cambiar el dominio después.
+
+> Configure el DNS **antes** de emitir el certificado: Let's Encrypt valida que el dominio resuelva
+> a la IP del VPS. La propagación suele tardar de minutos a un par de horas.
+
+### Paso 3 — Subir el proyecto
+
+**Opción rápida (paquete):** desde su equipo ejecute
+
+```bash
+bash deploy/hostinger/empaquetar.sh          # genera dist/simulador-contable-<fecha>.tar.gz
+```
+
+Súbalo con el *Administrador de archivos* de hPanel (o `scp dist/simulador-contable-*.tar.gz root@<IP>:/tmp/`)
+y en el VPS:
+
+```bash
+mkdir -p /tmp/simulador-contable
+tar -xzf /tmp/simulador-contable-*.tar.gz -C /tmp/simulador-contable
+cd /tmp/simulador-contable
+```
+
+**Alternativa con Git:**
+
+```bash
+apt-get update && apt-get install -y git
+git clone <URL-DE-SU-REPOSITORIO> /tmp/simulador-contable
+cd /tmp/simulador-contable
+```
+
+### Paso 4 — Instalar (un solo comando)
+
+```bash
+sudo bash deploy/hostinger/instalar_vps.sh \
+     --dominio contabilidad.utm.edu.ec \
+     --correo docente@utm.edu.ec
+```
+
+El instalador hace todo y es idempotente (se puede volver a ejecutar para actualizar):
+
+| Paso | Qué hace |
+|---|---|
+| 1 | Instala Python 3, venv, nginx, rsync, curl, ufw y certbot |
+| 2 | Crea el usuario de sistema `simulador` y las carpetas `/opt/simulador`, `/var/datos`, `/var/log/simulador` |
+| 3 | Copia la aplicación a `/opt/simulador` |
+| 4 | Crea el entorno virtual e instala las dependencias |
+| 5 | Genera `/etc/simulador/secrets.env` con **SECRET_KEY aleatoria** (permisos 600) |
+| 6 | Registra y arranca el servicio systemd `simulador-contable` (se reinicia solo si falla) |
+| 7 | Configura Nginx como proxy inverso del dominio y habilita el cortafuegos (SSH + HTTP/HTTPS) |
+| 8 | Espera el primer arranque, que **genera la base de datos de demostración automáticamente** |
+| 9 | Emite el certificado **HTTPS** con Let's Encrypt y activa `SESSION_COOKIE_SECURE` |
+| 10 | Programa el **respaldo diario** de la base a las 22:00 (conserva 30 copias) |
+
+Opciones útiles: `--puerto 8080`, `--ruta /opt/simulador`, `--datos /var/datos`,
+`--usuario simulador`, `--sin-firewall`.
+
+### Paso 5 — Contraseñas y verificación
+
+```bash
+# Cambiar las contraseñas de demostración (obligatorio antes de usar en clase)
+sudo -u simulador bash -c 'cd /opt/simulador && DATABASE_PATH=/var/datos/simulator.db .venv/bin/python deploy/cambiar_credenciales.py'
+```
+
+Desde su equipo:
+
+```bash
+python deploy/verificar_despliegue.py --url https://contabilidad.utm.edu.ec
+```
+
+### Operación del VPS
+
+```bash
+systemctl status simulador-contable --no-pager      # estado
+systemctl restart simulador-contable                # reiniciar
+journalctl -u simulador-contable -n 50              # registros del servicio
+tail -f /var/log/simulador/servidor.log             # registro de la aplicación
+certbot renew --dry-run                             # probar la renovación del certificado
+```
+
+Para actualizar una versión nueva: vuelva a subir el paquete y ejecute el instalador otra vez
+(paso 4). Los archivos de `/var/datos` y `/etc/simulador` **no se tocan**, por lo que los datos y la
+clave de sesión se conservan.
+
+> Recomendaciones de recursos: 1 vCPU / 2 GB de RAM sirve cómodamente para una clase; para varios
+> grupos simultáneos use KVM 2 (2 vCPU / 8 GB). Activar los *snapshots/backups* del VPS en hPanel
+> añade una segunda capa de protección sobre los respaldos diarios de la base.
+
+---
+
+## 6. Opción C — Plataforma gestionada (Render, Railway, Fly.io)
+
+El repositorio ya incluye lo necesario: `Procfile`, `Dockerfile` y `render.yaml`.
+
+**Render (con `render.yaml`)**
+
+1. Suba el proyecto a un repositorio Git (GitHub/GitLab).
+2. En Render: *New → Blueprint* y seleccione el repositorio. Render lee `render.yaml`, crea el
+   servicio web, el **disco persistente** en `/var/datos` y genera `SECRET_KEY` automáticamente.
+3. Al terminar el despliegue, verifique `https://<nombre>.onrender.com/api/health`.
+4. Cambie las contraseñas de demostración: en la consola del servicio, `python deploy/cambiar_credenciales.py`.
+
+**Docker (cualquier proveedor o servidor propio)**
+
+```bash
+docker build -t simulador-contable .
+docker run -d --name simulador -p 8080:8080 \
+  -e SECRET_KEY="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
+  -e SESSION_COOKIE_SECURE=false \
+  -v simulador_datos:/datos \
+  --restart unless-stopped \
+  simulador-contable
+```
+
+> **Aviso honesto sobre los planes gratuitos:** el plan gratuito de estas plataformas usa
+> almacenamiento efímero. Sin disco persistente, la base SQLite se regenera con los datos de
+> demostración en cada despliegue o reinicio y **todo el trabajo de los estudiantes se pierde**.
+> Para uso real: plan con disco persistente (Render Starter o superior) o la opción B.
+
+---
+
+## 7. Respaldos y restauración
+
+```bash
+python deploy/backup_db.py                      # respaldo manual en deploy/respaldos/
+python deploy/backup_db.py --conservar 30       # conserva los 30 más recientes
+python deploy/backup_db.py --origen /var/datos/simulator.db --destino /var/backups/simulador
+```
+
+Restaurar (con el servicio detenido):
+
+```bash
+sudo systemctl stop simulador-contable
+cp /var/backups/simulador/simulator_20260430_220000.db /var/datos/simulator.db
+sudo chown simulador:simulador /var/datos/simulator.db
+sudo systemctl start simulador-contable
+```
+
+El respaldo usa la API de copia en caliente de SQLite, por lo que puede ejecutarse con el sistema en
+funcionamiento. Los archivos `-wal` y `-shm` no hace falta copiarlos: la API los consolida.
+
+---
+
+## 8. Actualizar una versión desplegada
+
+```bash
+cd /opt/simulador
+git pull                                  # o rsync de los archivos modificados
+.venv/bin/pip install -r requirements.txt # si cambiaron dependencias
+sudo systemctl restart simulador-contable
+curl -s http://127.0.0.1:8080/api/health
+```
+
+Las migraciones de esquema se resuelven con `database/db_init.py` (crea tablas faltantes) y, si se
+requiere reiniciar los datos de demostración, con `python database/seed_data.py` — **esto último
+borra la base**: haga respaldo antes.
+
+---
+
+## 9. Diagnóstico rápido
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `Address already in use` | Otro proceso usa el puerto | `netstat -ano \| grep <puerto>` y detenga el PID, o cambie `PORT` |
+| 502 Bad Gateway en el VPS | El servicio no está escuchando | `systemctl status simulador-contable`; revise `/var/log/simulador/servidor.log` |
+| La base se reinicia sola | Almacenamiento efímero (plan gratuito de PaaS) | Use disco persistente o VPS |
+| `database is locked` | Muchas escrituras simultáneas sobre SQLite | Aumente `THREADS` con moderación; para carga alta migre a PostgreSQL |
+| El sitio responde por HTTP pero no por HTTPS | Falta el certificado o el proxy | `sudo certbot --nginx -d <dominio>` y revise `nginx -t` |
+| Sesiones que se cierran al recargar | `SESSION_COOKIE_SECURE=true` sin HTTPS | Sirva por HTTPS o desactive la variable |
+| La tarea de Windows no arranca el servicio | No se ejecutó como Administrador (opción `-Cuando AlInicio`) | Use `-Cuando AlIniciarSesion` o abra PowerShell como Administrador |
+
+---
+
+## 10. Comprobación final del despliegue
+
+```bash
+curl -s https://<su-dominio>/api/health          # estado OPERATIVO y período activo
+curl -s -o /dev/null -w "%{http_code}\n" https://<su-dominio>/login
+curl -s -o /dev/null -w "%{http_code}\n" https://<su-dominio>/manual
+```
+
+Y en el navegador: iniciar sesión con la cuenta administrador ya protegida, registrar una venta de
+prueba y comprobar en **Estados Financieros → Situación Financiera** que aparece el banner verde
+*Activo = Pasivo + Patrimonio ✓*.

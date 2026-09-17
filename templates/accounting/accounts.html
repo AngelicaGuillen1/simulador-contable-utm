@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Plan de Cuentas - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-diagram-3 text-primary me-2"></i>Plan de Cuentas</h3>
+    <p class="text-muted small mb-0">Estructura jerárquica y codificación contable bajo normas NIIF</p>
+  </div>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAccountModal">
+    <i class="bi bi-plus-circle me-1"></i> Nueva Cuenta
+  </button>
+</div>
+
+<!-- Accounts Tree / Table -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Código</th>
+            <th>Nombre de la Cuenta</th>
+            <th>Clasificación</th>
+            <th>Naturaleza</th>
+            <th class="text-center">Nivel</th>
+            <th class="text-center">Tipo</th>
+            <th class="text-end">Saldo Actual</th>
+            <th class="text-center pe-4">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cuentas %}
+          <tr class="{% if c.nivel == 1 %}table-secondary fw-bold{% elif c.nivel == 2 %}fw-semibold{% endif %}">
+            <td class="ps-4">
+              <span style="margin-left: {{ (c.nivel - 1) * 15 }}px;">
+                <code>{{ c.codigo }}</code>
+              </span>
+            </td>
+            <td>
+              <span style="margin-left: {{ (c.nivel - 1) * 15 }}px;">
+                {% if c.nivel == 1 %}<i class="bi bi-folder2-open text-primary me-1"></i>{% elif c.acepta_movimiento == 0 %}<i class="bi bi-folder text-warning me-1"></i>{% else %}<i class="bi bi-file-earmark-text text-secondary me-1"></i>{% endif %}
+                {{ c.nombre }}
+              </span>
+            </td>
+            <td><span class="badge bg-light text-dark border">{{ c.clasificacion.replace('_', ' ') }}</span></td>
+            <td>
+              {% if c.naturaleza == 'DEUDORA' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Deudora</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Acreedora</span>
+              {% endif %}
+            </td>
+            <td class="text-center"><span class="badge bg-secondary">{{ c.nivel }}</span></td>
+            <td class="text-center">
+              {% if c.acepta_movimiento %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Detalle</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border">Agrupadora</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold">
+              {% if c.acepta_movimiento %}
+                ${{ "{:,.2f}".format(c.saldo_actual or 0.0) }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-center pe-4">
+              {% if c.acepta_movimiento %}
+              <a href="{{ url_for('accounting.ledger', cuenta_id=c.id) }}" class="btn btn-outline-secondary btn-sm p-1 px-2" title="Ver Mayor">
+                <i class="bi bi-book"></i>
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal New Account -->
+<div class="modal fade" id="newAccountModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('accounting.accounts') }}" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle text-primary me-2"></i>Crear Cuenta Contable</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Código Contable</label>
+          <input type="text" name="codigo" class="form-control" placeholder="Ej: 1.1.09" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Nombre de la Cuenta</label>
+          <input type="text" name="nombre" class="form-control" placeholder="Ej: Caja Chica Sucursal" required>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Naturaleza</label>
+            <select name="naturaleza" class="form-select">
+              <option value="DEUDORA">Deudora (Activo, Costos, Gastos)</option>
+              <option value="ACREEDORA">Acreedora (Pasivo, Patrimonio, Ingresos)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Nivel</label>
+            <select name="nivel" class="form-select">
+              <option value="3">Nivel 3 (Detalle)</option>
+              <option value="2">Nivel 2 (Subgrupo)</option>
+              <option value="1">Nivel 1 (Clase)</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Clasificación Financiera</label>
+          <select name="clasificacion" class="form-select">
+            <option value="ACTIVO_CORRIENTE">Activo Corriente</option>
+            <option value="ACTIVO_NO_CORRIENTE">Activo No Corriente</option>
+            <option value="PASIVO_CORRIENTE">Pasivo Corriente</option>
+            <option value="PASIVO_NO_CORRIENTE">Pasivo No Corriente</option>
+            <option value="PATRIMONIO">Patrimonio</option>
+            <option value="INGRESOS_OPERACIONALES">Ingresos Operacionales</option>
+            <option value="COSTOS">Costos</option>
+            <option value="GASTOS_ADMIN">Gastos Administrativos</option>
+            <option value="GASTOS_VENTAS">Gastos de Ventas</option>
+            <option value="GASTOS_FINANCIEROS">Gastos Financieros</option>
+          </select>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="acepta_movimiento" value="1" id="chkMov" checked>
+          <label class="form-check-label small" for="chkMov">Acepta movimientos directos en el Libro Diario</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar Cuenta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Ventas de Bienes - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-cart-check text-primary me-2"></i>Ventas de Mercaderías</h3>
+    <p class="text-muted small mb-0">Facturación de productos de primera necesidad con afectación directa a inventario, costo de ventas y contabilidad</p>
+  </div>
+  <a href="{{ url_for('sales.create_sale') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Nueva Factura de Venta
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Factura</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Forma Pago</th>
+            <th class="text-end">Subtotal</th>
+            <th class="text-end">IVA (15%)</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Costo Ventas</th>
+            <th class="text-center pe-4">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in ventas %}
+          <tr>
+            <td class="ps-4 fw-bold"><code>{{ v.numero_factura }}</code></td>
+            <td>{{ v.fecha }}</td>
+            <td>
+              <div class="fw-semibold text-dark">{{ v.cliente_nombre }}</div>
+              <small class="text-muted">RUC/CI: {{ v.cliente_ruc }}</small>
+            </td>
+            <td>
+              <span class="badge {% if v.forma_pago == 'EFECTIVO' %}bg-success-subtle text-success{% elif v.forma_pago == 'CREDITO' %}bg-warning-subtle text-warning{% else %}bg-primary-subtle text-primary{% endif %} border">
+                {{ v.forma_pago }}
+              </span>
+            </td>
+            <td class="text-end">${{ "{:,.2f}".format(v.subtotal) }}</td>
+            <td class="text-end text-muted">${{ "{:,.2f}".format(v.iva_valor) }}</td>
+            <td class="text-end fw-bold text-success">${{ "{:,.2f}".format(v.total) }}</td>
+            <td class="text-end text-muted">${{ "{:,.2f}".format(v.costo_ventas_total) }}</td>
+            <td class="text-center pe-4">
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ v.estado }}</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-4 text-muted">No se registran ventas comerciales en el período.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

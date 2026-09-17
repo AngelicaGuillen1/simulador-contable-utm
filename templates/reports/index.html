@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Centro de Reportes - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set categorias = [
+  {
+    "nombre": "Contabilidad",
+    "icono": "bi-journal-text",
+    "color": "primary",
+    "descripcion": "Registros base del ciclo contable: libro diario, libro mayor y balance de comprobación.",
+    "reportes": [
+      {"tipo": "diario", "titulo": "Libro Diario", "icono": "bi-journal-text",
+       "descripcion": "Todos los asientos registrados con sus cuentas, debe, haber y referencia documental."},
+      {"tipo": "mayor", "titulo": "Libro Mayor", "icono": "bi-book",
+       "descripcion": "Movimientos y saldos por cuenta contable, con naturaleza y saldo final."},
+      {"tipo": "balance", "titulo": "Balance de Comprobación", "icono": "bi-scale",
+       "descripcion": "Sumas de débitos y créditos con saldos deudores y acreedores por cuenta."}
+    ]
+  },
+  {
+    "nombre": "Operaciones",
+    "icono": "bi-cart-check",
+    "color": "success",
+    "descripcion": "Documentos comerciales del ciclo de ventas de bienes, servicios prestados y compras a proveedores.",
+    "reportes": [
+      {"tipo": "ventas", "titulo": "Ventas de Bienes", "icono": "bi-cart-check",
+       "descripcion": "Facturación de mercaderías con IVA, formas de pago y costo de ventas asociado."},
+      {"tipo": "compras", "titulo": "Compras a Proveedores", "icono": "bi-bag-plus",
+       "descripcion": "Adquisiciones registradas, retenciones aplicadas y cuentas por pagar generadas."},
+      {"tipo": "servicios", "titulo": "Servicios Prestados", "icono": "bi-headset",
+       "descripcion": "Ingresos por servicios con base imponible, IVA y cuentas por cobrar."}
+    ]
+  },
+  {
+    "nombre": "Inventarios",
+    "icono": "bi-boxes",
+    "color": "info",
+    "descripcion": "Control permanente de existencias, valoración a costo y trazabilidad de entradas y salidas.",
+    "reportes": [
+      {"tipo": "inventario", "titulo": "Inventario de Existencias", "icono": "bi-boxes",
+       "descripcion": "Catálogo valorado a costo unitario con unidades disponibles y valor de existencias."},
+      {"tipo": "kardex", "titulo": "Kardex de Productos", "icono": "bi-card-list",
+       "descripcion": "Detalle de entradas, salidas y saldos valorados (promedio ponderado o FIFO)."}
+    ]
+  },
+  {
+    "nombre": "Tesorería y Cartera",
+    "icono": "bi-cash-stack",
+    "color": "warning",
+    "descripcion": "Liquidez inmediata, movimientos bancarios y saldos pendientes con clientes y proveedores.",
+    "reportes": [
+      {"tipo": "caja", "titulo": "Caja y Arqueos", "icono": "bi-cash-stack",
+       "descripcion": "Movimientos de caja chica y general con saldo disponible y arqueo del período."},
+      {"tipo": "bancos", "titulo": "Cuentas Bancarias", "icono": "bi-bank",
+       "descripcion": "Saldos y movimientos de las cuentas bancarias de la empresa."},
+      {"tipo": "cartera", "titulo": "Cartera por Cobrar", "icono": "bi-receipt",
+       "descripcion": "Documentos pendientes de cobro por cliente con antigüedad y saldo."},
+      {"tipo": "cuentas-pagar", "titulo": "Cuentas por Pagar", "icono": "bi-credit-card",
+       "descripcion": "Obligaciones pendientes con proveedores y fechas de vencimiento."}
+    ]
+  },
+  {
+    "nombre": "Estados Financieros",
+    "icono": "bi-file-earmark-spreadsheet",
+    "color": "dark",
+    "descripcion": "Informes de propósito general bajo normativa NIIF para la toma de decisiones.",
+    "reportes": [
+      {"tipo": "resultados", "titulo": "Estado de Resultados", "icono": "bi-file-earmark-spreadsheet",
+       "descripcion": "Ingresos, costo de ventas, gastos operacionales y utilidad del ejercicio."},
+      {"tipo": "situacion-financiera", "titulo": "Estado de Situación Financiera", "icono": "bi-file-earmark-check",
+       "descripcion": "Activos, pasivos y patrimonio con verificación de equilibrio contable."},
+      {"tipo": "flujo-efectivo", "titulo": "Estado de Flujo de Efectivo", "icono": "bi-water",
+       "descripcion": "Generación y aplicación de efectivo en actividades de operación e inversión."}
+    ]
+  },
+  {
+    "nombre": "Académico",
+    "icono": "bi-mortarboard",
+    "color": "secondary",
+    "descripcion": "Documentación del desempeño del estudiante dentro del entorno universitario de simulación.",
+    "reportes": [
+      {"tipo": "academico", "titulo": "Reporte Académico", "icono": "bi-mortarboard",
+       "descripcion": "Resultados de las simulaciones resueltas, puntajes obtenidos y nivel de avance del estudiante."}
+    ]
+  }
+] %}
+
+{% set ns = namespace(total=0) %}
+{% for c in categorias %}
+  {% set ns.total = ns.total + c.reportes|length %}
+{% endfor %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-printer text-primary me-2"></i>Centro de Reportes</h3>
+    <p class="text-muted small mb-0">
+      Descarga e imprime los informes contables, operativos y financieros de Comercial y Servicios Nueva Esperanza S.A.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+      <i class="bi bi-files me-1"></i> {{ ns.total }} informes disponibles
+    </span>
+    <span class="badge bg-light text-dark border px-3 py-2">
+      <i class="bi bi-calendar3 me-1"></i> Período: Abril 2026
+    </span>
+  </div>
+</div>
+
+<div class="alert alert-light border shadow-sm d-flex align-items-start" role="alert">
+  <i class="bi bi-info-circle-fill text-primary fs-5 me-2"></i>
+  <div class="small mb-0">
+    Cada informe se ofrece en tres formatos:
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-filetype-csv me-1"></i>CSV</span> para hojas de cálculo y análisis de datos,
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-file-earmark-excel me-1"></i>Excel</span> para trabajo con libros y plantillas, y
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-printer me-1"></i>Versión imprimible</span>
+    que se exporta a PDF mediante el diálogo de impresión del navegador.
+  </div>
+</div>
+
+{% for cat in categorias %}
+<div class="mb-4">
+  <div class="d-flex align-items-center mb-3">
+    <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ cat.color }}-subtle text-{{ cat.color }} me-2" style="width: 38px; height: 38px; font-size: 1.1rem;">
+      <i class="bi {{ cat.icono }}"></i>
+    </div>
+    <div>
+      <h5 class="fw-bold mb-0">{{ cat.nombre }}</h5>
+      <div class="text-muted small">{{ cat.descripcion }}</div>
+    </div>
+    <span class="badge bg-light text-dark border ms-auto">{{ cat.reportes|length }} informe{% if cat.reportes|length != 1 %}s{% endif %}</span>
+  </div>
+
+  <div class="row g-3">
+    {% for r in cat.reportes %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-start mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ cat.color }}-subtle text-{{ cat.color }} me-2" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="bi {{ r.icono }}"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold mb-1">{{ r.titulo }}</h6>
+              <code class="small text-muted">{{ r.tipo }}</code>
+            </div>
+          </div>
+          <p class="text-muted small mb-0">{{ r.descripcion }}</p>
+        </div>
+        <div class="card-footer bg-white border-top d-flex flex-wrap gap-2">
+          <a href="{{ url_for('reports.export_csv', tipo=r.tipo) }}" class="btn btn-outline-success btn-sm flex-grow-1"
+             title="Descargar {{ r.titulo }} en formato CSV">
+            <i class="bi bi-filetype-csv me-1"></i> CSV
+          </a>
+          <a href="{{ url_for('reports.export_excel', tipo=r.tipo) }}" class="btn btn-outline-success btn-sm flex-grow-1"
+             title="Descargar {{ r.titulo }} en formato Excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+          </a>
+          <a href="{{ url_for('reports.printable', tipo=r.tipo) }}" target="_blank" rel="noopener"
+             class="btn btn-outline-secondary btn-sm flex-grow-1" title="Abrir la versión imprimible de {{ r.titulo }}">
+            <i class="bi bi-printer me-1"></i> Imprimible
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-body d-flex flex-wrap gap-3 align-items-center">
+    <div class="small text-muted mb-0">
+      <i class="bi bi-lightbulb me-1 text-warning"></i>
+      <strong>Consejo académico:</strong> antes de exportar un informe, verifica que el período esté conciliado y que el balance de
+      comprobación se encuentre cuadrado; así los estados financieros exportados serán consistentes.
+    </div>
+    <div class="ms-auto d-flex gap-2">
+      <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-scale me-1"></i> Verificar balance
+      </a>
+      <a href="{{ url_for('financial_statements.income_statement') }}" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Estado de resultados
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

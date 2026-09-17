@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}Existencias y Alertas - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set ns = namespace(bajo=0, exceso=0, ok=0) %}
+{% set valores = [] %}
+{% for p in productos %}
+  {% if p.stock_actual|float <= p.stock_minimo|float %}
+    {% set ns.bajo = ns.bajo + 1 %}
+    {% set estado = "critico" %}
+  {% elif p.stock_actual|float > p.stock_maximo|float %}
+    {% set ns.exceso = ns.exceso + 1 %}
+    {% set estado = "exceso" %}
+  {% else %}
+    {% set ns.ok = ns.ok + 1 %}
+    {% set estado = "optimo" %}
+  {% endif %}
+  {% set _ = valores.append({
+      "codigo": p.codigo,
+      "descripcion": p.descripcion,
+      "valor": (p.stock_actual|float * p.costo_unitario|float)|round(2),
+      "estado": estado
+  }) %}
+{% endfor %}
+{% set top_valores = valores|sort(attribute="valor", reverse=true) %}
+{% set chart_items = top_valores[:10] %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Existencias y Alertas de Stock</h3>
+    <p class="text-muted small mb-0">
+      Control permanente de inventarios a costo unitario, con semáforo de reposición según niveles mínimo y máximo definidos.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('inventory.products') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-boxes me-1"></i> Catálogo de Productos
+    </a>
+    <a href="{{ url_for('inventory.kardex') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-card-list me-1"></i> Ver Kardex
+    </a>
+  </div>
+</div>
+
+<!-- KPIs de inventario -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Unidades en Existencia</div>
+          <div class="kpi-value">{{ "{:,.2f}".format(total_unidades) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-123 me-1"></i> Suma de stock_actual de todos los productos</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary">
+          <i class="bi bi-box-seam"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Valoración a Costo</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(total_costo) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-calculator me-1"></i> stock_actual &times; costo_unitario</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success">
+          <i class="bi bi-cash-coin"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Valoración a Precio de Venta</div>
+          <div class="kpi-value">$ {{ "{:,.2f}".format(total_pv) }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-tag me-1"></i> stock_actual &times; precio_venta</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info">
+          <i class="bi bi-tags"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Margen Potencial</div>
+          <div class="kpi-value {% if margen_potencial < 0 %}text-danger{% else %}text-success{% endif %}">
+            $ {{ "{:,.2f}".format(margen_potencial) }}
+          </div>
+          <div class="small text-muted mt-1"><i class="bi bi-graph-up-arrow me-1"></i> Valor a precio de venta &minus; valor a costo</div>
+        </div>
+        <div class="kpi-icon {% if margen_potencial < 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Semáforo de reposición -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100 {% if ns.bajo > 0 %}border-start border-4 border-danger{% endif %}">
+      <div class="card-body d-flex align-items-center">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-danger-subtle text-danger me-3" style="width: 46px; height: 46px; font-size: 1.25rem;"><i class="bi bi-exclamation-octagon"></i></div>
+        <div>
+          <div class="text-uppercase small fw-bold text-muted mb-1">Bajo / en el mínimo</div>
+          <div class="fs-4 fw-bold text-danger">{{ ns.bajo }} producto{% if ns.bajo != 1 %}s{% endif %}</div>
+          <div class="small text-muted">Stock actual &le; stock mínimo: requiere reposición.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-success-subtle text-success me-3" style="width: 46px; height: 46px; font-size: 1.25rem;"><i class="bi bi-check2-circle"></i></div>
+        <div>
+          <div class="text-uppercase small fw-bold text-muted mb-1">En rango óptimo</div>
+          <div class="fs-4 fw-bold text-success">{{ ns.ok }} producto{% if ns.ok != 1 %}s{% endif %}</div>
+          <div class="small text-muted">Stock actual mayor al mínimo y hasta el máximo.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-body d-flex align-items-center">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-3 bg-warning-subtle text-warning me-3" style="width: 46px; height: 46px; font-size: 1.25rem;"><i class="bi bi-arrow-up-circle"></i></div>
+        <div>
+          <div class="text-uppercase small fw-bold text-muted mb-1">Sobre el máximo</div>
+          <div class="fs-4 fw-bold text-warning">{{ ns.exceso }} producto{% if ns.exceso != 1 %}s{% endif %}</div>
+          <div class="small text-muted">Exceso de existencias: capital inmovilizado.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico de valoración de existencias -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3 rounded-top-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-primary me-2"></i>Valor de Existencias por Producto (USD)</h6>
+      <div class="text-muted small">Top {{ chart_items|length }} de productos por valor de stock (stock_actual &times; costo_unitario)</div>
+    </div>
+    <div class="d-flex gap-2 small">
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Bajo mínimo</span>
+      <span class="badge bg-success-subtle text-success border border-success-subtle">Rango óptimo</span>
+      <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Sobre máximo</span>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if chart_items %}
+      <canvas id="stockValueChart" style="max-height: 320px;"></canvas>
+    {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-bar-chart fs-1 d-block mb-2 opacity-50"></i>
+        Sin registros para mostrar
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Tabla de existencias con semáforo -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-table text-primary me-2"></i>Detalle de Existencias</h6>
+      <div class="text-muted small">Semáforo: rojo si stock actual &le; stock mínimo, ámbar si supera el stock máximo, verde si está en rango.</div>
+    </div>
+    <span class="badge bg-light text-dark border">{{ productos|length }} producto{% if productos|length != 1 %}s{% endif %} registrado{% if productos|length != 1 %}s{% endif %}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-custom table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Código</th>
+          <th>Producto</th>
+          <th class="text-center">Unidad</th>
+          <th class="text-end">Costo Unit.</th>
+          <th class="text-end">Precio Venta</th>
+          <th class="text-end">Stock Actual</th>
+          <th class="text-end">Mín. / Máx.</th>
+          <th class="text-end">Valor Existencia</th>
+          <th class="text-center">Semáforo</th>
+          <th class="text-center">IVA</th>
+          <th class="text-center pe-4">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        <tr>
+          <td class="ps-4"><code>{{ p.codigo }}</code></td>
+          <td>
+            <div class="fw-semibold text-dark">{{ p.descripcion }}</div>
+            <span class="badge bg-light text-dark border">{{ p.categoria }}</span>
+            {% if not p.activo %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactivo</span>{% endif %}
+          </td>
+          <td class="text-center text-muted">{{ p.unidad_medida }}</td>
+          <td class="text-end">$ {{ "{:,.2f}".format(p.costo_unitario) }}</td>
+          <td class="text-end fw-bold text-primary">$ {{ "{:,.2f}".format(p.precio_venta) }}</td>
+          <td class="text-end fw-bold">{{ p.stock_actual }}</td>
+          <td class="text-end text-muted small">{{ p.stock_minimo }} / {{ p.stock_maximo }}</td>
+          <td class="text-end fw-bold">$ {{ "{:,.2f}".format(p.stock_actual * p.costo_unitario) }}</td>
+          <td class="text-center">
+            {% if p.stock_actual <= p.stock_minimo %}
+              <span class="badge bg-danger px-3 py-2"
+                    title="Semáforo rojo: el stock actual ({{ p.stock_actual }} {{ p.unidad_medida }}) es menor o igual al stock mínimo definido ({{ p.stock_minimo }}). Se debe emitir una orden de reposición.">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Bajo mínimo
+              </span>
+            {% elif p.stock_actual > p.stock_maximo %}
+              <span class="badge bg-warning text-dark px-3 py-2"
+                    title="Semáforo ámbar: el stock actual ({{ p.stock_actual }} {{ p.unidad_medida }}) supera el stock máximo definido ({{ p.stock_maximo }}). Existe exceso de existencias y capital inmovilizado.">
+                <i class="bi bi-arrow-up-circle-fill me-1"></i> Sobre máximo
+              </span>
+            {% else %}
+              <span class="badge bg-success px-3 py-2"
+                    title="Semáforo verde: el stock actual ({{ p.stock_actual }} {{ p.unidad_medida }}) se encuentra dentro del rango definido entre el mínimo ({{ p.stock_minimo }}) y el máximo ({{ p.stock_maximo }}).">
+                <i class="bi bi-check-circle-fill me-1"></i> En rango
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if p.aplica_iva %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle" title="Producto sujeto a IVA en la venta">IVA</span>
+            {% else %}
+              <span class="badge bg-light text-muted border" title="Producto no sujeto a IVA en la venta">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center pe-4">
+            <a href="{{ url_for('inventory.kardex', producto_id=p.id) }}" class="btn btn-outline-primary btn-sm py-1"
+               title="Ver el Kardex valorado de {{ p.descripcion }}">
+              <i class="bi bi-card-list me-1"></i> Kardex
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="11" class="text-center text-muted py-5">
+            <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+            Sin registros para mostrar
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if productos %}
+      <tfoot class="table-light">
+        <tr class="fw-bold">
+          <td class="ps-4" colspan="5">TOTALES DEL INVENTARIO</td>
+          <td class="text-end">{{ "{:,.2f}".format(total_unidades) }}</td>
+          <td class="text-end text-muted small">unidades</td>
+          <td class="text-end">$ {{ "{:,.2f}".format(total_costo) }}</td>
+          <td colspan="3" class="text-center text-muted small">
+            Precio de venta: $ {{ "{:,.2f}".format(total_pv) }}
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canvas = document.getElementById("stockValueChart");
+  if (!canvas) return;
+
+  {% set serie = [] %}
+{% for p in productos %}
+  {% set _ = serie.append({
+      "label": p.codigo ~ " - " ~ (p.descripcion|truncate(30, True, '...')|replace('"', '')|replace("'", '')),
+      "valor": (p.stock_actual|float * p.costo_unitario|float)|round(2),
+      "estado": ("critico" if p.stock_actual|float <= p.stock_minimo|float else ("exceso" if p.stock_actual|float > p.stock_maximo|float else "optimo"))
+  }) %}
+{% endfor %}
+{% set serie = serie|sort(attribute="valor", reverse=true) %}
+{% set serie = serie[:10] %}
+
+const etiquetas = [
+  {% for v in serie %}"{{ v.label }}"{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+const valores = [
+  {% for v in serie %}{{ v.valor }}{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+const estados = [
+  {% for v in serie %}"{{ v.estado }}"{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+  const paleta = { "critico": "#dc3545", "exceso": "#f0ad4e", "optimo": "#198754" };
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        label: "Valor de existencias a costo ($)",
+        data: valores,
+        backgroundColor: estados.map(function (e) { return paleta[e] || "#2563eb"; }),
+        borderRadius: 6,
+        maxBarThickness: 46
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const estado = estados[ctx.dataIndex] || "";
+              const textoEstado = estado === "critico" ? "Bajo mínimo" : (estado === "exceso" ? "Sobre máximo" : "En rango óptimo");
+              return "$ " + Number(ctx.raw).toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " · " + textoEstado;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { maxRotation: 45, minRotation: 30, font: { size: 10 } },
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "USD" },
+          ticks: {
+            callback: function (value) {
+              return "$ " + Number(value).toLocaleString("es-EC");
+            }
+          }
+        }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

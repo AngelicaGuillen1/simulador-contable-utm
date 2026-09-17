@@ -1,0 +1,214 @@
+<!-- Cuerpo de la Página de Inicio (se usa tanto en la vista pública como en la interna) -->
+<div class="container py-4" style="max-width: 1180px;">
+
+  <!-- Encabezado profesional -->
+  <div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0f766e 100%);">
+    <div class="card-body p-4 p-md-5">
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div>
+          <span class="badge bg-primary px-3 py-2 rounded-pill mb-3 fw-semibold">
+            <i class="bi bi-mortarboard-fill me-1"></i> Entorno Universitario de Simulación Contable
+          </span>
+          <h1 class="fw-bold mb-2" style="letter-spacing: -0.5px;">{{ app_name }}</h1>
+          <h5 class="text-info fw-semibold mb-3">{{ app_subtitle }}</h5>
+          <p class="lead fs-6 text-white-50 mb-4">
+            “Aprende contabilidad gestionando una empresa en un entorno de simulación.”
+          </p>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('simulations.list_simulations') }}" class="btn btn-warning fw-bold px-4 py-2 rounded-3">
+              <i class="bi bi-play-circle-fill me-1"></i> Iniciar simulación
+            </a>
+            <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-light px-4 py-2 rounded-3">
+              <i class="bi bi-journal-text me-1"></i> Ir al sistema contable
+            </a>
+            <a href="{{ url_for('simulations.evaluations') }}" class="btn btn-light text-dark fw-semibold px-4 py-2 rounded-3">
+              <i class="bi bi-award me-1"></i> Ver mis resultados
+            </a>
+          </div>
+        </div>
+        <div class="text-center">
+          <div class="bg-white bg-opacity-10 p-4 rounded-4 border border-white border-opacity-10">
+            <div class="small text-uppercase text-white-50 fw-bold mb-1">Empresa simulada</div>
+            <div class="fw-bold fs-5">{{ empresa }}</div>
+            <div class="small text-white-50">RUC {{ empresa_ruc }}</div>
+            <hr class="border-white border-opacity-25">
+            <div class="small text-white-50">Período contable</div>
+            <div class="fw-semibold">
+              {% if indicadores.periodo %}{{ indicadores.periodo.nombre }}{% else %}Sin período abierto{% endif %}
+            </div>
+            <div class="small text-white-50 mt-1">Fecha de trabajo: {{ indicadores.fecha_trabajo }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicadores rápidos (dinámicos desde SQLite) -->
+  <h6 class="text-uppercase text-muted fw-bold small mb-3">Indicadores rápidos de la empresa simulada</h6>
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo de Caja</div>
+        <div class="kpi-value">{{ indicadores.caja|money }}</div>
+        <div class="small text-muted mt-1"><i class="bi bi-cash me-1"></i> Cuenta 1.1.01</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo Bancario</div>
+        <div class="kpi-value">{{ indicadores.bancos|money }}</div>
+        <div class="small text-muted mt-1"><i class="bi bi-bank me-1"></i> Pichincha + Guayaquil</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Inventario Disponible</div>
+        <div class="kpi-value">{{ indicadores.inventario|money }}</div>
+        <div class="small text-muted mt-1"><i class="bi bi-boxes me-1"></i> {{ indicadores.productos }} productos</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Cuentas por Cobrar</div>
+        <div class="kpi-value">{{ indicadores.cuentas_por_cobrar|money }}</div>
+        <div class="small text-muted mt-1"><i class="bi bi-receipt me-1"></i> Cartera de clientes</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Cuentas por Pagar</div>
+        <div class="kpi-value">{{ indicadores.cuentas_por_pagar|money }}</div>
+        <div class="small text-muted mt-1"><i class="bi bi-credit-card me-1"></i> Obligaciones proveedores</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Ingresos del Período</div>
+        <div class="kpi-value text-success">{{ indicadores.ingresos|money }}</div>
+        <div class="small text-muted mt-1">Ventas + servicios</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Gastos del Período</div>
+        <div class="kpi-value text-danger">{{ indicadores.gastos|money }}</div>
+        <div class="small text-muted mt-1">Administración, ventas y financieros</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Resultado del Período</div>
+        <div class="kpi-value {% if indicadores.resultado >= 0 %}text-primary{% else %}text-danger{% endif %}">
+          {{ indicadores.resultado|money }}
+        </div>
+        <div class="small text-muted mt-1">Utilidad / (Pérdida) neta</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alcance del simulador -->
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+          <h5 class="fw-bold mb-1">¿Qué puedes hacer en este simulador?</h5>
+          <p class="text-muted small mb-0">Ciclo contable completo sobre una empresa real simulada</p>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-primary-subtle text-primary p-2 rounded-3 me-2"><i class="bi bi-journal-text"></i></div>
+                <div>
+                  <div class="fw-semibold small">Contabilidad</div>
+                  <div class="text-muted small">Plan de cuentas, libro diario, libro mayor, balance de comprobación, ajustes y cierre del período.</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-success-subtle text-success p-2 rounded-3 me-2"><i class="bi bi-cart-check"></i></div>
+                <div>
+                  <div class="fw-semibold small">Operaciones</div>
+                  <div class="text-muted small">Ventas de productos, prestación de servicios, compras con inventario perpetuo y costo de ventas.</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-warning-subtle text-warning p-2 rounded-3 me-2"><i class="bi bi-boxes"></i></div>
+                <div>
+                  <div class="fw-semibold small">Inventarios y Kardex</div>
+                  <div class="text-muted small">Entradas, salidas, saldos, alertas de stock y valoración por promedio ponderado o FIFO.</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-info-subtle text-info p-2 rounded-3 me-2"><i class="bi bi-bank"></i></div>
+                <div>
+                  <div class="fw-semibold small">Tesorería y cartera</div>
+                  <div class="text-muted small">Caja, arqueos, bancos, conciliación bancaria, cuentas por cobrar, por pagar y documentos fuente.</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-danger-subtle text-danger p-2 rounded-3 me-2"><i class="bi bi-file-earmark-bar-graph"></i></div>
+                <div>
+                  <div class="fw-semibold small">Estados financieros</div>
+                  <div class="text-muted small">Estado de resultados, estado de situación financiera (Activo = Pasivo + Patrimonio) y flujo de efectivo.</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex">
+                <div class="bg-secondary-subtle text-secondary p-2 rounded-3 me-2"><i class="bi bi-robot"></i></div>
+                <div>
+                  <div class="fw-semibold small">Simulación con IA</div>
+                  <div class="text-muted small">Casos por niveles, evaluación automática con rúbrica, retroalimentación específica y Tutor Contable IA.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+          <h5 class="fw-bold mb-1">Acceso al sistema</h5>
+          <p class="text-muted small mb-0">Roles: Administrador, Docente, Estudiante y Auditor</p>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <p class="small text-muted">
+            El simulador conserva la trazabilidad de cada movimiento: documento fuente, transacción,
+            asiento, libro diario, libro mayor, balance y estados financieros.
+          </p>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary fw-semibold">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión en el simulador
+            </a>
+            <a href="{{ url_for('accounting.trial_balance') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-scale me-1"></i> Ver balance de comprobación
+            </a>
+            <a href="{{ url_for('financial_statements.balance_sheet') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-file-earmark-check me-1"></i> Ver estado de situación financiera
+            </a>
+          </div>
+          <hr>
+          <div class="small text-muted">
+            <div class="fw-bold text-dark mb-1"><i class="bi bi-info-circle me-1"></i> Datos de demostración</div>
+            Todos los valores mostrados provienen de la base SQLite del simulador y corresponden a datos
+            de demostración con fines exclusivamente académicos.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center text-muted small mt-4">
+    <strong>{{ app_name }}</strong> &bull; {{ app_subtitle }} &bull; Empresa ficticia: {{ empresa }}
+  </div>
+</div>

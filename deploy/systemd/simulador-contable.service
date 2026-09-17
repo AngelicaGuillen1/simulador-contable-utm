@@ -1,0 +1,36 @@
+[Unit]
+Description=Simulador Integral de Sistema Contable (waitress)
+Documentation=file:///opt/simulador/docs/MANUAL_DE_USUARIO.md
+After=network.target
+
+[Service]
+Type=simple
+User=simulador
+Group=simulador
+WorkingDirectory=/opt/simulador
+
+# --- Entorno (ajuste rutas y puerto según el servidor) ---
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=THREADS=8
+Environment=DATABASE_PATH=/var/datos/simulator.db
+Environment=SESSION_COOKIE_SECURE=true
+# SECRET_KEY y demás secretos se leen de este archivo (no versionado, permisos 600):
+EnvironmentFile=-/etc/simulador/secrets.env
+
+ExecStart=/opt/simulador/.venv/bin/python serve.py
+
+Restart=always
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+StandardOutput=append:/var/log/simulador/servidor.log
+StandardError=append:/var/log/simulador/servidor.log
+
+# Endurecimiento básico
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+{% block title %}Conciliación Bancaria - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{# Totalizadores de la cabecera #}
+{% set st = namespace(conciliadas=0, borradores=0, dif_acumulada=0.0) %}
+{% for c in conciliaciones %}
+  {% if c.estado == 'CONCILIADO' %}
+    {% set st.conciliadas = st.conciliadas + 1 %}
+  {% else %}
+    {% set st.borradores = st.borradores + 1 %}
+  {% endif %}
+  {% set st.dif_acumulada = st.dif_acumulada + (c.diferencia or 0) %}
+{% endfor %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-arrow-left-right text-primary me-2"></i>Conciliación Bancaria</h3>
+    <p class="text-muted small mb-0">
+      Ajuste del saldo del extracto bancario contra el saldo de libros &bull;
+      Fecha de corte de trabajo: <strong>{{ hoy|default('—') }}</strong>
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('treasury.banks') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-bank me-1"></i> Cuentas Bancarias
+    </a>
+    <button type="button" class="btn btn-primary fw-semibold" id="btnNuevaConciliacion">
+      <i class="bi bi-plus-circle me-1"></i> Nueva Conciliación
+    </button>
+  </div>
+</div>
+
+<!-- KPIs de Conciliación -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Conciliaciones Registradas</div>
+          <div class="kpi-value">{{ conciliaciones|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-list-check me-1"></i> Historial completo de cortes</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-list-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Conciliadas</div>
+          <div class="kpi-value text-success">{{ st.conciliadas }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-check2-circle me-1"></i> Sin diferencias (tolerancia &lt; $ 0.05)</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-check2-circle"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">En Borrador</div>
+          <div class="kpi-value {% if st.borradores > 0 %}text-warning{% else %}text-success{% endif %}">{{ st.borradores }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-pencil-square me-1"></i> Partidas con diferencia pendiente</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-pencil-square"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Diferencia Acumulada</div>
+          <div class="kpi-value {% if st.dif_acumulada|abs >= 0.05 %}text-danger{% else %}text-success{% endif %}">
+            $ {{ "{:,.2f}".format(st.dif_acumulada|abs) }}
+          </div>
+          <div class="small text-muted mt-1"><i class="bi bi-exclamation-diamond me-1"></i> Suma de diferencias históricas</div>
+        </div>
+        <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-exclamation-diamond"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FORMULARIO DE CONCILIACIÓN + PANEL EN VIVO ============ -->
+<div class="card border-0 shadow-sm rounded-4 mb-4" id="formConciliacionCard">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0"><i class="bi bi-calculator text-primary me-2"></i>Nueva Conciliación Bancaria</h6>
+    <span class="badge bg-light text-dark border">Período contable: Abril 2026</span>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('treasury.reconciliation') }}" id="formConciliacion" autocomplete="off">
+      <input type="hidden" name="periodo_id" value="1">
+
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-5">
+          <label class="form-label small fw-semibold">Banco / Cuenta Bancaria <span class="text-danger">*</span></label>
+          <select name="banco_id" id="concBanco" class="form-select" required>
+            <option value="">-- Seleccione la cuenta bancaria --</option>
+            {% for b in bancos %}
+            <option value="{{ b.id }}" data-saldo="{{ b.saldo_contable_real or 0 }}">
+              {{ b.nombre_banco }} - {{ b.numero_cuenta }} ({{ b.tipo_cuenta }})
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Saldo según Libro Mayor: <span id="concSaldoLibrosHint" class="fw-semibold">$ 0.00</span></div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+          <label class="form-label small fw-semibold">Fecha de Corte <span class="text-danger">*</span></label>
+          <input type="date" name="fecha_corte" id="concFechaCorte" class="form-control" value="{{ hoy|default('') }}" required>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-4">
+          <label class="form-label small fw-semibold">Saldo según Extracto Bancario <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" step="0.01" name="saldo_extracto" id="concSaldoExtracto" class="form-control text-end" value="0.00" required>
+            <button type="button" class="btn btn-outline-secondary" id="btnUsarSaldoLibro"
+                    title="Copiar el saldo del Libro Mayor como saldo del extracto">
+              <i class="bi bi-arrow-down-left-circle"></i> Usar libro
+            </button>
+          </div>
+          <div class="form-text">Saldo informado por el estado de cuenta del banco a la fecha de corte.</div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Partidas conciliatorias -->
+        <div class="col-12 col-lg-7">
+          <div class="border rounded-4 p-3 h-100 bg-white">
+            <h6 class="fw-bold small text-uppercase text-muted mb-3">
+              <i class="bi bi-list-ul me-1"></i>Partidas Conciliatorias del Período
+            </h6>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Depósitos en Tránsito <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" name="depositos_transito" id="concDepositos" class="form-control text-end" value="0.00" required>
+                </div>
+                <div class="form-text">Cobros registrados en libros aún no abonados por el banco (+).</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Cheques en Tránsito <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" name="cheques_transito" id="concCheques" class="form-control text-end" value="0.00" required>
+                </div>
+                <div class="form-text">Cheques girados y no cobrados por el banco (-).</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Notas de Débito No Registradas <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" name="notas_debito" id="concNotasDebito" class="form-control text-end" value="0.00" required>
+                </div>
+                <div class="form-text">Cargos del banco (comisiones, cheques protestados) no contabilizados (-).</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-semibold">Notas de Crédito No Registradas <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" step="0.01" name="notas_credito" id="concNotasCredito" class="form-control text-end" value="0.00" required>
+                </div>
+                <div class="form-text">Abonos del banco (intereses, transferencias) no contabilizados (+).</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Observaciones</label>
+                <textarea name="observaciones" id="concObservaciones" class="form-control" rows="2"
+                          placeholder="Detalle de partidas pendientes, funcionario que elabora y revisa la conciliación."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de cálculo en vivo -->
+        <div class="col-12 col-lg-5">
+          <div class="border rounded-4 p-3 h-100 bg-light">
+            <h6 class="fw-bold small text-uppercase text-muted mb-3">
+              <i class="bi bi-lightning-charge me-1"></i>Cálculo en Vivo de la Conciliación
+            </h6>
+
+            <div id="bannerConciliacion" class="balance-banner unbalanced">
+              <span id="bannerTexto"><i class="bi bi-info-circle me-1"></i> Seleccione un banco e ingrese valores</span>
+              <span class="badge bg-secondary" id="bannerDiferencia">Diferencia: $ 0.00</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-borderless mb-0">
+                <tbody>
+                  <tr class="border-bottom">
+                    <td class="small">Saldo según Extracto Bancario</td>
+                    <td class="text-end fw-semibold" id="lblExtracto">$ 0.00</td>
+                  </tr>
+                  <tr class="text-success">
+                    <td class="small"><i class="bi bi-plus-circle me-1"></i>Depósitos en Tránsito</td>
+                    <td class="text-end fw-semibold" id="lblDepositos">+ $ 0.00</td>
+                  </tr>
+                  <tr class="text-danger border-bottom">
+                    <td class="small"><i class="bi bi-dash-circle me-1"></i>Cheques en Tránsito</td>
+                    <td class="text-end fw-semibold" id="lblCheques">- $ 0.00</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td class="small fw-bold text-uppercase">Saldo Extracto Ajustado</td>
+                    <td class="text-end fw-bold" id="lblExtractoAjustado">$ 0.00</td>
+                  </tr>
+
+                  <tr><td colspan="2" class="pt-3"></td></tr>
+
+                  <tr class="border-bottom">
+                    <td class="small">Saldo según Libros (Libro Mayor)</td>
+                    <td class="text-end fw-semibold" id="lblLibros">$ 0.00</td>
+                  </tr>
+                  <tr class="text-success">
+                    <td class="small"><i class="bi bi-plus-circle me-1"></i>Notas de Crédito No Registradas</td>
+                    <td class="text-end fw-semibold" id="lblNotasCredito">+ $ 0.00</td>
+                  </tr>
+                  <tr class="text-danger border-bottom">
+                    <td class="small"><i class="bi bi-dash-circle me-1"></i>Notas de Débito No Registradas</td>
+                    <td class="text-end fw-semibold" id="lblNotasDebito">- $ 0.00</td>
+                  </tr>
+                  <tr class="table-light">
+                    <td class="small fw-bold text-uppercase">Saldo Libros Ajustado</td>
+                    <td class="text-end fw-bold" id="lblLibrosAjustado">$ 0.00</td>
+                  </tr>
+
+                  <tr class="border-top">
+                    <td class="small fw-bold text-uppercase pt-3">Diferencia por Conciliar</td>
+                    <td class="text-end pt-3">
+                      <span id="badgeDiferencia" class="badge bg-secondary fs-6 px-3 py-2">$ 0.00</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="reset" class="btn btn-light btn-sm" id="btnReiniciarConciliacion">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reiniciar
+              </button>
+              <button type="submit" class="btn btn-primary btn-sm fw-semibold flex-grow-1">
+                <i class="bi bi-save me-1"></i>Guardar Conciliación
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ HISTORIAL DE CONCILIACIONES ============ -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+    <h6 class="fw-bold mb-0"><i class="bi bi-clock-history text-secondary me-2"></i>Historial de Conciliaciones</h6>
+    <span class="badge bg-light text-dark border">{{ conciliaciones|length }} registro(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-custom align-middle mb-0">
+        <thead>
+          <tr>
+            <th class="ps-4">#</th>
+            <th>Fecha de Corte</th>
+            <th>Banco / Cuenta</th>
+            <th class="text-end">Saldo Extracto</th>
+            <th class="text-end">Saldo Libros</th>
+            <th class="text-end">Dep. Tránsito</th>
+            <th class="text-end">Cheques Tránsito</th>
+            <th class="text-end">ND / NC</th>
+            <th class="text-end">Diferencia</th>
+            <th class="text-center">Estado</th>
+            <th class="small">Usuario</th>
+            <th class="text-center pe-4">Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in conciliaciones %}
+          {% set dif = c.diferencia or 0 %}
+          <tr>
+            <td class="ps-4 text-muted">#{{ c.id }}</td>
+            <td class="text-nowrap fw-semibold">{{ c.fecha_corte }}</td>
+            <td>
+              <div class="fw-semibold small">{{ c.nombre_banco }}</div>
+              <div class="text-muted small"><code>{{ c.numero_cuenta }}</code></div>
+            </td>
+            <td class="text-end text-nowrap">$ {{ "{:,.2f}".format(c.saldo_extracto_bancario or 0) }}</td>
+            <td class="text-end text-nowrap">$ {{ "{:,.2f}".format(c.saldo_libro_bancos or 0) }}</td>
+            <td class="text-end text-nowrap text-success">$ {{ "{:,.2f}".format(c.depositos_en_transito or 0) }}</td>
+            <td class="text-end text-nowrap text-danger">$ {{ "{:,.2f}".format(c.cheques_en_transito or 0) }}</td>
+            <td class="text-end text-nowrap small">
+              <span class="text-danger">$ {{ "{:,.2f}".format(c.notas_debito_no_registradas or 0) }}</span>
+              /
+              <span class="text-success">$ {{ "{:,.2f}".format(c.notas_credito_no_registradas or 0) }}</span>
+            </td>
+            <td class="text-end fw-semibold text-nowrap {% if dif >= 0.05 %}text-danger{% else %}text-success{% endif %}">
+              $ {{ "{:,.2f}".format(dif) }}
+            </td>
+            <td class="text-center">
+              {% if c.estado == 'CONCILIADO' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check2-circle me-1"></i>Conciliado</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-pencil me-1"></i>Borrador</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ c.usuario_nombre or '—' }}</td>
+            <td class="text-center pe-4">
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+                      data-bs-target="#detalleConciliacion{{ c.id }}" aria-expanded="false" title="Ver detalle de las partidas conciliatorias">
+                <i class="bi bi-chevron-expand"></i>
+              </button>
+            </td>
+          </tr>
+          <tr class="collapse" id="detalleConciliacion{{ c.id }}">
+            <td colspan="12" class="bg-light">
+              {% set ext_aj = (c.saldo_extracto_bancario or 0) + (c.depositos_en_transito or 0) - (c.cheques_en_transito or 0) %}
+              {% set lib_aj = (c.saldo_libro_bancos or 0) + (c.notas_credito_no_registradas or 0) - (c.notas_debito_no_registradas or 0) %}
+              <div class="row g-3 py-2">
+                <div class="col-12 col-lg-4">
+                  <div class="small fw-bold text-uppercase text-muted mb-2">Ajuste al Extracto Bancario</div>
+                  <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="small">Saldo según extracto</td><td class="text-end small">$ {{ "{:,.2f}".format(c.saldo_extracto_bancario or 0) }}</td></tr>
+                    <tr class="text-success"><td class="small">+ Depósitos en tránsito</td><td class="text-end small">$ {{ "{:,.2f}".format(c.depositos_en_transito or 0) }}</td></tr>
+                    <tr class="text-danger"><td class="small">- Cheques en tránsito</td><td class="text-end small">$ {{ "{:,.2f}".format(c.cheques_en_transito or 0) }}</td></tr>
+                    <tr class="border-top fw-bold"><td class="small">Saldo extracto ajustado</td><td class="text-end small">$ {{ "{:,.2f}".format(ext_aj) }}</td></tr>
+                  </table>
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="small fw-bold text-uppercase text-muted mb-2">Ajuste al Saldo de Libros</div>
+                  <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="small">Saldo según libros</td><td class="text-end small">$ {{ "{:,.2f}".format(c.saldo_libro_bancos or 0) }}</td></tr>
+                    <tr class="text-success"><td class="small">+ Notas de crédito no registradas</td><td class="text-end small">$ {{ "{:,.2f}".format(c.notas_credito_no_registradas or 0) }}</td></tr>
+                    <tr class="text-danger"><td class="small">- Notas de débito no registradas</td><td class="text-end small">$ {{ "{:,.2f}".format(c.notas_debito_no_registradas or 0) }}</td></tr>
+                    <tr class="border-top fw-bold"><td class="small">Saldo libros ajustado</td><td class="text-end small">$ {{ "{:,.2f}".format(lib_aj) }}</td></tr>
+                  </table>
+                </div>
+                <div class="col-12 col-lg-4">
+                  <div class="small fw-bold text-uppercase text-muted mb-2">Resultado</div>
+                  <div class="p-3 rounded-3 border bg-white">
+                    <div class="d-flex justify-content-between small mb-1">
+                      <span>Período contable</span><span class="fw-semibold">#{{ c.periodo_id }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-1">
+                      <span>Diferencia absoluta</span>
+                      <span class="fw-semibold {% if dif >= 0.05 %}text-danger{% else %}text-success{% endif %}">$ {{ "{:,.2f}".format(dif) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-2">
+                      <span>Elaborado por</span><span class="fw-semibold">{{ c.usuario_nombre or '—' }}</span>
+                    </div>
+                    {% if dif < 0.05 %}
+                      <div class="alert alert-success py-2 px-3 mb-0 small mb-2">
+                        <i class="bi bi-check2-circle me-1"></i> Conciliación cuadrada: diferencia menor a la tolerancia de $ 0.05.
+                      </div>
+                    {% else %}
+                      <div class="alert alert-danger py-2 px-3 mb-0 small mb-2">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Existe una diferencia pendiente de depurar antes del cierre del período.
+                      </div>
+                    {% endif %}
+                    <div class="small text-muted mt-2">
+                      <strong>Observaciones:</strong> {{ c.observaciones or 'Sin observaciones registradas.' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="12" class="text-center text-muted py-4">
+              <i class="bi bi-inbox fs-4 d-block mb-1"></i> Sin registros para mostrar
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Nota metodológica -->
+<div class="alert alert-light border rounded-4 d-flex align-items-start gap-3 shadow-sm">
+  <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+  <div class="small">
+    <strong class="d-block mb-1">Metodología de la Conciliación Bancaria</strong>
+    <code>Saldo Extracto + Depósitos en Tránsito - Cheques en Tránsito = Saldo Extracto Ajustado</code> &nbsp;y&nbsp;
+    <code>Saldo Libros + Notas de Crédito - Notas de Débito = Saldo Libros Ajustado</code>.
+    Cuando ambos saldos ajustados coinciden (diferencia menor a <strong>$ 0.05</strong>) la conciliación se marca como
+    <span class="badge bg-success-subtle text-success border border-success-subtle">CONCILIADO</span>; en caso contrario se conserva como
+    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">BORRADOR</span> hasta depurar las partidas pendientes.
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  var TOLERANCIA = 0.05;
+
+  /* Formato monetario idéntico al del servidor ("{:,.2f}"): $ 1,234.56 */
+  function miles(n) {
+    var partes = Math.abs(isFinite(n) ? n : 0).toFixed(2).split('.');
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return partes[0] + '.' + partes[1];
+  }
+  function money(n) {
+    var v = isFinite(n) ? n : 0;
+    return (v < 0 ? '- $ ' : '$ ') + miles(v);
+  }
+  function num(el) {
+    var v = parseFloat(el && el.value ? el.value : '0');
+    return isFinite(v) ? v : 0;
+  }
+  function r2(n) { return Math.round(n * 100) / 100; }
+
+  var selBanco = document.getElementById('concBanco');
+  var inExtracto = document.getElementById('concSaldoExtracto');
+  var inDepositos = document.getElementById('concDepositos');
+  var inCheques = document.getElementById('concCheques');
+  var inNotasDebito = document.getElementById('concNotasDebito');
+  var inNotasCredito = document.getElementById('concNotasCredito');
+  var form = document.getElementById('formConciliacion');
+
+  var lblExtracto = document.getElementById('lblExtracto');
+  var lblDepositos = document.getElementById('lblDepositos');
+  var lblCheques = document.getElementById('lblCheques');
+  var lblExtractoAjustado = document.getElementById('lblExtractoAjustado');
+  var lblLibros = document.getElementById('lblLibros');
+  var lblNotasCredito = document.getElementById('lblNotasCredito');
+  var lblNotasDebito = document.getElementById('lblNotasDebito');
+  var lblLibrosAjustado = document.getElementById('lblLibrosAjustado');
+  var badgeDiferencia = document.getElementById('badgeDiferencia');
+  var banner = document.getElementById('bannerConciliacion');
+  var bannerTexto = document.getElementById('bannerTexto');
+  var bannerDiferencia = document.getElementById('bannerDiferencia');
+  var hintLibros = document.getElementById('concSaldoLibrosHint');
+
+  function saldoLibrosBanco() {
+    if (!selBanco) { return 0; }
+    var opt = selBanco.options[selBanco.selectedIndex];
+    return opt && opt.dataset.saldo ? parseFloat(opt.dataset.saldo) : 0;
+  }
+
+  function recalcular() {
+    var extracto = num(inExtracto);
+    var depositos = num(inDepositos);
+    var cheques = num(inCheques);
+    var notasDebito = num(inNotasDebito);
+    var notasCredito = num(inNotasCredito);
+    var libros = saldoLibrosBanco();
+
+    var extractoAjustado = r2(extracto + depositos - cheques);
+    var librosAjustado = r2(libros + notasCredito - notasDebito);
+    var diferencia = r2(Math.abs(extractoAjustado - librosAjustado));
+    var cuadra = diferencia < TOLERANCIA;
+
+    if (lblExtracto) { lblExtracto.textContent = money(extracto); }
+    if (lblDepositos) { lblDepositos.textContent = '+ ' + money(depositos); }
+    if (lblCheques) { lblCheques.textContent = '- ' + money(cheques); }
+    if (lblExtractoAjustado) { lblExtractoAjustado.textContent = money(extractoAjustado); }
+    if (lblLibros) { lblLibros.textContent = money(libros); }
+    if (lblNotasCredito) { lblNotasCredito.textContent = '+ ' + money(notasCredito); }
+    if (lblNotasDebito) { lblNotasDebito.textContent = '- ' + money(notasDebito); }
+    if (lblLibrosAjustado) { lblLibrosAjustado.textContent = money(librosAjustado); }
+    if (hintLibros) { hintLibros.textContent = money(libros); }
+
+    if (badgeDiferencia) {
+      badgeDiferencia.className = 'badge fs-6 px-3 py-2 ' + (cuadra ? 'bg-success' : 'bg-danger');
+      badgeDiferencia.textContent = money(diferencia);
+    }
+    if (banner) {
+      banner.className = 'balance-banner ' + (cuadra ? 'balanced' : 'unbalanced');
+    }
+    if (bannerDiferencia) {
+      bannerDiferencia.className = 'badge ' + (cuadra ? 'bg-success' : 'bg-danger');
+      bannerDiferencia.textContent = 'Diferencia: ' + money(diferencia);
+    }
+    if (bannerTexto) {
+      if (!selBanco || !selBanco.value) {
+        bannerTexto.innerHTML = '<i class="bi bi-info-circle me-1"></i> Seleccione la cuenta bancaria a conciliar';
+      } else if (cuadra) {
+        bannerTexto.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Conciliación cuadrada: se guardará como CONCILIADA';
+      } else {
+        bannerTexto.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Existe diferencia: se guardará como BORRADOR';
+      }
+    }
+  }
+
+  [selBanco, inExtracto, inDepositos, inCheques, inNotasDebito, inNotasCredito].forEach(function (el) {
+    if (!el) { return; }
+    el.addEventListener('input', recalcular);
+    el.addEventListener('change', recalcular);
+  });
+  recalcular();
+
+  /* Botón: copiar el saldo del Libro Mayor al saldo del extracto */
+  var btnUsarLibro = document.getElementById('btnUsarSaldoLibro');
+  if (btnUsarLibro) {
+    btnUsarLibro.addEventListener('click', function () {
+      if (!selBanco || !selBanco.value) {
+        window.alert('Seleccione primero la cuenta bancaria a conciliar.');
+        return;
+      }
+      if (inExtracto) { inExtracto.value = saldoLibrosBanco().toFixed(2); }
+      recalcular();
+    });
+  }
+
+  /* Botón: reiniciar el formulario y el panel */
+  var btnReiniciar = document.getElementById('btnReiniciarConciliacion');
+  if (btnReiniciar && form) {
+    btnReiniciar.addEventListener('click', function (e) {
+      e.preventDefault();
+      form.reset();
+      if (inExtracto) { inExtracto.value = '0.00'; }
+      if (inDepositos) { inDepositos.value = '0.00'; }
+      if (inCheques) { inCheques.value = '0.00'; }
+      if (inNotasDebito) { inNotasDebito.value = '0.00'; }
+      if (inNotasCredito) { inNotasCredito.value = '0.00'; }
+      recalcular();
+    });
+  }
+
+  /* Botón superior: desplazar y enfocar el formulario */
+  var btnNueva = document.getElementById('btnNuevaConciliacion');
+  if (btnNueva) {
+    btnNueva.addEventListener('click', function () {
+      var card = document.getElementById('formConciliacionCard');
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.classList.add('border', 'border-primary');
+        setTimeout(function () { card.classList.remove('border-primary'); }, 1500);
+      }
+      if (selBanco) { setTimeout(function () { selBanco.focus(); }, 400); }
+    });
+  }
+
+  /* Confirmación contable al guardar con diferencia */
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      if (!selBanco || !selBanco.value) {
+        e.preventDefault();
+        window.alert('Debe seleccionar la cuenta bancaria a conciliar.');
+        return;
+      }
+      var extractoAjustado = r2(num(inExtracto) + num(inDepositos) - num(inCheques));
+      var librosAjustado = r2(saldoLibrosBanco() + num(inNotasCredito) - num(inNotasDebito));
+      var diferencia = r2(Math.abs(extractoAjustado - librosAjustado));
+      if (diferencia >= TOLERANCIA) {
+        var continuar = window.confirm(
+          'La conciliación presenta una diferencia de ' + money(diferencia) + '.\n' +
+          'Se guardará en estado BORRADOR hasta depurar las partidas pendientes.\n¿Deseas continuar?'
+        );
+        if (!continuar) { e.preventDefault(); }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
