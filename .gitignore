@@ -4,6 +4,7 @@
 
 # Secretos y configuración local
 deploy/windows/entorno.local.cmd
+.devcontainer/entorno.local.sh
 .env
 *.env.local
 secrets.env

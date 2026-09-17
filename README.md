@@ -121,12 +121,29 @@ docs/
 └── build_manual.py         # Generador del manual en HTML
 deploy/
 ├── windows/                # Arranque automático del servicio en Windows
+├── hostinger/              # Instalador para VPS Ubuntu (un solo comando)
+├── pythonanywhere/wsgi.py  # URL pública gratuita con PythonAnywhere
 ├── systemd/ nginx/         # Servicio y proxy inverso para VPS
 ├── backup_db.py            # Respaldo en caliente de la base SQLite
 ├── cambiar_credenciales.py # Cambio de contraseñas antes de publicar
 └── verificar_despliegue.py # Verificación del despliegue publicado
+.devcontainer/              # Abrir el sistema en el navegador con GitHub Codespaces
+.github/workflows/          # Integración continua: 113 pruebas + arranque real en Linux
 Procfile · Dockerfile · render.yaml   # Artefactos para plataformas gestionadas
 ```
+
+## 4.b Cómo abrir el sistema desde GitHub
+
+| Vía | Sirve para | Requisitos |
+|---|---|---|
+| **GitHub Codespaces** (`.devcontainer/`) | Abrir el simulador en el navegador, sin instalar nada; una instancia por estudiante | Cuenta de GitHub (plan gratuito: 120 horas-núcleo/mes) |
+| **Descarga del repositorio** (`Code → Download ZIP`) | Ejecutarlo en el propio computador | Python 3.11+ |
+| **PythonAnywhere** (`deploy/pythonanywhere/wsgi.py`) | **Una URL pública para todo el curso**, gratis | Cuenta gratuita en pythonanywhere.com |
+| **GitHub Pages** (`docs/`) | Portada del curso, manual y guía en línea | — |
+
+> **GitHub Pages no puede ejecutar la aplicación:** solo publica contenido estático. El simulador
+> necesita un proceso Python y una base de datos, por lo que se ejecuta en Codespaces, en
+> PythonAnywhere o en un servidor (ver `docs/DESPLIEGUE.md`).
 
 ## 5. Instalación
 

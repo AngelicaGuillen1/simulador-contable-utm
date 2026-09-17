@@ -45,20 +45,31 @@
 </header>
 
 <main>
+  <h2>Abrir el sistema ahora mismo (sin instalar nada)</h2>
+  <p>GitHub crea un entorno en la nube con el simulador ya instalado y lo abre en su navegador.
+     Solo necesita una cuenta de GitHub:</p>
   <div class="acciones">
     <div class="tarjeta">
-      <h3>1. Descargar el sistema</h3>
-      <p>Botón <code>Code → Download ZIP</code> en GitHub, descomprima y siga la guía.</p>
-      <a class="boton" href="https://github.com/" target="_blank" rel="noopener">Ir al repositorio</a>
+      <h3>Abrir en GitHub Codespaces</h3>
+      <p>Espera 1–2 minutos a que instale todo y aparecerá el simulador funcionando en una pestaña.</p>
+      <a class="boton" href="https://codespaces.new/AngelicaGuillen1/simulador-contable-utm" target="_blank" rel="noopener">Abrir el sistema en el navegador</a>
     </div>
     <div class="tarjeta">
-      <h3>2. Guía del estudiante</h3>
-      <p>Instalación paso a paso, usuarios de acceso, primer recorrido y solución de problemas.</p>
+      <h3>Ejecutar en su computador</h3>
+      <p>Descargue el ZIP y siga los comandos de más abajo (requiere Python 3.11 o superior).</p>
+      <a class="boton sec" href="https://github.com/AngelicaGuillen1/simulador-contable-utm" target="_blank" rel="noopener">Ir al repositorio (Code → Download ZIP)</a>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <div class="tarjeta">
+      <h3>1. Guía del estudiante</h3>
+      <p>Instalación paso a paso, apertura en el navegador, usuarios de acceso y solución de problemas.</p>
       <a class="boton sec" href="GUIA_ESTUDIANTES.md">Abrir la guía</a>
     </div>
     <div class="tarjeta">
-      <h3>3. Manual de usuario</h3>
-      <p>Manual completo del sistema: los 31 módulos, reglas contables y anexos.</p>
+      <h3>2. Manual de usuario</h3>
+      <p>Manual completo del sistema: todos los módulos, reglas contables y anexos.</p>
       <a class="boton sec" href="MANUAL_DE_USUARIO.html">Abrir el manual</a>
     </div>
   </div>
@@ -84,10 +95,11 @@ python serve.py</pre>
   </table>
 
   <div class="nota">
-    <strong>Sobre esta página:</strong> GitHub Pages solo publica contenido estático (esta portada, la
-    guía y el manual). El simulador es una aplicación con base de datos, por lo que se ejecuta en el
-    computador de cada estudiante o en un servidor propio; las instrucciones están en
-    <code>docs/DESPLIEGUE.md</code>.
+    <strong>Importante sobre GitHub:</strong> GitHub Pages (esta página) solo publica contenido
+    estático: no puede ejecutar Python, así que el simulador no corre aquí. Para abrirlo sin instalar
+    nada use <strong>Codespaces</strong> (botón de arriba); para ejecutarlo en su computador, los
+    comandos de abajo. Si el docente publica una URL única para todo el curso, aparecerá en esta
+    portada.
   </div>
 
   <h2>Qué incluye el sistema</h2>

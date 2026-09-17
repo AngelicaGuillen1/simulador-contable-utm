@@ -276,6 +276,77 @@ clave de sesión se conservan.
 
 ---
 
+## 5.c Opción B3 — Abrir el sistema desde GitHub en el navegador (Codespaces)
+
+Es la vía más directa **sin servidor propio y sin instalar nada en el equipo**: GitHub crea un entorno
+en la nube con el proyecto ya instalado y publica el puerto de la aplicación.
+
+> **Aclaración necesaria:** GitHub Pages (la portada del repositorio) **no puede ejecutar** esta
+> aplicación — solo publica contenido estático, y el simulador necesita un proceso Python y una base
+> de datos. La forma de “abrirlo desde GitHub” es Codespaces, no Pages.
+
+**Cómo funciona** (ya está configurado en el repositorio, carpeta `.devcontainer/`):
+
+| Archivo | Función |
+|---|---|
+| `.devcontainer/devcontainer.json` | Define el entorno (Python 3.12), publica el puerto **5000** y abre la vista previa automáticamente |
+| `.devcontainer/instalar.sh` | Al crear el entorno: instala dependencias, genera la empresa simulada y corre las 113 pruebas |
+| `.devcontainer/arrancar.sh` | Al iniciar el entorno: arranca `serve.py` con una `SECRET_KEY` propia (no versionada) |
+
+**Para el estudiante**
+
+1. **https://codespaces.new/AngelicaGuillen1/simulador-contable-utm**
+   (o *Code → Codespaces → Create codespace on main*).
+2. Esperar 1–3 minutos y el simulador se abre en una pestaña
+   (`https://<codespace>-5000.app.github.dev`).
+3. Iniciar sesión con `estudiante / estudiante123`.
+4. Al terminar: *Codespaces → Stop codespace* para no consumir cuota.
+
+**Límites honestos**
+
+* Es un entorno **individual**: cada estudiante tiene su propia base de datos; no hay una URL única
+  compartida para todo el curso.
+* La cuenta personal gratuita incluye **120 horas-núcleo/mes** (≈ 60 h reales en un entorno de
+  2 núcleos). Detener el entorno al terminar es lo que hace sostenible el semestre.
+* Los puertos se publican como **privados** (solo su cuenta accede). Si necesita mostrar el sistema al
+  docente durante una clase, en el panel *Ports* puede cambiar la visibilidad a *Public* de forma
+  temporal.
+* GitHub puede solicitar verificación de la cuenta la primera vez que se usa Codespaces.
+
+---
+
+## 5.d Opción B4 — URL pública gratuita con PythonAnywhere (sin Hostinger)
+
+Si lo que se busca es **una sola dirección web para todo el curso**, sin contratar un VPS, el plan
+gratuito de **PythonAnywhere** ejecuta aplicaciones Flask con SQLite y entrega una URL del tipo
+`https://usuario.pythonanywhere.com`.
+
+1. Cree una cuenta gratuita (*Beginner*) en **pythonanywhere.com**.
+2. Abra una consola **Bash** y suba el proyecto:
+
+   ```bash
+   git clone https://github.com/AngelicaGuillen1/simulador-contable-utm.git
+   cd simulador-contable-utm
+   python3.10 -m venv .venv && source .venv/bin/activate
+   pip install -r requirements.txt
+   python database/seed_data.py
+   ```
+
+3. **Web → Add a new web app → Manual configuration → Python 3.10**.
+4. En *Virtualenv* escriba: `/home/USUARIO/simulador-contable-utm/.venv`
+5. En *WSGI configuration file* pegue **todo** el contenido de
+   `deploy/pythonanywhere/wsgi.py` (ajustando `USUARIO` y la ruta del proyecto).
+6. Pulse **Reload** y abra `https://USUARIO.pythonanywhere.com`.
+7. Antes de usarlo con estudiantes:
+   `python deploy/cambiar_credenciales.py` (cambiar las contraseñas demo).
+
+**Límites honestos del plan gratuito:** la aplicación se “duerme” si nadie la usa durante un rato y
+despierta en unos segundos al primer acceso; hay cuota diaria de CPU (suficiente para una clase, no
+para cientos de usuarios simultáneos), y el almacenamiento es limitado (~512 MB). Para uso intensivo,
+la opción B (VPS) sigue siendo la adecuada.
+
+---
+
 ## 6. Opción C — Plataforma gestionada (Render, Railway, Fly.io)
 
 El repositorio ya incluye lo necesario: `Procfile`, `Dockerfile` y `render.yaml`.
