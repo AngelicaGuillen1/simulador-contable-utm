@@ -39,6 +39,9 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
     SESSION_COOKIE_SECURE = _bool_env("SESSION_COOKIE_SECURE", False)
+    # Permite aislar las sesiones cuando varias instancias (aulas) comparten dominio
+    # y solo se diferencian por el puerto: las cookies NO distinguen puertos.
+    SESSION_COOKIE_NAME = os.environ.get("SESSION_COOKIE_NAME", "session")
     PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.environ.get("SESSION_HORAS", "8")))
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_MB", "16")) * 1024 * 1024
 
