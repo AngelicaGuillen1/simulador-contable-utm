@@ -25,24 +25,26 @@ body {
   overflow-x: hidden;
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling — TONO CLARO (institucional) */
 #sidebar-wrapper {
   min-height: 100vh;
   width: var(--sidebar-width);
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-  color: #f1f5f9;
+  background: #ffffff;
+  border-right: 1px solid var(--border-color);
+  color: var(--text-main);
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1040;
   transition: all 0.3s ease;
   overflow-y: auto;
-  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.08);
+  box-shadow: 2px 0 12px rgba(15, 23, 42, 0.06);
 }
 
 .sidebar-heading {
   padding: 1.25rem 1.25rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
+  background: #f8fafc;
 }
 
 .sidebar-heading h5 {
@@ -50,12 +52,12 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
-  color: #ffffff;
+  color: var(--primary-navy);
 }
 
 .sidebar-heading .subtitle {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
@@ -65,7 +67,7 @@ body {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #64748b;
+  color: #94a3b8;
   padding: 1rem 1.25rem 0.35rem;
   font-weight: 700;
 }
@@ -74,7 +76,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0.55rem 1.25rem;
-  color: #cbd5e1;
+  color: #334155;
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 500;
@@ -86,29 +88,29 @@ body {
   font-size: 1.1rem;
   width: 1.6rem;
   margin-right: 0.5rem;
-  color: #94a3b8;
+  color: #64748b;
   transition: color 0.2s ease;
 }
 
 .sidebar-link:hover {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--accent-blue-hover);
+  background-color: #f1f5f9;
   border-left-color: var(--accent-blue);
 }
 
 .sidebar-link:hover i {
-  color: #60a5fa;
+  color: var(--accent-blue);
 }
 
 .sidebar-link.active {
-  color: #ffffff;
-  background-color: rgba(37, 99, 235, 0.18);
-  border-left-color: #3b82f6;
+  color: #1d4ed8;
+  background-color: #eff6ff;
+  border-left-color: var(--accent-blue);
   font-weight: 600;
 }
 
 .sidebar-link.active i {
-  color: #60a5fa;
+  color: var(--accent-blue);
 }
 
 /* Main Content Area */

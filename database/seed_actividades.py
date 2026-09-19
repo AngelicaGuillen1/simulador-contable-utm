@@ -185,6 +185,17 @@ def construir_instrucciones(actividad, item, unidad):
     partes.append(_texto_lista("CRITERIOS DE EVALUACIÓN:", item.get("criterios")))
     if item.get("uso_simulador"):
         partes.append("USO DEL SIMULADOR:\n%s" % item["uso_simulador"])
+    # Bloque fijo: cómo entra el estudiante y dónde queda su trabajo. Deja cada tarea
+    # autocontenida (usuario = correo institucional, aula propia, entrega de evidencia).
+    partes.append("")
+    partes.append(
+        "CÓMO INGRESAS Y DÓNDE TRABAJAS:\n"
+        "Ingrese al simulador con su CORREO INSTITUCIONAL como usuario (la clave inicial se le "
+        "entregó; cámbiela al primer ingreso). Su trabajo queda en SU PROPIA AULA: su plan de "
+        "cuentas, sus libros y sus evidencias; nadie más los ve. Trabaje en los módulos indicados "
+        "en «Uso del simulador». Al terminar, entregue la evidencia en Mis Evidencias y conserve "
+        "el código de verificación que le entrega el sistema."
+    )
     parametros = item.get("parametros") or {}
     if parametros.get("bibliografia"):
         partes.append("")

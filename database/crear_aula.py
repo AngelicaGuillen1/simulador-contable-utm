@@ -29,7 +29,11 @@ TABLAS_TRANSACCIONALES = [
     "transacciones_servicios", "movimientos_inventario", "kardex_lotes", "cuentas_cobrar",
     "cobros", "cuentas_pagar", "pagos", "movimientos_caja", "arqueos_caja",
     "movimientos_bancarios", "conciliaciones_bancarias", "documentos_fuente",
-    "intentos_estudiante", "detalle_intentos", "casos_simulacion", "simulaciones",
+    # El INTENTO del estudiante se limpia; el CATÁLOGO de simulaciones de práctica NO:
+    # `simulaciones` y `casos_simulacion` son material didáctico que cada estudiante debe
+    # tener disponible desde el primer día (si se borran, el módulo Simulador le queda
+    # vacío). Solo se borran sus intentos.
+    "intentos_estudiante", "detalle_intentos",
     "sesiones_usuario", "eventos_estudiante", "versiones_evidencia", "evidencias",
     "asignaciones_actividad", "matriculas", "auditoria",
 ]

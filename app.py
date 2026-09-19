@@ -33,6 +33,15 @@ def create_app():
     # x_for=1 (una sola cabecera X-Forwarded-For) evita que un cliente falsifique su IP.
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
+    @app.context_processor
+    def _version_estatica():
+        """Marca de tiempo del CSS: evita que el navegador sirva una versión vieja."""
+        try:
+            ruta = os.path.join(app.static_folder, "css", "custom.css")
+            return {"static_version": int(os.path.getmtime(ruta))}
+        except OSError:
+            return {"static_version": 0}
+
     # ---------------- Filtros de plantilla ----------------
     @app.template_filter("money")
     def money_filter(value):
