@@ -150,6 +150,10 @@ def create_app():
             "alertas_globales": alertas,
             "aula_propia": aula_propia,
             "empresa_propia": empresa_propia,
+            # Recordatorio de credenciales de demostración en el login: desactivado por
+            # defecto (el sistema está publicado). Actívelo con MODO_DEMO=1 solo para
+            # una demostración en clase.
+            "modo_demo": Config.MODO_DEMO,
         }
 
     # ---------------- Blueprints ----------------

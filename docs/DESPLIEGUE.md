@@ -12,7 +12,7 @@ en el primer arranque, respaldos y arranque automático.
 
 | # | Acción | Por qué |
 |---|---|---|
-| 1 | **Cambiar las contraseñas de demostración** | `admin/admin123`, `docente/docente123`, `estudiante/estudiante123`, `auditor/auditor123` son públicas (están en el manual y en el código). Ejecute: `python deploy/cambiar_credenciales.py` |
+| 1 | **Cambiar las contraseñas de demostración** | Las cuentas `admin`, `docente`, `estudiante` y `auditor` traen claves conocidas de fábrica. Cambie las cuatro con: `python deploy/cambiar_credenciales.py` |
 | 2 | **Definir `SECRET_KEY`** con una cadena aleatoria larga | Sin ella las sesiones se firman con la clave por defecto del código. `python -c "import secrets;print(secrets.token_urlsafe(48))"` |
 | 3 | **Servir por HTTPS** y poner `SESSION_COOKIE_SECURE=true` | Evita que la cookie de sesión viaje en claro |
 | 4 | **Programar respaldos** de la base (`deploy/backup_db.py`) | Todo el sistema vive en un archivo SQLite |
@@ -336,7 +336,7 @@ en la nube con el proyecto ya instalado y publica el puerto de la aplicación.
    (o *Code → Codespaces → Create codespace on main*).
 2. Esperar 1–3 minutos y el simulador se abre en una pestaña
    (`https://<codespace>-5000.app.github.dev`).
-3. Iniciar sesión con `estudiante / estudiante123`.
+3. Iniciar sesión con una cuenta real del curso (correo institucional y su clave).
 4. Al terminar: *Codespaces → Stop codespace* para no consumir cuota.
 
 **Límites honestos**

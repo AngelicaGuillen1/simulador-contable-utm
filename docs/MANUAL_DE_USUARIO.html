@@ -231,7 +231,7 @@ vista imprimible en HTML para <em>Imprimir → Guardar como PDF</em>.</p>
 <pre><code> SIMULADOR INTEGRAL DE SISTEMA CONTABLE
  Servicios y Comercialización de Productos - Comercial Nueva Esperanza
  Servidor Flask disponible en: http://127.0.0.1:5000
- Usuarios demo: admin/admin123 - docente/docente123 - estudiante/estudiante123
+ Las credenciales se entregan en clase y no se publican
 </code></pre>
 <p><strong>Detener:</strong> <code>Ctrl + C</code> en la consola donde corre el servidor.</p>
 <h3 id="servicio-continuo-247-y-uso-en-red">Servicio continuo (24/7) y uso en red</h3>
@@ -286,26 +286,26 @@ sistema desde el panel de Administración (ver <a href="#13-fecha-de-trabajo-y-p
 <tbody>
 <tr>
 <td>Administrador</td>
-<td><code>admin</code></td>
-<td><code>admin123</code></td>
+<td>(cuenta de administración)</td>
+<td>(privada)</td>
 <td>Ing. Marco Morales</td>
 </tr>
 <tr>
 <td>Docente</td>
-<td><code>docente</code></td>
-<td><code>docente123</code></td>
+<td>su correo institucional</td>
+<td>(la asignada por la docente)</td>
 <td>Ing. Angélica Victoria Guillén Pinargote, Mg.</td>
 </tr>
 <tr>
 <td>Estudiante</td>
-<td><code>estudiante</code></td>
-<td><code>estudiante123</code></td>
+<td>su correo institucional</td>
+<td>(entregada en clase)</td>
 <td>Ana Lucía Morales</td>
 </tr>
 <tr>
 <td>Auditor</td>
-<td><code>auditor</code></td>
-<td><code>auditor123</code></td>
+<td>(cuenta de auditoría)</td>
+<td>(privada)</td>
 <td>Lic. Roberto Vaca</td>
 </tr>
 </tbody>
@@ -319,7 +319,7 @@ estudiante se construye con la parte local de su correo institucional.</p>
 <blockquote>
 <p><strong>Antes de publicar el sistema en Internet:</strong> cambie las contraseñas de demostración
 (<code>python deploy/cambiar_credenciales.py</code>) y defina una <code>SECRET_KEY</code> propia. Las cuentas
-<code>admin/admin123</code>, <code>docente/docente123</code>, etc. son públicas y solo sirven para la práctica.</p>
+Las credenciales se entregan en clase. En un sistema publicado <strong>no</strong> se muestran usuarios ni claves en la pantalla de acceso.</p>
 </blockquote>
 <h3 id="matriz-de-permisos">Matriz de permisos</h3>
 <table>
@@ -1222,7 +1222,7 @@ avance a un estudiante</strong>.</p>
 <h2 id="8-recorrido-guiado-de-15-minutos">8. Recorrido guiado de 15 minutos</h2>
 <p>Un primer recorrido para entender cómo se encadenan los módulos (rol <strong>Estudiante</strong>):</p>
 <ol>
-<li><strong>Inicia sesión</strong> con <code>estudiante / estudiante123</code>.</li>
+<li><strong>Inicia sesión</strong> con tu correo institucional y la clave que te entregó la docente.</li>
 <li>Entra a <strong>Simulador de Casos</strong> y pulsa <em>Iniciar</em> en <strong>Nivel 1 — Básico</strong>.</li>
 <li>Lee el enunciado y el documento fuente del caso. En la tabla de líneas contables selecciona las
    cuentas, escribe los importes en <strong>Debe</strong> y <strong>Haber</strong> y añade líneas si necesitas más.

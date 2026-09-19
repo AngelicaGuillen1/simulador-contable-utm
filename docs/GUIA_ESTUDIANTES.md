@@ -30,7 +30,7 @@ GitHub crea para usted un entorno en la nube con el simulador ya instalado.
    Si no aparece: abra el panel **`PUERTOS` / `PORTS`**, busque el puerto **5000**, pulse el icono del
    globo (*Abrir en el navegador*) y use la dirección
    `https://<nombre-del-codespace>-5000.app.github.dev`.
-4. Inicie sesión con **`estudiante` / `estudiante123`** y empiece a trabajar.
+4. Inicie sesión con su **correo institucional** y la clave que le entregó la docente.
 
 **Al terminar la clase:** detenga el entorno para no consumir su cuota → en GitHub:
 *Codespaces → (los tres puntos del entorno) → `Stop codespace`*. Sus datos quedan guardados y al
@@ -90,10 +90,6 @@ Para terminar, cierre la ventana de la terminal o pulse `Ctrl + C`.
 
 | Rol | Usuario | Contraseña |
 |---|---|---|
-| Administrador | `admin` | `admin123` |
-| Docente | `docente` | `docente123` |
-| Estudiante | `estudiante` | `estudiante123` |
-| Auditor | `auditor` | `auditor123` |
 
 > Trabaje con el usuario **estudiante**. Los otros perfiles existen para que pueda ver los módulos de
 > administración, de docencia y de auditoría.

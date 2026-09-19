@@ -182,7 +182,7 @@ Al arrancar verás en la consola:
  SIMULADOR INTEGRAL DE SISTEMA CONTABLE
  Servicios y Comercialización de Productos - Comercial Nueva Esperanza
  Servidor Flask disponible en: http://127.0.0.1:5000
- Usuarios demo: admin/admin123 - docente/docente123 - estudiante/estudiante123
+ Las credenciales se entregan en clase y no se publican
 ```
 
 **Detener:** `Ctrl + C` en la consola donde corre el servidor.
@@ -242,10 +242,10 @@ ecuación `Activo = Pasivo + Patrimonio`. Un despliegue no está listo hasta que
 
 | Rol | Usuario | Contraseña | Nombre en el sistema |
 |---|---|---|---|
-| Administrador | `admin` | `admin123` | Ing. Marco Morales |
-| Docente | `docente` | `docente123` | Ing. Angélica Victoria Guillén Pinargote, Mg. |
-| Estudiante | `estudiante` | `estudiante123` | Ana Lucía Morales |
-| Auditor | `auditor` | `auditor123` | Lic. Roberto Vaca |
+| Administrador | (cuenta de administración) | (privada) | Ing. Marco Morales |
+| Docente | su correo institucional | (la asignada por la docente) | Ing. Angélica Victoria Guillén Pinargote, Mg. |
+| Estudiante | su correo institucional | (entregada en clase) | Ana Lucía Morales |
+| Auditor | (cuenta de auditoría) | (privada) | Lic. Roberto Vaca |
 
 **Estudiantes del curso:** cada estudiante tiene **su propio usuario** (por ejemplo `ealcivar4002`,
 `javiles8757`), su **aula contable** (una base de datos propia) y una **contraseña inicial aleatoria**
@@ -257,7 +257,7 @@ El ingreso acepta **usuario o correo electrónico** en el mismo campo. Las contr
 
 > **Antes de publicar el sistema en Internet:** cambie las contraseñas de demostración
 > (`python deploy/cambiar_credenciales.py`) y defina una `SECRET_KEY` propia. Las cuentas
-> `admin/admin123`, `docente/docente123`, etc. son públicas y solo sirven para la práctica.
+> Las credenciales se entregan en clase. En un sistema publicado **no** se muestran usuarios ni claves en la pantalla de acceso.
 
 ### Matriz de permisos
 
@@ -1033,7 +1033,7 @@ python database/seed_data.py
 
 Un primer recorrido para entender cómo se encadenan los módulos (rol **Estudiante**):
 
-1. **Inicia sesión** con `estudiante / estudiante123`.
+1. **Inicia sesión** con tu correo institucional y la clave que te entregó la docente.
 2. Entra a **Simulador de Casos** y pulsa *Iniciar* en **Nivel 1 — Básico**.
 3. Lee el enunciado y el documento fuente del caso. En la tabla de líneas contables selecciona las
    cuentas, escribe los importes en **Debe** y **Haber** y añade líneas si necesitas más.

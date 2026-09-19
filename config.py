@@ -92,6 +92,9 @@ class Config:
     HOST = os.environ.get("HOST", "127.0.0.1")
     PORT = int(os.environ.get("PORT", "5000"))
     DEBUG = _bool_env("SIMULADOR_DEBUG", False)
+    # Recordatorio de credenciales de demostración en la pantalla de acceso.
+    # Desactivado por defecto: en un sistema publicado no se muestran credenciales.
+    MODO_DEMO = _bool_env("MODO_DEMO", False)
 
     # ----------------------------------------------------------------------- Empresa
     COMPANY_NAME = "Comercial y Servicios Nueva Esperanza"
