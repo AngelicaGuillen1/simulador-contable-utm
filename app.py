@@ -117,6 +117,29 @@ def create_app():
         except Exception:
             pass
 
+        # ¿Este usuario trabaja en SU propio espacio (su aula, con su propia empresa)?
+        # Sirve para que la interfaz no le diga «datos de demostración» a un estudiante
+        # real, y para avisar cuando alguien entra a la empresa compartida de práctica.
+        aula_propia = False
+        empresa_propia = None
+        try:
+            from flask import session as _sesion
+            from models import ruta_aula as _ruta_aula
+            if _sesion.get("user_role") == "Estudiante" and _sesion.get("paralelo"):
+                ruta = _ruta_aula(_sesion.get("username"), _sesion.get("paralelo"))
+                aula_propia = os.path.exists(ruta)
+                if aula_propia:
+                    import sqlite3 as _sqlite3
+                    conexion = _sqlite3.connect(ruta)
+                    try:
+                        fila = conexion.execute(
+                            "SELECT razon_social FROM empresas LIMIT 1").fetchone()
+                        empresa_propia = fila[0] if fila else None
+                    finally:
+                        conexion.close()
+        except Exception:
+            aula_propia = False
+
         return {
             "app_name": Config.APP_NAME,
             "app_subtitle": Config.APP_SUBTITLE,
@@ -125,6 +148,8 @@ def create_app():
             "periodo_activo": periodo,
             "fecha_trabajo": fecha_trabajo,
             "alertas_globales": alertas,
+            "aula_propia": aula_propia,
+            "empresa_propia": empresa_propia,
         }
 
     # ---------------- Blueprints ----------------

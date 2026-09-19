@@ -56,12 +56,23 @@ fi
 ENTORNO="DATABASE_PATH=$DATOS_DIR/simulator.db RUTA_AULAS=$DATOS_DIR/aulas RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db"
 PY="$PROYECTO_DIR/.venv/bin/python"
 
+# El usuario de servicio NO puede leer /root (permisos 700): si el CSV está ahí,
+# se copia a la carpeta de datos, que sí es accesible.
+CSV_ACCESIBLE="$CSV"
+if ! sudo -u "$USUARIO" test -r "$CSV"; then
+  CSV_ACCESIBLE="$DATOS_DIR/$(basename "$CSV")"
+  cp "$CSV" "$CSV_ACCESIBLE"
+  chown "$USUARIO:$USUARIO" "$CSV_ACCESIBLE"
+  chmod 600 "$CSV_ACCESIBLE"
+  verde "    CSV copiado a $CSV_ACCESIBLE (el usuario $USUARIO no puede leer $CSV)"
+fi
+
 # ---- 1) Usuarios + aulas (respetando las claves del CSV) --------------------
-azul "==> 1/4 Cargando estudiantes y creando sus aulas"
+azul "==> 1/5 Cargando estudiantes y creando sus aulas"
 PARAM_PARALELO=()
 [[ -n "$PARALELO" ]] && PARAM_PARALELO=(--paralelo "$PARALELO")
 sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/importar_nomina.py" \
-  --nomina "$CSV" --credenciales "$DATOS_DIR/credenciales_aplicadas.csv" "${PARAM_PARALELO[@]}"
+  --nomina "$CSV_ACCESIBLE" --credenciales "$DATOS_DIR/credenciales_aplicadas.csv" "${PARAM_PARALELO[@]}"
 
 # ---- 2) Simulador de práctica en las aulas ---------------------------------
 azul "==> 2/5 Sembrando el simulador de práctica (niveles y casos)"
