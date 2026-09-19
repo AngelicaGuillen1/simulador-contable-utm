@@ -29,6 +29,7 @@ EVENTO_CREAR_CUENTA = "CREAR_CUENTA"
 EVENTO_MODIFICAR_CUENTA = "MODIFICAR_CUENTA"
 EVENTO_CREAR_ASIENTO = "CREAR_ASIENTO"
 EVENTO_INTENTO_FALLIDO_ASIENTO = "INTENTO_FALLIDO_ASIENTO"
+EVENTO_INTENTO_FALLIDO_DOCUMENTO = "INTENTO_FALLIDO_DOCUMENTO"
 EVENTO_CONSULTA_DIARIO = "CONSULTA_DIARIO"
 EVENTO_CONSULTA_MAYOR = "CONSULTA_MAYOR"
 EVENTO_GENERACION_BALANCE = "GENERACION_BALANCE"
@@ -45,6 +46,7 @@ EVENTOS_PERMITIDOS = (
     EVENTO_MODIFICAR_CUENTA,
     EVENTO_CREAR_ASIENTO,
     EVENTO_INTENTO_FALLIDO_ASIENTO,
+    EVENTO_INTENTO_FALLIDO_DOCUMENTO,
     EVENTO_CONSULTA_DIARIO,
     EVENTO_CONSULTA_MAYOR,
     EVENTO_GENERACION_BALANCE,
@@ -353,7 +355,7 @@ def registrar_evento_desde_request(response, db_path=None, roles=ROLES_SEGUIDOS)
     pase ``roles=None`` para trazar también a docentes y administradores.
     """
     try:
-        from flask import request, session
+        from flask import request, session, g
 
         if session.get("user_id") is None or request.method == "OPTIONS":
             return response
@@ -367,11 +369,15 @@ def registrar_evento_desde_request(response, db_path=None, roles=ROLES_SEGUIDOS)
 
         endpoint = request.endpoint or ""
         evento, modulo = _mapear_evento(endpoint, request.method)
-        if not evento:
+        # Una ruta puede marcar el intento rechazado en flask.g (cuando responde con
+        # redirect + flash y el código HTTP no lo delata: es un 302, no un >= 400).
+        marca = getattr(g, "intento_fallido", None)
+        if marca:
+            evento = marca.get("evento") or EVENTO_INTENTO_FALLIDO_ASIENTO
+        elif not evento:
             return response
-
-        # Un asiento que el sistema rechazó cuenta como intento fallido.
-        if evento == EVENTO_CREAR_ASIENTO and codigo >= 400:
+        elif evento == EVENTO_CREAR_ASIENTO and codigo >= 400:
+            # Un asiento que el sistema rechazó cuenta como intento fallido.
             evento = EVENTO_INTENTO_FALLIDO_ASIENTO
 
         usuario_id = session.get("user_id")
@@ -395,8 +401,14 @@ def registrar_evento_desde_request(response, db_path=None, roles=ROLES_SEGUIDOS)
             if repetido:
                 return response
 
+        detalle = request.path
+        if marca and marca.get("mensaje"):
+            detalle = "%s | RECHAZADO: %s" % (request.path, marca["mensaje"])
+            if marca.get("documento_elegido"):
+                detalle += " | documento elegido: %s" % marca["documento_elegido"]
+
         registrar_evento(usuario_id, evento, modulo=modulo, registro_id=registro_id,
-                         detalle=request.path, actividad_id=actividad_id,
+                         detalle=detalle, actividad_id=actividad_id,
                          empresa_id=empresa_id, sesion_id=sesion_id, db_path=db_path)
     except Exception as e:  # nunca debe romper la respuesta
         print("Aviso: no se pudo registrar el evento de acceso: %s" % e)

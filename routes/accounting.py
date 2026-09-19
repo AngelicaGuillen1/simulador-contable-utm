@@ -97,8 +97,15 @@ def journal():
             )
             flash(f"Asiento Contable #{num} registrado exitosamente con partida doble.", "success")
         except ValueError as ve:
+            # Intento rechazado = evidencia pedagógica (§58.3). La ruta responde con
+            # redirect + flash (no con >= 400), así que se marca aquí para que el hook
+            # de trazabilidad lo registre como INTENTO_FALLIDO_ASIENTO con su mensaje.
+            g.intento_fallido = {"evento": "INTENTO_FALLIDO_ASIENTO",
+                                 "mensaje": "Error de validación contable: %s" % ve}
             flash(f"Error de validación contable: {str(ve)}", "danger")
         except Exception as e:
+            g.intento_fallido = {"evento": "INTENTO_FALLIDO_ASIENTO",
+                                 "mensaje": "Error al guardar el asiento: %s" % e}
             flash(f"Error inesperado al guardar asiento: {str(e)}", "danger")
         return redirect(url_for("accounting.journal"))
 

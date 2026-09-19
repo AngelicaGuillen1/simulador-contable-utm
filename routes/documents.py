@@ -8,7 +8,7 @@ emisión con las validaciones del reglamento, detalle, anulación y ayuda didác
 
 Todos los endpoints aceptan `?formato=json` para devolver la misma información en JSON.
 """
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, g
 
 from config import Config
 from routes.auth import login_required
@@ -203,6 +203,14 @@ def nuevo():
         if _quiere_json():
             return jsonify({"success": False, "tipo": tipo_sel, "errores": errores,
                             "advertencias": advertencias}), 400
+        # El intento rechazado es evidencia pedagógica: se marca para que el hook
+        # de trazabilidad lo registre como INTENTO_FALLIDO_DOCUMENTO (aquí la ruta
+        # responde con redirect y flash, no con un código >= 400).
+        g.intento_fallido = {
+            "evento": "INTENTO_FALLIDO_DOCUMENTO",
+            "mensaje": " | ".join(str(e) for e in (errores or [])[:3]) or "comprobante rechazado",
+            "documento_elegido": tipo_sel,
+        }
         flash("El comprobante no se emitió: revisa los puntos marcados en rojo.", "danger")
 
     # Valores sugeridos para no dejar el formulario en blanco.
