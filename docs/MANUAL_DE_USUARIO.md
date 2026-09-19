@@ -243,7 +243,7 @@ ecuación `Activo = Pasivo + Patrimonio`. Un despliegue no está listo hasta que
 | Rol | Usuario | Contraseña | Nombre en el sistema |
 |---|---|---|---|
 | Administrador | `admin` | `admin123` | Ing. Marco Morales |
-| Docente | `docente` | `docente123` | Dr. Carlos Mendoza |
+| Docente | `docente` | `docente123` | Ing. Angélica Victoria Guillén Pinargote, Mg. |
 | Estudiante | `estudiante` | `estudiante123` | Ana Lucía Morales |
 | Auditor | `auditor` | `auditor123` | Lic. Roberto Vaca |
 

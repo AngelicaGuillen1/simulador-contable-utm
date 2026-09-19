@@ -129,7 +129,7 @@ def _seed_maestros(db_path):
 
     users = [
         (1, "admin", generate_password_hash("admin123"), "Ing. Marco Morales - Administrador", "admin@nuevaesperanza.edu.ec", 1, 1),
-        (2, "docente", generate_password_hash("docente123"), "Dr. Carlos Mendoza - Catedrático Contable", "cmendoza@universidad.edu.ec", 2, 1),
+        (2, "docente", generate_password_hash("docente123"), "Ing. Angélica Victoria Guillén Pinargote, Mg.", "angelica.guillen@utm.edu.ec", 2, 1),
         (3, "estudiante", generate_password_hash("estudiante123"), "Ana Lucía Morales - Estudiante", "amorales@estudiantes.edu.ec", 3, 1),
         (4, "auditor", generate_password_hash("auditor123"), "Lic. Roberto Vaca - Auditor Externo", "rvaca@auditoria.com.ec", 4, 1),
     ]
