@@ -33,10 +33,28 @@ from services.activity_service import (                      # noqa: E402
     asignar_a_estudiantes, asignar_a_todos_los_estudiantes, crear_actividad, estudiantes_activos,
 )
 
+def _localizar_cronograma():
+    """Busca cronograma.json en los sitios donde puede estar, sin fijar rutas de un solo equipo.
+
+    1) variable de entorno CRONOGRAMA_PATH;
+    2) database/datos_curso/cronograma.json  (viaja con el proyecto: es el caso del servidor);
+    3) datos/cronograma.json                 (copia de trabajo local);
+    4) la ruta del equipo de la docente      (compatibilidad hacia atrás).
+    """
+    raiz = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    candidatos = [
+        os.path.join(raiz, "database", "datos_curso", "cronograma.json"),
+        os.path.join(raiz, "datos", "cronograma.json"),
+        "C:/Users/1161150/Desktop/2026/S2/Clases/Contabilidad 1/datos/cronograma.json",
+    ]
+    for candidato in candidatos:
+        if os.path.exists(candidato):
+            return candidato
+    return candidatos[0]
+
+
 # Ruta del cronograma oficial del sílabo (se puede sobreescribir con la variable de entorno).
-CRONOGRAMA_PATH = os.environ.get("CRONOGRAMA_PATH") or (
-    "C:/Users/1161150/Desktop/2026/S2/Clases/Contabilidad 1/datos/cronograma.json"
-)
+CRONOGRAMA_PATH = os.environ.get("CRONOGRAMA_PATH") or _localizar_cronograma()
 
 # --------------------------------------------------------------------------- Las 6 actividades
 # `titulo_cronograma` es el nombre EXACTO del cronograma.json; se usa para localizar las fechas.

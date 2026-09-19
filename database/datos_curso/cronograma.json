@@ -1,0 +1,630 @@
+{
+  "asignatura": "CONTABILIDAD I (AUD ONLINE)",
+  "periodo_titulo": "CRONOGRAMA ACADÉMICO SEPTIEMBRE 2026 – ENERO 2027",
+  "anio": 2026,
+  "unidades": [
+    {
+      "numero": 1,
+      "titulo": "Fundamentos Generales de Contabilidad",
+      "ra": "Explicar los fundamentos conceptuales, legales y normativos de la contabilidad, reconociendo su marco técnico vigente en el Ecuador.",
+      "horas": {
+        "docencia": 10,
+        "practicas": 0,
+        "autonomas": 26
+      },
+      "inicia_txt": "21 de septiembre de 2026",
+      "finaliza_txt": "17 de octubre de 2026",
+      "inicia": "2026-09-21",
+      "finaliza": "2026-10-17",
+      "contenidos": [
+        "1. Historia y evolución de la contabilidad; concepto, objeto e importancia",
+        "2. Objetivos de la contabilidad y usuarios de la información contable.",
+        "3. Marco normativo: NIC y NIIF para PYMES, Código de ética del contador Ecuatoriano",
+        "4. Principios de Contabilidad Generalmente Aceptados (PCGA) y características cualitativas de la información financiera.",
+        "5. Ecuación contable patrimonial: Activo = Pasivo + Patrimonio",
+        "6. Documentos fuente y comprobantes de venta conforme al RCVRD."
+      ],
+      "semanas": [
+        {
+          "numero": 1,
+          "rango_txt": "21 DE SEPTIEMBRE AL 26 DE SEPTIEMBRE",
+          "desde": "2026-09-21",
+          "hasta": "2026-09-26",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 1 y 2",
+          "clase": "—",
+          "temas": [
+            "1. Historia y evolución de la contabilidad; concepto, objeto e importancia",
+            "2. Objetivos de la contabilidad y usuarios de la información contable."
+          ]
+        },
+        {
+          "numero": 2,
+          "rango_txt": "28 DE SEPTIEMBRE AL 03 DE OCTUBRE",
+          "desde": "2026-09-28",
+          "hasta": "2026-10-03",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 3 y 4",
+          "clase": "C1 · 28/09",
+          "temas": [
+            "3. Marco normativo: NIC y NIIF para PYMES, Código de ética del contador Ecuatoriano",
+            "4. Principios de Contabilidad Generalmente Aceptados (PCGA) y características cualitativas de la información financiera."
+          ]
+        },
+        {
+          "numero": 3,
+          "rango_txt": "05 DE OCTUBRE AL 10 DE OCTUBRE",
+          "desde": "2026-10-05",
+          "hasta": "2026-10-10",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 5 y 6 · retroalimentación de las clases 1 y 2",
+          "clase": "C2 · 05/10",
+          "temas": [
+            "5. Ecuación contable patrimonial: Activo = Pasivo + Patrimonio",
+            "6. Documentos fuente y comprobantes de venta conforme al RCVRD."
+          ]
+        },
+        {
+          "numero": 4,
+          "rango_txt": "12 DE OCTUBRE AL 17 DE OCTUBRE",
+          "desde": "2026-10-12",
+          "hasta": "2026-10-17",
+          "modalidad": "Sincrónica",
+          "foco": "Cierre de la unidad: revisión, retroalimentación y corte 1",
+          "clase": "C3 · 12/10",
+          "temas": []
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "titulo": "Personificación de Cuentas Contables",
+      "ra": "Aplicar la teoría de la partida doble para personificar cuentas contables y determinar su naturaleza deudora o acreedora.",
+      "horas": {
+        "docencia": 16,
+        "practicas": 0,
+        "autonomas": 36
+      },
+      "inicia_txt": "19 de octubre de 2026",
+      "finaliza_txt": "14 de noviembre de 2026",
+      "inicia": "2026-10-19",
+      "finaliza": "2026-11-14",
+      "contenidos": [
+        "1. Teoría de la partida doble: postulados y aplicación práctica",
+        "2. La cuenta contable: concepto, estructura y representación gráfica",
+        "3. Clasificación de las cuentas: de activo, pasivo, patrimonio, ingresos y gastos",
+        "4. Codificación y plan de cuentas (catálogo de cuentas) conforme a NIIF para PYMES.",
+        "5. Naturaleza de las cuentas: saldo deudor y saldo acreedor",
+        "6. Dinámica contable de las cuentas de balance y de resultados"
+      ],
+      "semanas": [
+        {
+          "numero": 5,
+          "rango_txt": "19 DE OCTUBRE AL 24 DE OCTUBRE",
+          "desde": "2026-10-19",
+          "hasta": "2026-10-24",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 1 y 2",
+          "clase": "—",
+          "temas": [
+            "1. Teoría de la partida doble: postulados y aplicación práctica",
+            "2. La cuenta contable: concepto, estructura y representación gráfica"
+          ]
+        },
+        {
+          "numero": 6,
+          "rango_txt": "26 DE OCTUBRE AL 31 DE OCTUBRE",
+          "desde": "2026-10-26",
+          "hasta": "2026-10-31",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 3 y 4",
+          "clase": "C4 · 26/10",
+          "temas": [
+            "3. Clasificación de las cuentas: de activo, pasivo, patrimonio, ingresos y gastos",
+            "4. Codificación y plan de cuentas (catálogo de cuentas) conforme a NIIF para PYMES."
+          ]
+        },
+        {
+          "numero": 7,
+          "rango_txt": "02 DE NOVIEMBRE AL 07 DE NOVIEMBRE",
+          "desde": "2026-11-02",
+          "hasta": "2026-11-07",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 5 y 6 · retroalimentación",
+          "clase": "C5 · 02/11",
+          "temas": [
+            "5. Naturaleza de las cuentas: saldo deudor y saldo acreedor",
+            "6. Dinámica contable de las cuentas de balance y de resultados"
+          ]
+        },
+        {
+          "numero": 8,
+          "rango_txt": "09 DE NOVIEMBRE AL 14 DE NOVIEMBRE",
+          "desde": "2026-11-09",
+          "hasta": "2026-11-14",
+          "modalidad": "Sincrónica",
+          "foco": "Cierre de la unidad: revisión, retroalimentación, corte 2 y examen parcial",
+          "clase": "C6 · 09/11",
+          "temas": []
+        }
+      ]
+    },
+    {
+      "numero": 3,
+      "titulo": "Jornalización y Mayorización",
+      "ra": "Desarrollar ejercicios de registro de transacciones económicas mediante la jornalización en el Libro Diario y su Mayorización en el Libro Mayor, conforme a la normativa vigente.",
+      "horas": {
+        "docencia": 26,
+        "practicas": 0,
+        "autonomas": 40
+      },
+      "inicia_txt": "16 de noviembre de 2026",
+      "finaliza_txt": "12 de diciembre de 2026",
+      "inicia": "2026-11-16",
+      "finaliza": "2026-12-12",
+      "contenidos": [
+        "1. El Libro Diario: concepto, estructura y requisitos legales de registro",
+        "2. Documentos soporte de las transacciones: facturas, notas de crédito/débito, comprobantes de retención",
+        "3. Análisis de transacciones comerciales y su tratamiento contable (compras, ventas, gastos, IVA).",
+        "4. Elaboración de asientos contables simples y compuestos.",
+        "5. El Libro Mayor: concepto, estructura y proceso de mayorización"
+      ],
+      "semanas": [
+        {
+          "numero": 9,
+          "rango_txt": "16 DE NOVIEMBRE AL 21 DE NOVIEMBRE",
+          "desde": "2026-11-16",
+          "hasta": "2026-11-21",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 1 y 2",
+          "clase": "—",
+          "temas": [
+            "1. El Libro Diario: concepto, estructura y requisitos legales de registro",
+            "2. Documentos soporte de las transacciones: facturas, notas de crédito/débito, comprobantes de retención"
+          ]
+        },
+        {
+          "numero": 10,
+          "rango_txt": "23 DE NOVIEMBRE AL 28 DE NOVIEMBRE",
+          "desde": "2026-11-23",
+          "hasta": "2026-11-28",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 3 y 4",
+          "clase": "C7 · 23/11",
+          "temas": [
+            "3. Análisis de transacciones comerciales y su tratamiento contable (compras, ventas, gastos, IVA).",
+            "4. Elaboración de asientos contables simples y compuestos."
+          ]
+        },
+        {
+          "numero": 11,
+          "rango_txt": "30 DE NOVIEMBRE AL 05 DE DICIEMBRE",
+          "desde": "2026-11-30",
+          "hasta": "2026-12-05",
+          "modalidad": "Sincrónica",
+          "foco": "Tema 5 · retroalimentación",
+          "clase": "C8 · 30/11",
+          "temas": [
+            "5. El Libro Mayor: concepto, estructura y proceso de mayorización"
+          ]
+        },
+        {
+          "numero": 12,
+          "rango_txt": "07 DE DICIEMBRE AL 12 DE DICIEMBRE",
+          "desde": "2026-12-07",
+          "hasta": "2026-12-12",
+          "modalidad": "Sincrónica",
+          "foco": "Cierre de la unidad: revisión, retroalimentación y corte 3",
+          "clase": "C9 · 07/12",
+          "temas": []
+        }
+      ]
+    },
+    {
+      "numero": 4,
+      "titulo": "Balance de Comprobación de Sumas y Saldos",
+      "ra": "Aplicar el procedimiento técnico de elaboración del balance de comprobación de sumas y saldos para verificar la exactitud aritmética del proceso contable.",
+      "horas": {
+        "docencia": 12,
+        "practicas": 0,
+        "autonomas": 26
+      },
+      "inicia_txt": "14 de diciembre de 2026",
+      "finaliza_txt": "09 de enero de 2027",
+      "inicia": "2026-12-14",
+      "finaliza": "2027-01-09",
+      "contenidos": [
+        "1. Concepto, objetivo e importancia del balance de comprobación.",
+        "2. Estructura del balance de comprobación de sumas y saldos",
+        "3. Procedimiento de elaboración a partir del Libro Mayor",
+        "4. Detección, análisis y corrección de errores contables",
+        "5. Relación del balance de comprobación con el ciclo contable y los estados financieros bajo NIIF para PYMES."
+      ],
+      "semanas": [
+        {
+          "numero": 13,
+          "rango_txt": "14 DE DICIEMBRE AL 19 DE DICIEMBRE",
+          "desde": "2026-12-14",
+          "hasta": "2026-12-19",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 1, 2 y 3",
+          "clase": "—",
+          "temas": [
+            "1. Concepto, objetivo e importancia del balance de comprobación.",
+            "2. Estructura del balance de comprobación de sumas y saldos",
+            "3. Procedimiento de elaboración a partir del Libro Mayor"
+          ]
+        },
+        {
+          "numero": 14,
+          "rango_txt": "21 DE DICIEMBRE AL 26 DE DICIEMBRE",
+          "desde": "2026-12-21",
+          "hasta": "2026-12-26",
+          "modalidad": "Sincrónica",
+          "foco": "Temas 4 y 5",
+          "clase": "C10 · 21/12",
+          "temas": [
+            "4. Detección, análisis y corrección de errores contables",
+            "5. Relación del balance de comprobación con el ciclo contable y los estados financieros bajo NIIF para PYMES."
+          ]
+        },
+        {
+          "numero": 15,
+          "rango_txt": "28 DE DICIEMBRE AL 02 DE ENERO",
+          "desde": "2026-12-28",
+          "hasta": "2027-01-02",
+          "modalidad": "Sincrónica",
+          "foco": "Retroalimentación y cierre de actividades",
+          "clase": "C11 · 28/12",
+          "temas": []
+        },
+        {
+          "numero": 16,
+          "rango_txt": "04 DE ENERO AL 09 DE ENERO",
+          "desde": "2027-01-04",
+          "hasta": "2027-01-09",
+          "modalidad": "Sincrónica",
+          "foco": "Cierre de la unidad: revisión, retroalimentación y corte 4",
+          "clase": "C12 · 04/01",
+          "temas": []
+        }
+      ]
+    }
+  ],
+  "actividades": [
+    {
+      "codigo": "Actividad #1",
+      "numero": 1,
+      "unidad": 1,
+      "semana": 3,
+      "tipo": "Otro tipo de actividades (modalidad asistida)",
+      "componente": "ACD",
+      "nombre": "Taller asistido: objeto, objetivos y usuarios de la información contable",
+      "puntaje": 10,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "21 de septiembre hasta 10 de octubre de 2026",
+      "fecha_limite": "10 de octubre de 2026",
+      "desde": "2026-10-05",
+      "hasta": "2026-10-10",
+      "contenidos": [
+        "1. Historia y evolución de la contabilidad; concepto, objeto e importancia",
+        "2. Objetivos de la contabilidad y usuarios de la información contable."
+      ],
+      "estrategia": "TALLER GUIADO Y ACOMPAÑADO POR EL DOCENTE EN SESIÓN SINCRÓNICA EN EL QUE EL ESTUDIANTE ANALIZA TRES SITUACIONES EMPRESARIALES ENTREGADAS EN EL AULA VIRTUAL, IDENTIFICA AL USUARIO DE LA INFORMACIÓN CONTABLE Y EL OBJETIVO QUE PERSIGUE EN CADA CASO, Y PRESENTA UNA MATRIZ COMPARATIVA CON EVIDENCIAS VERIFICABLES Y UN ANEXO DE TRAZABILIDAD DEL PROCESO.",
+      "uso_simulador": "El docente proyecta el módulo Dashboard y el Estado de Situación Financiera de la empresa simulada «Comercial y Servicios Nueva Esperanza S.A.» para que el estudiante reconozca los usuarios y los objetivos de la información contable sobre datos reales del sistema.",
+      "criterios": [
+        "Identifica correctamente el usuario interno o externo de cada situación analizada.",
+        "Relaciona cada usuario con el objetivo de la información que requiere.",
+        "Sustenta la clasificación con las características cualitativas de la información financiera.",
+        "Presenta la matriz comparativa completa, con las tres situaciones trabajadas.",
+        "Incluye el anexo de trazabilidad de fuentes y herramientas utilizadas."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Análisis de situaciones empresariales entregadas en el aula virtual para identificar al usuario y el objetivo de la información contable, con una matriz comparativa como producto.",
+        "contenido": "Temas 1 y 2: evolución y concepto de la contabilidad, objetivos y usuarios de la información contable.",
+        "metodologia": "Taller acompañado en la sesión sincrónica, con trabajo previo de lectura en el aula virtual.",
+        "evaluacion": "Rúbrica de la actividad de docencia, según los criterios publicados en el aula virtual.",
+        "tac": "Aula virtual (consigna, entrega y retroalimentación) y recursos digitales de la asignatura (simulador contable).",
+        "habilidad_blanda": "Pensamiento crítico y comunicación escrita, evidenciados en la matriz y en su justificación.",
+        "practica": "Aplicación de los contenidos de la unidad a situaciones empresariales reales o simuladas.",
+        "bibliografia": "Zapata Sánchez (2011); Bravo Valdivieso (2013); NIC y NIIF para PYMES."
+      }
+    },
+    {
+      "codigo": "Actividad #2",
+      "numero": 2,
+      "unidad": 2,
+      "semana": 6,
+      "tipo": "Otro tipo de actividades (prácticas)",
+      "componente": "APE",
+      "nombre": "Práctica de laboratorio: clasificación, naturaleza y dinámica de las cuentas contables",
+      "puntaje": 12,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "19 de octubre hasta 07 de noviembre de 2026",
+      "fecha_limite": "07 de noviembre de 2026",
+      "desde": "2026-10-26",
+      "hasta": "2026-11-07",
+      "contenidos": [
+        "3. Clasificación de las cuentas: de activo, pasivo, patrimonio, ingresos y gastos",
+        "4. Codificación y plan de cuentas (catálogo de cuentas) conforme a NIIF para PYMES.",
+        "5. Naturaleza de las cuentas: saldo deudor y saldo acreedor",
+        "6. Dinámica contable de las cuentas de balance y de resultados"
+      ],
+      "estrategia": "PRÁCTICA DE LABORATORIO CONTABLE EN LA QUE EL ESTUDIANTE CLASIFICA TREINTA CUENTAS POR GRUPO Y NATURALEZA, CODIFICA UN CATÁLOGO BÁSICO CONFORME A NIIF PARA PYMES Y RESUELVE QUINCE TRANSACCIONES INDICANDO LA CUENTA, SU NATURALEZA Y SI AUMENTA O DISMINUYE EN EL DEBE O EN EL HABER. LA ACTIVIDAD REQUIERE EVIDENCIAS VERIFICABLES Y UN ANEXO DE TRAZABILIDAD DEL PROCESO EN EL SIMULADOR CONTABLE.",
+      "uso_simulador": "El estudiante ejecuta las transacciones en el Simulador de casos, niveles 1 y 2, y exporta la comprobación de la partida doble y los saldos por cuenta para contrastar cada movimiento con el módulo Libro Mayor.",
+      "criterios": [
+        "Clasifica las cuentas en el grupo correcto (activo, pasivo, patrimonio, ingresos, gastos).",
+        "Determina correctamente la naturaleza deudora o acreedora de cada cuenta.",
+        "Codifica el catálogo respetando la jerarquía y la nomenclatura de NIIF para PYMES.",
+        "Registra las quince transacciones sin alterar la igualdad de la partida doble.",
+        "Adjunta los reportes exportados del simulador que comprueban cargos y abonos.",
+        "Incluye el anexo de trazabilidad del proceso seguido."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Elaboración de un cuaderno de práctica sobre clasificación, codificación y dinámica de las cuentas contables, con verificación de la partida doble.",
+        "contenido": "Temas 3 a 6: clasificación, codificación, naturaleza y dinámica de las cuentas contables.",
+        "metodologia": "Práctica guiada con recursos digitales: demostración del docente y ejecución individual.",
+        "evaluacion": "Rúbrica del componente práctico-experimental, según los criterios publicados en el aula virtual.",
+        "tac": "Simulador contable de la asignatura y hoja de cálculo.",
+        "habilidad_blanda": "Toma de decisiones y responsabilidad profesional al clasificar y justificar cada cuenta.",
+        "practica": "Aplicación directa de los contenidos de clasificación, codificación y dinámica de cuentas.",
+        "bibliografia": "Zapata Sánchez (2011); NIC y NIIF para PYMES."
+      }
+    },
+    {
+      "codigo": "Actividad #3",
+      "numero": 3,
+      "unidad": 2,
+      "semana": 7,
+      "tipo": "Otro tipo de actividades (autónomas)",
+      "componente": "AA",
+      "nombre": "Fichero autónomo de cuentas: codificación, naturaleza y dinámica",
+      "puntaje": 10,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "19 de octubre hasta 07 de noviembre de 2026",
+      "fecha_limite": "07 de noviembre de 2026",
+      "desde": "2026-10-26",
+      "hasta": "2026-11-07",
+      "contenidos": [
+        "4. Codificación y plan de cuentas (catálogo de cuentas) conforme a NIIF para PYMES.",
+        "5. Naturaleza de las cuentas: saldo deudor y saldo acreedor",
+        "6. Dinámica contable de las cuentas de balance y de resultados"
+      ],
+      "estrategia": "TRABAJO AUTÓNOMO DE CONSTRUCCIÓN Y CURADURÍA DE UN FICHERO DE VEINTE CUENTAS SELECCIONADAS POR EL ESTUDIANTE, CADA UNA CON SU FICHA TÉCNICA COMPLETA: CÓDIGO, NOMBRE, GRUPO, NATURALEZA, DINÁMICA (AUMENTA Y DISMINUYE), ESTADO FINANCIERO EN EL QUE SE PRESENTA Y UN EJEMPLO DE TRANSACCIÓN. EL ESTUDIANTE ASUME EL ROL DE CONTADOR DE UNA PYMES Y JUSTIFICA SUS DECISIONES.",
+      "uso_simulador": "El estudiante toma como referencia el catálogo real del módulo Planeación de cuentas del simulador y verifica la dinámica y el saldo resultante de cada cuenta en el módulo Libro Mayor.",
+      "criterios": [
+        "Selecciona veinte cuentas pertinentes para una PYMES y las ficha correctamente.",
+        "Justifica la naturaleza y la dinámica de cada cuenta con lenguaje técnico.",
+        "Relaciona cada cuenta con el estado financiero en el que se presenta.",
+        "Presenta un ejemplo de transacción coherente por cada cuenta fichada.",
+        "Entrega el fichero completo, ordenado por código, en el plazo establecido."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Construcción de un fichero de cuentas con ficha técnica (código, grupo, naturaleza, dinámica y ejemplo) y criterio de selección justificado.",
+        "contenido": "Temas 4 a 6: codificación del plan de cuentas, naturaleza y dinámica de las cuentas.",
+        "metodologia": "Trabajo autónomo con control de avance en el aula virtual.",
+        "evaluacion": "Rúbrica de la actividad autónoma, según los criterios publicados en el aula virtual.",
+        "tac": "Plantilla del fichero en el aula virtual y recursos digitales de la asignatura.",
+        "habilidad_blanda": "Organización de la información y comunicación escrita con lenguaje técnico.",
+        "practica": "Aplicación de la codificación y la dinámica de cuentas a un catálogo propio de una PYMES.",
+        "bibliografia": "NIIF para PYMES; Bravo Valdivieso (2013)."
+      }
+    },
+    {
+      "codigo": "Actividad #6",
+      "numero": 6,
+      "unidad": 3,
+      "semana": 11,
+      "tipo": "Resolución de problemas",
+      "componente": "ACD",
+      "nombre": "Jornalización integral de transacciones comerciales con IVA y documentos soporte",
+      "puntaje": 10,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "16 de noviembre hasta 05 de diciembre de 2026",
+      "fecha_limite": "05 de diciembre de 2026",
+      "desde": "2026-11-30",
+      "hasta": "2026-12-05",
+      "contenidos": [
+        "1. El Libro Diario: concepto, estructura y requisitos legales de registro",
+        "2. Documentos soporte de las transacciones: facturas, notas de crédito/débito, comprobantes de retención",
+        "3. Análisis de transacciones comerciales y su tratamiento contable (compras, ventas, gastos, IVA).",
+        "4. Elaboración de asientos contables simples y compuestos."
+      ],
+      "estrategia": "RESOLUCIÓN DE UN PROBLEMA CONTABLE INTEGRADOR EN EL QUE EL ESTUDIANTE ANALIZA CADA DOCUMENTO SOPORTE ENTREGADO (FACTURAS DE COMPRA Y VENTA, NOTAS DE CRÉDITO/DÉBITO), DETERMINA LA BASE IMPONIBLE Y EL IMPUESTO CON LAS TASAS CONFIGURADAS EN EL SISTEMA, Y JORNALIZA ASIENTOS SIMPLES Y COMPUESTOS EN EL LIBRO DIARIO CON SU RESPECTIVO ANEXO DE TRAZABILIDAD.",
+      "uso_simulador": "El estudiante registra las transacciones en los módulos Compras, Ventas, Documentos fuente y Tributación del simulador y valida el resultado con el módulo Libro Diario antes de presentar el informe.",
+      "criterios": [
+        "Analiza correctamente cada documento soporte de la transacción.",
+        "Determina la base imponible y el impuesto con la configuración vigente del sistema.",
+        "Jornaliza sin errores los asientos simples y compuestos requeridos.",
+        "Mantiene la igualdad de cargos y abonos en todos los asientos.",
+        "Presenta el informe técnico con la matriz de análisis y el anexo de trazabilidad."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Análisis de documentos soporte y jornalización de transacciones comerciales con impuesto, con una matriz de análisis como producto.",
+        "contenido": "Temas 1 a 4: Libro Diario, documentos soporte y análisis de las transacciones comerciales con impuesto.",
+        "metodologia": "Resolución de problemas con documentos soporte y modelamiento previo del docente.",
+        "evaluacion": "Rúbrica de resolución de problemas, según los criterios publicados en el aula virtual.",
+        "tac": "Simulador contable de la asignatura y hoja de cálculo.",
+        "habilidad_blanda": "Argumentación profesional y pensamiento crítico al sustentar el tratamiento contable.",
+        "practica": "Aplicación: registro de transacciones comerciales en el Libro Diario conforme a la normativa vigente.",
+        "bibliografia": "NIC y NIIF para PYMES; RCVRD; Espejo Jaramillo (2012)."
+      }
+    },
+    {
+      "codigo": "Actividad #7",
+      "numero": 7,
+      "unidad": 3,
+      "semana": 11,
+      "tipo": "Otro tipo de actividades (autónomas)",
+      "componente": "AA",
+      "nombre": "Portafolio autónomo de jornalización y mayorización",
+      "puntaje": 10,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "16 de noviembre hasta 05 de diciembre de 2026",
+      "fecha_limite": "05 de diciembre de 2026",
+      "desde": "2026-11-16",
+      "hasta": "2026-12-05",
+      "contenidos": [
+        "3. Análisis de transacciones comerciales y su tratamiento contable (compras, ventas, gastos, IVA).",
+        "4. Elaboración de asientos contables simples y compuestos.",
+        "5. El Libro Mayor: concepto, estructura y proceso de mayorización"
+      ],
+      "estrategia": "CONSTRUCCIÓN AUTÓNOMA Y PROGRESIVA DE UN PORTAFOLIO CONTABLE EN EL QUE EL ESTUDIANTE SELECCIONA TRANSACCIONES COMERCIALES REPRESENTATIVAS, LAS RESPALDA CON SUS DOCUMENTOS SOPORTE, LAS JORNALIZA Y LAS MAYORIZA, VERIFICANDO LOS SALDOS POR CUENTA. EL PORTAFOLIO SE ENTREGA CON EL ANEXO DE TRAZABILIDAD DEL PROCESO.",
+      "uso_simulador": "El estudiante reproduce cada ficha del portafolio en los módulos Libro Diario, Libro Mayor y Documentos fuente del simulador, y adjunta la comparación entre su mayorización manual y los saldos del sistema.",
+      "criterios": [
+        "Incluye un mínimo de diez transacciones con su documento soporte identificado.",
+        "Jornaliza cada transacción según la estructura legal del Libro Diario.",
+        "Mayoriza los asientos y determina el saldo de cada cuenta afectada.",
+        "Coincide con los saldos reportados por el simulador o explica la diferencia.",
+        "Presenta el portafolio organizado y con el anexo de trazabilidad."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Portafolio de transacciones documentadas, jornalizadas y mayorizadas, con verificación de saldos por cuenta.",
+        "contenido": "Temas 3 a 5: análisis de transacciones, asientos contables y proceso de mayorización.",
+        "metodologia": "Trabajo autónomo progresivo con entregas de avance.",
+        "evaluacion": "Rúbrica de la actividad autónoma, según los criterios publicados en el aula virtual.",
+        "tac": "Simulador contable de la asignatura y plantilla del portafolio en el aula virtual.",
+        "habilidad_blanda": "Responsabilidad y autogestión del aprendizaje.",
+        "practica": "Aplicación del ciclo de registro: documento soporte, jornalización y mayorización.",
+        "bibliografia": "Bravo Valdivieso (2013); NIC y NIIF para PYMES."
+      }
+    },
+    {
+      "codigo": "Actividad #8",
+      "numero": 8,
+      "unidad": 4,
+      "semana": 15,
+      "tipo": "Otro tipo de actividades (autónomas)",
+      "componente": "AA",
+      "nombre": "Trabajo autónomo integrador: balance de comprobación de sumas y saldos y corrección de errores contables",
+      "puntaje": 10,
+      "forma_de_evidenciar": "Entrega de trabajo en un documento tipo PDF en plataforma",
+      "disponibilidad": "14 de diciembre de 2026 hasta 02 de enero de 2027",
+      "fecha_limite": "02 de enero de 2027",
+      "desde": "2026-12-14",
+      "hasta": "2027-01-02",
+      "contenidos": [
+        "2. Estructura del balance de comprobación de sumas y saldos",
+        "3. Procedimiento de elaboración a partir del Libro Mayor",
+        "4. Detección, análisis y corrección de errores contables",
+        "5. Relación del balance de comprobación con el ciclo contable y los estados financieros bajo NIIF para PYMES."
+      ],
+      "estrategia": "ELABORACIÓN AUTÓNOMA DEL BALANCE DE COMPROBACIÓN DE SUMAS Y SALDOS A PARTIR DE LOS SALDOS DEL LIBRO MAYOR, SEGUIDA DEL ANÁLISIS DE UN BALANCE ENTREGADO CON DESCUADRE: EL ESTUDIANTE LOCALIZA EL ERROR, EXPLICA SU CAUSA, LO CORRIGE Y RELACIONA EL BALANCE CON EL CICLO CONTABLE Y LOS ESTADOS FINANCIEROS BAJO NIIF PARA PYMES. REQUIERE EVIDENCIAS VERIFICABLES Y ANEXO DE TRAZABILIDAD.",
+      "uso_simulador": "El estudiante elabora el balance con el módulo Balance de Comprobación del simulador, verifica el descuadre del caso con el agente auditor y comprueba la reexpresión con los módulos Estado de Resultados y Estado de Situación Financiera.",
+      "criterios": [
+        "Elabora el balance de comprobación con la estructura de sumas y saldos.",
+        "Verifica las igualdades de sumas y de saldos y las documenta.",
+        "Localiza el error del caso, explica su causa y aplica la corrección.",
+        "Relaciona el balance con el ciclo contable y los estados financieros bajo NIIF para PYMES.",
+        "Presenta el informe con el anexo de trazabilidad del proceso."
+      ],
+      "nota": "",
+      "parametros": {
+        "actividad": "Elaboración del balance de comprobación de sumas y saldos a partir del Libro Mayor y corrección de un error contable identificado.",
+        "contenido": "Temas 2 a 5: estructura y elaboración del balance de comprobación, corrección de errores y ciclo contable.",
+        "metodologia": "Trabajo autónomo integrador con análisis de caso.",
+        "evaluacion": "Rúbrica de la actividad autónoma, según los criterios publicados en el aula virtual.",
+        "tac": "Simulador contable de la asignatura y hoja de cálculo.",
+        "habilidad_blanda": "Pensamiento crítico y toma de decisiones al detectar y corregir el error.",
+        "practica": "Aplicación: elaboración y verificación del balance de comprobación y su relación con los estados financieros.",
+        "bibliografia": "NIIF para PYMES; Espejo Jaramillo (2012)."
+      }
+    }
+  ],
+  "tests": [
+    {
+      "codigo": "Test de la Unidad 1",
+      "unidad": 1,
+      "semana": 3,
+      "puntaje": 2,
+      "componente": "ACD",
+      "desde": "2026-10-05",
+      "hasta": "2026-10-10",
+      "nombre": "Test de la Unidad 1: fundamentos generales de contabilidad",
+      "items": 12,
+      "tiempo_min": 25
+    },
+    {
+      "codigo": "Test de la Unidad 2",
+      "unidad": 2,
+      "semana": 7,
+      "puntaje": 2,
+      "componente": "ACD",
+      "desde": "2026-11-02",
+      "hasta": "2026-11-07",
+      "nombre": "Test de la Unidad 2: personificación de cuentas contables",
+      "items": 13,
+      "tiempo_min": 30
+    },
+    {
+      "codigo": "Test de la Unidad 3",
+      "unidad": 3,
+      "semana": 11,
+      "puntaje": 2,
+      "componente": "ACD",
+      "desde": "2026-11-30",
+      "hasta": "2026-12-05",
+      "nombre": "Test de la Unidad 3: Libro Diario, análisis de transacciones y Libro Mayor",
+      "items": 12,
+      "tiempo_min": 30
+    },
+    {
+      "codigo": "Test de la Unidad 4",
+      "unidad": 4,
+      "semana": 15,
+      "puntaje": 2,
+      "componente": "ACD",
+      "desde": "2026-12-28",
+      "hasta": "2027-01-02",
+      "nombre": "Test de la Unidad 4: balance de comprobación de sumas y saldos y corrección de errores",
+      "items": 12,
+      "tiempo_min": 30
+    }
+  ],
+  "examenes": [
+    {
+      "nombre": "Examen parcial (Unidades 1 y 2)",
+      "semana": 8,
+      "puntaje": 15,
+      "es_total": false,
+      "desde": "2026-11-09",
+      "hasta": "2026-11-14",
+      "rango_txt": "09 - 14 DE NOVIEMBRE",
+      "nota": "Ubicación propuesta por la docente en la semana de cierre y revisión de la Unidad 2; debe confirmarse con la coordinación de carrera, porque el cronograma institucional solo declara la semana de exámenes 17."
+    },
+    {
+      "nombre": "Examen final (Unidades 3 y 4)",
+      "semana": 17,
+      "puntaje": 15,
+      "es_total": false,
+      "desde": "2027-01-11",
+      "hasta": "2027-01-16",
+      "rango_txt": "11 - 16 DE ENERO",
+      "nota": "Semana institucional de exámenes del período."
+    }
+  ],
+  "semanas_examenes": [
+    {
+      "numero": 17,
+      "rango_txt": "11 - 16 DE ENERO",
+      "desde": "2027-01-11",
+      "hasta": "2027-01-16",
+      "examen": "Examen final",
+      "puntaje_celda": 30
+    }
+  ],
+  "puntos_actividades": 62,
+  "puntos_tests": 8,
+  "puntos_examenes": 30,
+  "total_curso": 100,
+  "notas_legales": [
+    "Semana de aprendizaje autónomo (*): se resolverán dudas por medio de la mensajería interna del aula y por los foros de dudas e inquietudes.",
+    "Tutoría académica (**): a través del SGA el docente o los estudiantes podrán agendar tutorías.",
+    "Componentes: ACD = aprendizaje en contacto con el docente; AA = aprendizaje autónomo; APE = aprendizaje práctico-experimental."
+  ]
+}

@@ -95,17 +95,20 @@ def importar(nomina, credenciales, plan="completo", paralelo=None, dry_run=False
             existente = conn.execute(
                 "SELECT id, password_hash FROM usuarios WHERE username = ? OR email = ?",
                 (usuario, correo)).fetchone()
+            # Si el CSV trae la clave (columna `password_inicial`), se respeta: así el
+            # servidor queda con EXACTAMENTE las claves de la lista que se entrega.
+            password_csv = (f.get("password_inicial") or "").strip()
             password = None
             if existente:
                 estudiante_id = existente["id"]
                 actualizados += 1
-                if reset_passwords:
-                    password = generar_password()
+                if reset_passwords or password_csv:
+                    password = password_csv or generar_password()
                     if not dry_run:
                         conn.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?",
                                      (generate_password_hash(password), estudiante_id))
             else:
-                password = generar_password()
+                password = password_csv or generar_password()
                 creados += 1
                 if not dry_run:
                     cur = conn.execute(
@@ -129,7 +132,7 @@ def importar(nomina, credenciales, plan="completo", paralelo=None, dry_run=False
                 aula = crear_aula(usuario, paral, plan=plan, estudiante_id=estudiante_id, verboso=False)
             salida.append({
                 "paralelo": paral, "usuario": usuario, "nombre": nombre, "cedula": cedula,
-                "correo": correo, "password_inicial": password or "(la que ya tenía)",
+                "correo": correo, "password_inicial": password or password_csv or "(la que ya tenía)",
                 "aula": os.path.basename(aula), "estado": "actualizado" if existente else "creado",
             })
     finally:
