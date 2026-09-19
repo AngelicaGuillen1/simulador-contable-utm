@@ -93,6 +93,7 @@ def _enviar_asiento(cliente, db, debe, haber, glosa):
 # --------------------------------------------------------------------------- 1. rechazo
 def test_asiento_descuadrado_queda_como_intento_fallido(cliente, db):
     asientos_antes = _escalar(db, "SELECT COUNT(*) FROM asientos")
+    crear_antes = len(_eventos(db, "CREAR_ASIENTO"))
 
     respuesta = _enviar_asiento(cliente, db, 500.00, 450.00, GLOSA_RECHAZADA)
     assert respuesta.status_code == 200
@@ -105,9 +106,11 @@ def test_asiento_descuadrado_queda_como_intento_fallido(cliente, db):
         "El registro del intento debe conservar el mensaje del rechazo: %r" % ultimo.get("detalle"))
     assert "50.00" in (ultimo.get("detalle") or ""), "El mensaje debe indicar la diferencia"
 
-    # No se guardó ningún asiento y el rechazo NO se cuenta como creación.
+    # No se guardó ningún asiento y el rechazo NO se cuenta como creación (sin ruido
+    # en la traza: un rechazo deja UN evento, el del intento fallido).
     assert _escalar(db, "SELECT COUNT(*) FROM asientos") == asientos_antes
-    assert not [e for e in _eventos(db, "CREAR_ASIENTO") if GLOSA_RECHAZADA in (e.get("detalle") or "")]
+    assert len(_eventos(db, "CREAR_ASIENTO")) == crear_antes, \
+        "Un asiento rechazado no debe anotarse también como CREAR_ASIENTO"
 
 
 def test_asiento_correcto_no_se_marca_como_fallido(cliente, db):

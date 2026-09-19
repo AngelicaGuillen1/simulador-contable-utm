@@ -156,6 +156,23 @@ def _ajustar_periodo(ruta, inicio, fin, nombre=None):
         conn.close()
 
 
+def _marcar_empresa_del_estudiante(ruta, estudiante_id):
+    """Deja la empresa del aula como la EMPRESA PROPIA del estudiante.
+
+    Cada estudiante trabaja en su propio archivo, así que la empresa de su aula es
+    «su» empresa. Al marcar `empresas.estudiante_id`, las actividades, las evidencias
+    y el panel docente se refieren a SU empresa en vez de caer a la empresa compartida
+    por defecto (services/activity_service._empresa_de_estudiante). La plantilla
+    (aula_base.db) conserva `estudiante_id` en NULL: es el molde, no la empresa de nadie.
+    """
+    conn = _conectar(ruta)
+    try:
+        with conn:
+            conn.execute("UPDATE empresas SET estudiante_id = ?, es_demo = 0", (estudiante_id,))
+    finally:
+        conn.close()
+
+
 def _registrar_usuario_en_aula(ruta, estudiante_id, db_control=None):
     """Copia la fila del estudiante a la tabla `usuarios` de su aula.
 
@@ -220,6 +237,7 @@ def crear_aula(usuario, paralelo=None, plan="completo", estudiante_id=None,
     asignadas = 0
     if estudiante_id:
         _registrar_usuario_en_aula(destino, estudiante_id)
+        _marcar_empresa_del_estudiante(destino, estudiante_id)
         asignadas = _asignar_actividades(estudiante_id, paralelo)
     elif verboso:
         print("     (sin estudiante_id: no se asignaron actividades; indíquelo con --estudiante-id)")
