@@ -5,7 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h3 class="fw-bold mb-1"><i class="bi bi-cart-plus-fill text-primary me-2"></i>Registrar Factura de Compra</h3>
-    <p class="text-muted small mb-0">Recepción de mercaderías con cálculo de costo promedio ponderado / FIFO e imputación contable</p>
+    <p class="text-muted small mb-0">Recepción de mercaderías con cálculo de costo promedio ponderado / FIFO, IVA crédito
+      tributario y <strong>retenciones de Renta y de IVA</strong> según los porcentajes oficiales del SRI.</p>
   </div>
   <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i> Volver a Compras
@@ -13,7 +14,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('purchases.create_purchase') }}" class="card border-0 shadow-sm rounded-4 p-4">
-  <div class="row g-3 mb-4">
+  <div class="row g-3 mb-3">
     <div class="col-md-4">
       <label class="form-label small fw-semibold">Proveedor</label>
       <select name="proveedor_id" class="form-select" required>
@@ -31,7 +32,7 @@
 
     <div class="col-md-3">
       <label class="form-label small fw-semibold">Forma de Pago</label>
-      <select name="forma_pago" class="form-select">
+      <select name="forma_pago" id="formaPago" class="form-select" onchange="actualizarDesgloseCompra()">
         <option value="EFECTIVO">Efectivo (Caja 1.1.01)</option>
         <option value="TRANSFERENCIA">Transferencia Bancaria</option>
         <option value="CREDITO">Crédito Comercial (CxP Proveedores 2.1.01)</option>
@@ -41,6 +42,40 @@
     <div class="col-md-2">
       <label class="form-label small fw-semibold">Plazo Crédito (Días)</label>
       <input type="number" name="dias_credito" class="form-control" value="30" min="0">
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-7">
+      <label class="form-label small fw-semibold">Concepto de la compra (retenciones aplicables)</label>
+      <select name="tipo_compra" id="tipoCompra" class="form-select" onchange="actualizarDesgloseCompra()">
+        {% for c in conceptos %}
+        <option value="{{ c.clave }}" data-explicacion="{{ c.explicacion }}" {% if not c.disponible %}disabled{% endif %}>
+          {{ c.etiqueta }}{% if c.renta %} — Renta {{ c.renta.porcentaje|round(2) }} %{% endif %}{% if c.iva %} · IVA {{ c.iva.porcentaje|round(2) }} %{% endif %}{% if not c.disponible %} (no configurado en el catálogo){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="form-text text-muted" id="conceptoExplicacion"></div>
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label small fw-semibold">Situación del proveedor</label>
+      <div class="form-check mt-1">
+        <input class="form-check-input" type="checkbox" value="1" id="contribuyenteEspecial"
+               name="proveedor_contribuyente_especial" onchange="actualizarDesgloseCompra()">
+        <label class="form-check-label small" for="contribuyenteEspecial">
+          El proveedor es <strong>contribuyente especial</strong>: la retención de IVA se reduce
+          (10 % en bienes, 20 % en servicios) y la retención de Renta se mantiene.
+        </label>
+      </div>
+      <div class="mt-2">
+        <label class="form-label small fw-semibold mb-1">Cuenta bancaria (si es transferencia)</label>
+        <select name="banco_id" id="bancoId" class="form-select form-select-sm" onchange="actualizarDesgloseCompra()">
+          {% for b in bancos %}
+            <option value="{{ b.id }}">{{ b.nombre_banco }} — {{ b.numero_cuenta }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
   </div>
 
@@ -91,26 +126,114 @@
       <i class="bi bi-plus-lg me-1"></i> Agregar Producto
     </button>
 
-    <div class="card bg-light border p-3 rounded-3" style="width: 320px;">
+    <div class="card bg-light border p-3 rounded-3" style="width: 420px;">
       <div class="d-flex justify-content-between mb-2">
-        <span class="text-muted small">Subtotal Mercaderías:</span>
+        <span class="text-muted small">Subtotal (valor del bien o servicio):</span>
         <strong id="purchSubtotalDisplay">$0.00</strong>
       </div>
       <div class="d-flex justify-content-between mb-2">
-        <span class="text-muted small">IVA Compras (15% Crédito Tributario):</span>
+        <span class="text-muted small">IVA Compras (crédito tributario):</span>
         <strong id="purchIvaDisplay" class="text-primary">$0.00</strong>
       </div>
       <hr class="my-2">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="text-muted small">Retención Renta <span id="purchRentaDetalle" class="text-secondary"></span>:</span>
+        <strong id="purchRentaDisplay" class="text-danger">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Retención IVA <span id="purchRetIvaDetalle" class="text-secondary"></span>:</span>
+        <strong id="purchRetIvaDisplay" class="text-danger">$0.00</strong>
+      </div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Total de la factura:</span>
+        <strong id="purchTotalDisplay" class="fs-5">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Total retenciones:</span>
+        <strong id="purchRetTotalDisplay" class="text-danger">$0.00</strong>
+      </div>
       <div class="d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Total a Pagar/Acreditar:</span>
-        <span id="purchTotalDisplay" class="fs-4 fw-bold text-dark">$0.00</span>
+        <span class="fw-bold">Neto a pagar al proveedor:</span>
+        <span id="purchNetoDisplay" class="fs-4 fw-bold text-dark">$0.00</span>
+      </div>
+      <div class="form-text mt-2 mb-0">
+        La <strong>retención de Renta</strong> se calcula sobre el valor del bien o servicio
+        (subtotal, sin IVA) y la <strong>retención de IVA</strong> sobre el IVA de la factura.
+        El neto es lo que realmente se paga (o se acredita) al proveedor.
+      </div>
+      <div class="alert alert-warning small py-2 px-3 mt-2 mb-0 d-none" id="desgloseAviso"></div>
+    </div>
+  </div>
+
+  <div class="card border rounded-3 mb-4">
+    <div class="card-header bg-white fw-semibold small">
+      <i class="bi bi-journal-check me-1 text-primary"></i> Asiento contable que se registrará (partida doble)
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Cuenta</th>
+            <th class="text-end">Debe</th>
+            <th class="text-end pe-3">Haber</th>
+          </tr>
+        </thead>
+        <tbody id="asientoBody">
+          <tr><td colspan="3" class="text-center text-muted py-3">Indique el subtotal para ver el asiento.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="accordion mb-4" id="acordeonTarifas">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed small" type="button" data-bs-toggle="collapse" data-bs-target="#tarifasRetencion">
+          Tarifas de retención vigentes en el catálogo del SRI (dato configurable, no fijo en el programa)
+        </button>
+      </h2>
+      <div id="tarifasRetencion" class="accordion-collapse collapse" data-bs-parent="#acordeonTarifas">
+        <div class="accordion-body">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+              <thead class="table-light">
+                <tr>
+                  <th>Concepto de la compra</th>
+                  <th class="text-center">Retención Renta</th>
+                  <th class="text-center">Retención IVA</th>
+                  <th class="text-center">Si es contribuyente especial</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in conceptos %}
+                <tr>
+                  <td class="small">{{ c.etiqueta }}</td>
+                  <td class="text-center small">
+                    {% if c.renta %}{{ c.renta.porcentaje|round(2) }} % <code>{{ c.renta.codigo }}</code>{% else %}—{% endif %}
+                  </td>
+                  <td class="text-center small">
+                    {% if c.iva %}{{ c.iva.porcentaje|round(2) }} % <code>{{ c.iva.codigo }}</code>{% else %}—{% endif %}
+                  </td>
+                  <td class="text-center small">
+                    {% if c.iva_contribuyente_especial %}
+                      {{ c.iva_contribuyente_especial.porcentaje|round(2) }} % <code>{{ c.iva_contribuyente_especial.codigo }}</code>
+                    {% else %}—{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-muted small mb-0">{{ conceptos|length }} conceptos configurados en la tabla <code>impuestos</code> del aula.</p>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="text-end">
     <button type="submit" class="btn btn-primary px-5 py-2 fw-bold rounded-3 shadow">
-      <i class="bi bi-check-circle-fill me-1"></i> Registrar Compra e Ingresar Stock
+      <i class="bi bi-check-circle-fill me-1"></i> Registrar Compra, Retenciones e Ingresar Stock
     </button>
   </div>
 </form>
@@ -126,6 +249,9 @@
 
 {% block scripts %}
 <script>
+const URL_DESGLOSE = "{{ url_for('purchases.desglose_compra') }}";
+let temporizadorDesglose = null;
+
 function addPurchRow() {
   const tableBody = document.getElementById("purchaseItemsBody");
   const optionsHtml = document.getElementById("purchSelectTemplate").innerHTML;
@@ -164,25 +290,129 @@ function updatePurchCost(selectEl) {
   calculatePurchTotals();
 }
 
-function calculatePurchTotals() {
-  const rows = document.querySelectorAll(".purch-item-row");
-  let subtotal = 0;
+function money(valor) {
+  return "$" + (Math.round((parseFloat(valor) || 0) * 100) / 100).toFixed(2);
+}
 
-  rows.forEach((r) => {
+function subtotalFacturado() {
+  let subtotal = 0;
+  document.querySelectorAll(".purch-item-row").forEach((r) => {
     const cant = parseFloat(r.querySelector(".cant-input").value || 0);
     const cost = parseFloat(r.querySelector(".cost-input").value || 0);
     const itemSub = Math.round(cant * cost * 100) / 100;
-    r.querySelector(".subtotal-display").value = `$${itemSub.toFixed(2)}`;
+    r.querySelector(".subtotal-display").value = money(itemSub);
     subtotal += itemSub;
   });
-
-  subtotal = Math.round(subtotal * 100) / 100;
-  const iva = Math.round(subtotal * 0.15 * 100) / 100;
-  const total = Math.round((subtotal + iva) * 100) / 100;
-
-  document.getElementById("purchSubtotalDisplay").textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById("purchIvaDisplay").textContent = `$${iva.toFixed(2)}`;
-  document.getElementById("purchTotalDisplay").textContent = `$${total.toFixed(2)}`;
+  return Math.round(subtotal * 100) / 100;
 }
+
+function mostrarExplicacionConcepto() {
+  const select = document.getElementById("tipoCompra");
+  const opt = select.options[select.selectedIndex];
+  document.getElementById("conceptoExplicacion").textContent = opt ? (opt.getAttribute("data-explicacion") || "") : "";
+}
+
+function pintarAsiento(lineas) {
+  const cuerpo = document.getElementById("asientoBody");
+  cuerpo.innerHTML = "";
+  lineas.forEach((l) => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td class="ps-3 small">
+        <code>${l.cuenta_codigo || ""}</code> ${l.cuenta_nombre || ""}
+        <div class="text-muted" style="font-size: .75rem;">${l.referencia || ""}</div>
+      </td>
+      <td class="text-end small">${l.debe ? money(l.debe) : "—"}</td>
+      <td class="text-end pe-3 small">${l.haber ? money(l.haber) : "—"}</td>
+    `;
+    cuerpo.appendChild(fila);
+  });
+
+  const debe = lineas.reduce((s, l) => s + (parseFloat(l.debe) || 0), 0);
+  const haber = lineas.reduce((s, l) => s + (parseFloat(l.haber) || 0), 0);
+  const total = document.createElement("tr");
+  total.className = "table-light fw-semibold";
+  total.innerHTML = `<td class="ps-3 small">Totales</td>
+                     <td class="text-end small">${money(debe)}</td>
+                     <td class="text-end pe-3 small">${money(haber)}</td>`;
+  cuerpo.appendChild(total);
+}
+
+function calculatePurchTotals() {
+  actualizarDesgloseCompra();
+}
+
+function actualizarDesgloseCompra() {
+  const subtotal = subtotalFacturado();
+  mostrarExplicacionConcepto();
+
+  if (subtotal <= 0) {
+    document.getElementById("asientoBody").innerHTML =
+      '<tr><td colspan="3" class="text-center text-muted py-3">Indique el subtotal para ver el asiento.</td></tr>';
+    document.getElementById("purchSubtotalDisplay").textContent = money(0);
+    document.getElementById("purchIvaDisplay").textContent = money(0);
+    document.getElementById("purchRentaDisplay").textContent = money(0);
+    document.getElementById("purchRetIvaDisplay").textContent = money(0);
+    document.getElementById("purchTotalDisplay").textContent = money(0);
+    document.getElementById("purchRetTotalDisplay").textContent = money(0);
+    document.getElementById("purchNetoDisplay").textContent = money(0);
+    document.getElementById("purchRentaDetalle").textContent = "";
+    document.getElementById("purchRetIvaDetalle").textContent = "";
+    document.getElementById("desgloseAviso").classList.add("d-none");
+    return;
+  }
+
+  clearTimeout(temporizadorDesglose);
+  temporizadorDesglose = setTimeout(() => {
+    const datos = new URLSearchParams({
+      subtotal: subtotal,
+      tipo_compra: document.getElementById("tipoCompra").value,
+      forma_pago: document.getElementById("formaPago").value,
+      banco_id: document.getElementById("bancoId") ? document.getElementById("bancoId").value : "",
+      proveedor_contribuyente_especial: document.getElementById("contribuyenteEspecial").checked ? "1" : "0",
+    });
+
+    fetch(URL_DESGLOSE, { method: "POST", body: datos })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d })))
+      .then(({ ok, data }) => {
+        const aviso = document.getElementById("desgloseAviso");
+        if (!ok || !data.ok) {
+          aviso.textContent = data.mensaje || "No se pudo calcular el desglose.";
+          aviso.classList.remove("d-none");
+          return;
+        }
+        aviso.classList.add("d-none");
+        const d = data.desglose;
+
+        document.getElementById("purchSubtotalDisplay").textContent = money(d.subtotal);
+        document.getElementById("purchIvaDisplay").textContent =
+          money(d.iva_valor) + ` (${d.iva_porcentaje} % · ${d.iva_codigo})`;
+
+        const renta = d.retencion_renta;
+        document.getElementById("purchRentaDisplay").textContent = renta ? "− " + money(renta.valor) : money(0);
+        document.getElementById("purchRentaDetalle").textContent = renta ? `(${renta.porcentaje} % · ${renta.codigo})` : "(no aplica)";
+
+        const riva = d.retencion_iva;
+        document.getElementById("purchRetIvaDisplay").textContent = riva ? "− " + money(riva.valor) : money(0);
+        document.getElementById("purchRetIvaDetalle").textContent = riva ? `(${riva.porcentaje} % · ${riva.codigo})` : "(no aplica)";
+
+        document.getElementById("purchTotalDisplay").textContent = money(d.total_factura);
+        document.getElementById("purchRetTotalDisplay").textContent = "− " + money(d.total_retenciones);
+        document.getElementById("purchNetoDisplay").textContent = money(d.neto_pagar);
+
+        pintarAsiento(d.lineas);
+      })
+      .catch(() => {
+        const aviso = document.getElementById("desgloseAviso");
+        aviso.textContent = "No se pudo consultar el desglose de retenciones. Verifique el subtotal.";
+        aviso.classList.remove("d-none");
+      });
+  }, 200);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  mostrarExplicacionConcepto();
+  actualizarDesgloseCompra();
+});
 </script>
 {% endblock %}

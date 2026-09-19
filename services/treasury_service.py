@@ -1,7 +1,7 @@
 # Treasury Service: Cash Boxes, Cash Count (Arqueo), Banks & Bank Reconciliation
 import sqlite3
 from datetime import datetime, date
-from models import get_db_connection
+from models import get_db_contable
 from services.accounting_service import AccountingService
 from services.audit_service import AuditService
 from services.period_service import PeriodService
@@ -17,7 +17,7 @@ class TreasuryService:
         if float(monto) <= 0:
             raise ValueError("El monto del movimiento de caja debe ser mayor a 0.")
         fecha_mov = fecha or PeriodService.get_fecha_trabajo(db_path=db_path)
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             caja = conn.execute("SELECT * FROM cajas WHERE id = ?", (caja_id,)).fetchone()
             if not caja:
@@ -43,7 +43,7 @@ class TreasuryService:
         if float(monto) <= 0:
             raise ValueError("El monto del movimiento bancario debe ser mayor a 0.")
         fecha_mov = fecha or PeriodService.get_fecha_trabajo(db_path=db_path)
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             banco = conn.execute("SELECT * FROM bancos WHERE id = ?", (banco_id,)).fetchone()
             if not banco:
@@ -62,7 +62,7 @@ class TreasuryService:
 
     @staticmethod
     def sync_cash_balance(caja_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             caja = conn.execute("SELECT * FROM cajas WHERE id = ?", (caja_id,)).fetchone()
             if not caja:
@@ -76,7 +76,7 @@ class TreasuryService:
 
     @staticmethod
     def sync_bank_balance(banco_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             banco = conn.execute("SELECT * FROM bancos WHERE id = ?", (banco_id,)).fetchone()
             if not banco:
@@ -90,7 +90,7 @@ class TreasuryService:
 
     @staticmethod
     def get_cash_movements(caja_id=None, limit=100, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = """
                 SELECT m.*, c.nombre as caja_nombre
@@ -109,7 +109,7 @@ class TreasuryService:
 
     @staticmethod
     def get_cash_boxes(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cajas = conn.execute("SELECT * FROM cajas ORDER BY id ASC").fetchall()
             res = []
@@ -129,7 +129,7 @@ class TreasuryService:
         Compares Saldo Contable (Libro Mayor) vs Saldo Físico Declarado.
         Calculates Difference: Físico - Contable.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             caja = cursor.execute("SELECT * FROM cajas WHERE id = ?", (caja_id,)).fetchone()
@@ -171,7 +171,7 @@ class TreasuryService:
         - Sobrante: Debe Caja / Haber 4.2.01 Otros ingresos.
         Vincula el asiento al arqueo (trazabilidad) y sincroniza el saldo de la caja.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             arqueo = conn.execute("""
                 SELECT a.*, c.nombre as caja_nombre, c.cuenta_contable_id
@@ -215,7 +215,7 @@ class TreasuryService:
             usuario_id=usuario_id, db_path=db_path
         )
 
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             conn.execute("UPDATE arqueos_caja SET asiento_ajuste_id = ? WHERE id = ?", (asiento_id, arqueo_id))
             conn.commit()
@@ -236,7 +236,7 @@ class TreasuryService:
 
     @staticmethod
     def get_banks(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             bancos = conn.execute("SELECT * FROM bancos WHERE activo = 1 ORDER BY id ASC").fetchall()
             res = []
@@ -260,7 +260,7 @@ class TreasuryService:
         = Saldo Conciliado
         Compares against Saldo de Libros Contables.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             banco = cursor.execute("SELECT * FROM bancos WHERE id = ?", (banco_id,)).fetchone()

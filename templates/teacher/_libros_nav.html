@@ -1,0 +1,92 @@
+{# ============================================================================
+   Encabezado y navegación de los libros de un estudiante (SOLO LECTURA).
+   Variables requeridas: estudiante_id, estudiante (dict), libro (dict), seccion.
+   ============================================================================ #}
+{% set tabs = [
+  ('teacher.estudiante_detalle', 'ficha', 'Ficha del estudiante', 'bi-person-vcard'),
+  ('teacher.estudiante_cuentas', 'cuentas', 'Plan de cuentas', 'bi-list-columns-reverse'),
+  ('teacher.estudiante_diario', 'diario', 'Libro Diario', 'bi-journal-text'),
+  ('teacher.estudiante_mayor', 'mayor', 'Libro Mayor', 'bi-journals'),
+  ('teacher.estudiante_balance', 'balance', 'Balance de comprobación', 'bi-clipboard-check'),
+  ('teacher.estudiante_estados', 'estados', 'Estados financieros', 'bi-file-earmark-bar-graph'),
+] %}
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div class="d-flex align-items-center">
+        <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+             style="width: 56px; height: 56px; font-size: 1.2rem;">
+          {{ (estudiante.nombre_completo or '??')[:2]|upper }}
+        </div>
+        <div>
+          <h4 class="fw-bold mb-1">{{ estudiante.nombre_completo or 'Estudiante' }}</h4>
+          <div class="text-muted small">
+            <i class="bi bi-person me-1"></i><code>{{ estudiante.username }}</code>
+            {% if estudiante.paralelo %}<span class="mx-2">|</span><i class="bi bi-people me-1"></i>Paralelo {{ estudiante.paralelo }}{% endif %}
+            {% if libro.nombre_archivo %}<span class="mx-2">|</span><i class="bi bi-file-earmark-lock me-1"></i><code>{{ libro.nombre_archivo }}</code>{% endif %}
+          </div>
+          <div class="mt-2 d-flex flex-wrap gap-2">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              <i class="bi bi-eye me-1"></i>Solo lectura
+            </span>
+            {% if libro.existe %}
+              {% if libro.hay_movimientos is defined and not libro.hay_movimientos %}
+              <span class="badge bg-secondary-subtle text-secondary border">
+                <i class="bi bi-dash-circle me-1"></i>Sin movimientos todavía
+              </span>
+              {% elif libro.cuadrado is defined and libro.cuadrado %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-check2-circle me-1"></i>Balance cuadrado
+              </span>
+              {% elif libro.cuadrado is defined %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                <i class="bi bi-exclamation-triangle me-1"></i>Balance descuadrado
+              </span>
+              {% endif %}
+            {% else %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+              <i class="bi bi-info-circle me-1"></i>Sin aula contable
+            </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('teacher.estudiante_detalle', estudiante_id=estudiante_id) }}"
+           class="btn btn-light btn-sm border">
+          <i class="bi bi-arrow-left me-1"></i> Ficha del estudiante
+        </a>
+        <a href="{{ url_for('teacher.estudiantes') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-people me-1"></i> Estudiantes
+        </a>
+      </div>
+    </div>
+
+    <ul class="nav nav-pills gap-2 mt-4 flex-wrap">
+      {% for endpoint, clave, titulo, icono in tabs %}
+      <li class="nav-item">
+        <a class="nav-link py-1 px-3 {% if seccion == clave %}active{% endif %}"
+           href="{{ url_for(endpoint, estudiante_id=estudiante_id) }}">
+          <i class="bi {{ icono }} me-1"></i>{{ titulo }}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% if not libro.existe %}
+<div class="alert alert-warning border-0 rounded-4 d-flex align-items-start">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+  <div>
+    <strong>No hay libros que mostrar.</strong><br>
+    {{ libro.aviso or aviso_sin_aula }}
+  </div>
+</div>
+{% elif libro.aviso %}
+<div class="alert alert-info border-0 rounded-4 d-flex align-items-start">
+  <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+  <div>{{ libro.aviso }}</div>
+</div>
+{% endif %}

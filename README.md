@@ -109,8 +109,12 @@ static/js/                  # app.js (buscador global), journal.js, simulation.j
 database/
 ├── db_init.py              # Esquema de 38 tablas + índices
 ├── seed_data.py            # Datos de demostración (30 operaciones reales del período)
+├── banco_casos_libros.py   # §62: fuentes, reglas de trazabilidad, tarifas demostrativas, catálogo §59
+├── casos_libros_61.py      # §61: los 19 casos prácticos con cifras (datos puros)
+├── esquema_casos_libros.py # Tablas y siembra del banco de casos y de las reglas §62
+├── cargar_casos_libros.py  # Cargador del banco de casos (§61) por línea de comandos
 └── simulator.db            # Base de datos SQLite
-tests/                      # 113 pruebas automáticas (pytest)
+tests/                      # Pruebas automáticas (pytest)
 
 serve.py                    # Servidor de producción (waitress) para servicio 24/7
 wsgi.py                     # Punto de entrada WSGI (waitress/gunicorn/Docker)
@@ -128,7 +132,7 @@ deploy/
 ├── cambiar_credenciales.py # Cambio de contraseñas antes de publicar
 └── verificar_despliegue.py # Verificación del despliegue publicado
 .devcontainer/              # Abrir el sistema en el navegador con GitHub Codespaces
-.github/workflows/          # Integración continua: 113 pruebas + arranque real en Linux
+.github/workflows/          # Integración continua: pruebas + arranque real en Linux
 Procfile · Dockerfile · render.yaml   # Artefactos para plataformas gestionadas
 ```
 
@@ -260,6 +264,40 @@ Administración del sistema.
 Los casos de demostración se generan a partir de los **asientos reales** registrados en la base, de
 modo que la solución esperada coincide exactamente con la contabilidad del período.
 
+## 11.b Banco de casos prácticos de los libros (§61) y trazabilidad de las fuentes (§62)
+
+Además de los casos generados por el sistema, el simulador carga como **DATOS** el banco de los
+**19 casos prácticos de los libros** descritos en la sección §61 del Prompt Maestro v2 y aplica las
+reglas de trazabilidad de las fuentes de §62. Todo vive en la base de **control** (contenido
+académico compartido) y se puede recargar en cualquier momento:
+
+```bash
+python database/cargar_casos_libros.py            # carga idempotente del banco (§61 y §62)
+python database/cargar_casos_libros.py --listar   # informe del estado del banco
+```
+
+* **Ficha obligatoria por caso (§62.9):** fuente completa, página con **doble numeración** (impresa
+  y del PDF, §62.7), año, si la solución está o no en la fuente y si hubo corrección de erratas.
+  `activar_caso()` rechaza cualquier caso con ficha incompleta.
+* **Erratas corregidas y registradas (§62.1):** C61.02 (fecha), C61.04 (Cuentas por pagar 300,00 en
+  lugar de 500,00), C61.16 (Caja 4.600,00 en lugar de 4.000,00), C61.17 (reconocimiento mensual
+  600,00 en lugar de 500,00) y C61.18 (fila de patrimonio negativo excluida).
+* **Casos sin solución (§62.5):** C61.11 a C61.19 se cargan como enunciado de práctica **sin
+  solución visible** y se verifican con reglas mecánicas (asiento cuadrado, cuentas válidas,
+  posición Debe/Haber y balance cuadrado); el resultado queda marcado como **no oficial**.
+* **Fidelidad de las fuentes (§62.2, §62.3, §62.4 y §62.6):** las tarifas de los libros quedan
+  etiquetadas como *Configuración académica / demostrativa* y se editan desde el panel docente
+  (`/docente/casos-libros`); toda ficha advierte que las fuentes no explican el IVA ni las
+  retenciones como normativa, y las páginas que eran imagen sin texto se muestran con la etiqueta
+  «dato reconstruido — pendiente de validación con el facsímil».
+* **Interfaz:** *Casos de los libros (§61)* para el estudiante (`/casos-libros`, ficha por caso,
+  historial de intentos) y *Banco de casos §61 y §62* para el docente (`/docente/casos-libros`, con
+  reglas, erratas del plan de cuentas, tarifas demostrativas editables e intentos). Todas las vistas
+  responden también en JSON con `?formato=json`, y las cifras se muestran en formato `es-EC`
+  (1.234,56) sin alterar ningún valor.
+
+Detalle completo en `docs/BANCO_CASOS_LIBROS.md`.
+
 ## 12. Arquitectura agéntica
 
 | Agente | Responsabilidad |
@@ -307,16 +345,20 @@ Verificación en caliente: `GET /api/tools` devuelve `faltantes: []`.
 python -m pytest tests -q
 ```
 
-**113 pruebas** cubren: partida doble, asientos descuadrados, mayor vs. diario, balance de
+**275 pruebas** cubren: partida doble, asientos descuadrados, mayor vs. diario, balance de
 comprobación, ecuación **Activo = Pasivo + Patrimonio**, reversión de asientos, períodos y fechas,
 inventarios (entradas, salidas, stock, Kardex, promedio ponderado y FIFO), costo de ventas, ventas
 de contado y crédito, servicios, compras, cuentas por cobrar y por pagar, cobros y pagos, caja y
 arqueos (con regularización contable), conciliación bancaria, impuestos, estados financieros, cierre
 contable, evaluación del estudiante con rúbrica, navegación por los 40 módulos de la interfaz,
 flujos completos de operaciones por formulario, exportaciones CSV/Excel/impresión, API interna,
-manual de usuario, control de roles, documentos fuente, trazabilidad y auditoría.
+manual de usuario, control de roles, documentos fuente, trazabilidad y auditoría, y el **banco de
+casos prácticos de los libros (§61) con las reglas de trazabilidad de las fuentes (§62)**:
+ficha obligatoria por caso, erratas corregidas y registradas, doble numeración de páginas,
+tarifas demostrativas editables, casos sin solución con verificación mecánica no oficial y
+control de intentos (`tests/test_casos_libros.py`).
 
-Resultado verificado: **113 passed** (suite completa en ~80 s).
+Resultado verificado: **275 passed** (suite completa en ~6 min).
 
 Además se verificó el sistema en ejecución real con peticiones HTTP, tanto con el servidor de
 desarrollo (`python app.py`) como con el de producción (`python serve.py`): los 40 módulos responden

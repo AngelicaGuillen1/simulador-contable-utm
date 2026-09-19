@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 
 from flask import Flask, render_template, g, redirect, url_for, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from models import get_db_connection
@@ -26,6 +27,12 @@ def create_app():
     app.config.from_object(Config)
     app.config["JSON_AS_ASCII"] = False
 
+    # Detrás del proxy inverso (Nginx en el VPS): confía en UNA capa de proxy para
+    # conocer el esquema real (https) y la IP del estudiante. Sin esto, el registro de
+    # accesos guardaría 127.0.0.1 y los enlaces saldrían con http:// en vez de https://.
+    # x_for=1 (una sola cabecera X-Forwarded-For) evita que un cliente falsifique su IP.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     # ---------------- Filtros de plantilla ----------------
     @app.template_filter("money")
     def money_filter(value):
@@ -41,6 +48,18 @@ def create_app():
             return formato.format(float(value or 0))
         except (TypeError, ValueError):
             return "0"
+
+    # §62.6 — las cifras de las fuentes se muestran en formato es-EC (1.234,56) sin alterar
+    # ningún valor: `num_ec` y `money_ec` son las versiones normalizadas de `num` y `money`.
+    @app.template_filter("num_ec")
+    def num_ec_filter(value, decimales=2):
+        from database.banco_casos_libros import formato_es_ec
+        return formato_es_ec(value, decimales)
+
+    @app.template_filter("money_ec")
+    def money_ec_filter(value, decimales=2):
+        from database.banco_casos_libros import formato_es_ec
+        return "$%s" % formato_es_ec(value, decimales)
 
     @app.template_filter("fecha_legible")
     def fecha_legible(value):
@@ -67,7 +86,10 @@ def create_app():
 
         alertas = {"stock_bajo": 0, "cxc_vencidas": 0, "cxp_proximas": 0, "periodo": None}
         try:
-            conn = get_db_connection()
+            # Los indicadores dependen de los libros de quien está en sesión: se leen del aula
+            # del estudiante y, para los perfiles administrativos, de la base de control.
+            from models import get_db_contable
+            conn = get_db_contable()
             try:
                 alertas["stock_bajo"] = len(InventoryService.get_low_stock_alerts())
                 alertas["cxc_vencidas"] = conn.execute("""
@@ -101,6 +123,12 @@ def create_app():
     app.register_blueprint(home_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(taxes_bp)
+
+    # ---------------- Seguimiento de accesos (Panel Docente) ----------------
+    # Anota en eventos_estudiante la acción correspondiente a cada endpoint visitado
+    # por un estudiante. Nunca altera ni rompe la respuesta original.
+    from services.access_service import registrar_evento_desde_request
+    app.after_request(registrar_evento_desde_request)
 
     # ---------------- Manejo de errores ----------------
     @app.errorhandler(403)

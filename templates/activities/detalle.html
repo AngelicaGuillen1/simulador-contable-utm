@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}{{ actividad.codigo }} - {{ actividad.titulo }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('activities.mis_actividades') }}">Mis actividades</a></li>
+    <li class="breadcrumb-item active">{{ actividad.codigo }}</li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div>
+          <span class="badge bg-dark font-monospace me-2">{{ actividad.codigo }}</span>
+          <strong>Unidad {{ actividad.unidad }} · {{ actividad.componente|capitalize }}</strong>
+        </div>
+        <span class="badge {{ 'bg-success' if actividad.abierta_ahora else 'bg-secondary' }}">
+          {{ 'Disponible' if actividad.abierta_ahora else 'No disponible' }}
+        </span>
+      </div>
+      <div class="card-body">
+        <h4 class="mb-2">{{ actividad.titulo }}</h4>
+        <p class="text-muted">{{ actividad.resultado_aprendizaje or 'Resultado de aprendizaje asociado a la actividad del syllabus.' }}</p>
+
+        {% if actividad.motivo_disponibilidad %}
+        <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ actividad.motivo_disponibilidad }}</div>
+        {% endif %}
+
+        {% if actividad.instrucciones %}
+        <h6 class="text-uppercase text-muted fw-bold mt-3">Instrucciones</h6>
+        <p class="mb-3" style="white-space: pre-line;">{{ actividad.instrucciones }}</p>
+        {% endif %}
+
+        {% if actividad.evidencia_requerida %}
+        <h6 class="text-uppercase text-muted fw-bold">Evidencia solicitada por el docente</h6>
+        <p class="mb-0" style="white-space: pre-line;">{{ actividad.evidencia_requerida }}</p>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white d-flex flex-wrap gap-2">
+        {% if actividad.puede_iniciar and actividad.estado_asignacion not in ['ENTREGADA', 'REVISADA'] %}
+        <form method="post" action="{{ url_for('activities.iniciar_actividad', actividad_id=actividad.id) }}">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-play-fill me-1"></i>{{ 'Continuar actividad' if actividad.estado_asignacion == 'EN_CURSO' else 'Iniciar actividad' }}
+          </button>
+        </form>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('evidence.nueva_evidencia') }}" class="d-inline">
+          <input type="hidden" name="actividad_id" value="{{ actividad.id }}">
+          <input type="hidden" name="tipo" value="{{ actividad.tipo_evidencia or 'INTEGRAL' }}">
+          <input type="hidden" name="titulo" value="{{ actividad.codigo }} · {{ actividad.titulo }}">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-file-earmark-check me-1"></i>Generar evidencia
+          </button>
+        </form>
+
+        <a href="{{ url_for('evidence.mis_evidencias', actividad_id=actividad.id) }}" class="btn btn-outline-secondary">
+          <i class="bi bi-clipboard2-check me-1"></i>Mis evidencias de esta actividad
+        </a>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white"><strong><i class="bi bi-clock-history me-2"></i>Trazabilidad de la actividad</strong></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr><th>Evento</th><th>Módulo</th><th>Detalle</th><th>Fecha y hora</th></tr>
+          </thead>
+          <tbody>
+            {% for e in eventos %}
+            <tr>
+              <td><span class="badge bg-light text-dark border font-monospace">{{ e.evento }}</span></td>
+              <td class="small">{{ e.modulo or '—' }}</td>
+              <td class="small text-muted text-truncate" style="max-width: 380px;">{{ e.detalle or '—' }}</td>
+              <td class="small">{{ e.timestamp }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Sin eventos registrados todavía.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white"><strong>Ficha de la actividad</strong></div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Estado de la entrega</span><strong>{{ (actividad.estado_asignacion or 'PENDIENTE')|capitalize }}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Puntaje</span><strong>{{ actividad.puntaje|num(0) }} pts</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Apertura</span><span>{{ actividad.apertura_legible or 'sin fecha' }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Cierre</span><span>{{ actividad.cierre_legible or 'sin fecha' }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Intentos</span><span>{{ actividad.intentos_usados or 0 }} / {{ actividad.intentos_maximos or 1 }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Abierta en</span><span>{{ actividad.abierta_en_legible or '—' }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Cerrada en</span><span>{{ actividad.cerrada_en_legible or '—' }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Nota</span><span>{{ actividad.nota|num(2) if actividad.nota is not none else 'sin calificar' }}</span></li>
+      </ul>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong><i class="bi bi-clipboard2-check me-1"></i>Evidencias generadas</strong>
+        <span class="badge bg-primary">{{ evidencias|length }}</span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for ev in evidencias %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold small">{{ ev.titulo }}</div>
+              <code class="small">{{ ev.codigo }}</code>
+              <div class="text-muted small">{{ ev.generada_en }}</div>
+            </div>
+            <div class="text-end">
+              <span class="badge {{ 'bg-success' if ev.estado == 'FINAL' else 'bg-secondary' }}">{{ ev.estado }}</span>
+            </div>
+          </div>
+          <div class="mt-2 d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('evidence.detalle_evidencia', evidencia_id=ev.id) }}"><i class="bi bi-eye"></i> Ver</a>
+            <a class="btn btn-sm btn-outline-dark" href="{{ url_for('evidence.captura_evidencia', evidencia_id=ev.id) }}"><i class="bi bi-camera"></i> Preparar captura</a>
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted small text-center py-3">Todavía no has generado evidencias para esta actividad.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

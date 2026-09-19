@@ -2,13 +2,13 @@
 import sqlite3
 import json
 from datetime import datetime
-from models import get_db_connection
+from models import get_db_contable
 from services.audit_service import AuditService
 
 class SimulationService:
     @staticmethod
     def get_simulations(activo_only=True, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = """
                 SELECT s.*, u.nombre_completo as docente_nombre, c.nombre as curso_nombre,
@@ -27,7 +27,7 @@ class SimulationService:
 
     @staticmethod
     def get_simulation_by_id(simulacion_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             sim = conn.execute("SELECT * FROM simulaciones WHERE id = ?", (simulacion_id,)).fetchone()
             if not sim:
@@ -59,7 +59,7 @@ class SimulationService:
 
     @staticmethod
     def start_attempt(simulacion_id, estudiante_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -74,7 +74,7 @@ class SimulationService:
 
     @staticmethod
     def get_student_attempts(estudiante_id=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = """
                 SELECT i.*, s.titulo as simulacion_titulo, s.nivel as simulacion_nivel, s.modo_examen,
@@ -95,7 +95,7 @@ class SimulationService:
 
     @staticmethod
     def get_teacher_analytics(docente_id=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             total_estudiantes = conn.execute("SELECT COUNT(*) as cnt FROM usuarios WHERE rol_id = 3 AND activo = 1").fetchone()["cnt"]
             total_intentos = conn.execute("SELECT COUNT(*) as cnt FROM intentos_estudiante").fetchone()["cnt"]

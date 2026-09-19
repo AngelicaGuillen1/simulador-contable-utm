@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Mis Actividades del Syllabus - Simulador Contable{% endblock %}
+
+{# ---------- Macros de apoyo ---------- #}
+{% macro estado_badge(estado) %}
+  {% set e = (estado or 'PENDIENTE')|upper %}
+  {% if e == 'ENTREGADA' %}
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-send-check me-1"></i>Entregada</span>
+  {% elif e == 'REVISADA' %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-patch-check me-1"></i>Revisada</span>
+  {% elif e == 'EN_CURSO' %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-hourglass-split me-1"></i>En curso</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-circle me-1"></i>Pendiente</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro componente_badge(componente) %}
+  {% set c = (componente or '')|upper %}
+  {% if c == 'DOCENCIA' %}
+    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Docencia</span>
+  {% elif c == 'PRACTICA' %}
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Práctica</span>
+  {% else %}
+    <span class="badge bg-dark-subtle text-dark border">Autónomo</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro disponibilidad(actividad) %}
+  {% if actividad.abierta_ahora %}
+    <span class="badge bg-success"><i class="bi bi-unlock me-1"></i>Disponible ahora</span>
+  {% else %}
+    <span class="badge bg-secondary" title="{{ actividad.motivo_disponibilidad or '' }}"><i class="bi bi-lock me-1"></i>No disponible</span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0"><i class="bi bi-list-check text-primary me-2"></i>Mis actividades del syllabus</h3>
+    <p class="text-muted mb-0 small">Contabilidad I · actividades de docencia, prácticas y trabajo autónomo con su puntaje y plazo.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('evidence.mis_evidencias') }}" class="btn btn-outline-primary">
+      <i class="bi bi-clipboard2-check me-1"></i> Mis evidencias
+    </a>
+    <a href="{{ url_for('activities.mis_actividades', formato='json') }}" class="btn btn-outline-secondary btn-sm" title="Ver la respuesta JSON de este módulo">
+      <i class="bi bi-braces me-1"></i> JSON
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase fw-bold">Asignadas</div>
+        <div class="fs-3 fw-bold">{{ resumen.total }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase fw-bold">Pendientes</div>
+        <div class="fs-3 fw-bold text-secondary">{{ resumen.pendientes }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase fw-bold">En curso</div>
+        <div class="fs-3 fw-bold text-warning-emphasis">{{ resumen.en_curso }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small text-uppercase fw-bold">Puntaje total</div>
+        <div class="fs-3 fw-bold text-success">{{ resumen.puntaje_total|num(0) }} pts</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white">
+    <strong><i class="bi bi-clipboard-data me-2"></i>Actividades asignadas</strong>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Código</th>
+          <th>Actividad</th>
+          <th>Unidad</th>
+          <th>Componente</th>
+          <th class="text-end">Puntaje</th>
+          <th>Disponibilidad</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in actividades %}
+        <tr>
+          <td><span class="badge bg-dark font-monospace">{{ a.codigo }}</span></td>
+          <td>
+            <div class="fw-semibold">{{ a.titulo }}</div>
+            <div class="text-muted small">
+              Intentos: {{ a.intentos_usados or 0 }} de {{ a.intentos_maximos or 1 }} ·
+              Evidencia: {{ a.tipo_evidencia or 'INTEGRAL' }}
+            </div>
+          </td>
+          <td>U{{ a.unidad }}</td>
+          <td>{{ componente_badge(a.componente) }}</td>
+          <td class="text-end fw-semibold">{{ a.puntaje|num(0) }}</td>
+          <td>
+            {{ disponibilidad(a) }}
+            <div class="text-muted small">
+              {{ a.apertura_legible or 'sin fecha' }} → {{ a.cierre_legible or 'sin fecha' }}
+            </div>
+          </td>
+          <td>
+            {{ estado_badge(a.estado_asignacion) }}
+            {% if a.nota is not none and a.estado_asignacion in ['ENTREGADA', 'REVISADA'] %}
+              <div class="small text-success fw-bold">Nota: {{ a.nota|num(2) }}</div>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <a href="{{ url_for('activities.detalle_actividad', actividad_id=a.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-eye"></i> Ver
+              </a>
+              {% if a.puede_iniciar and a.estado_asignacion not in ['ENTREGADA', 'REVISADA'] %}
+              <form method="post" action="{{ url_for('activities.iniciar_actividad', actividad_id=a.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-play-fill"></i>
+                  {{ 'Continuar' if a.estado_asignacion == 'EN_CURSO' else 'Iniciar' }}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+            Aún no tienes actividades asignadas. El docente las publicará en el aula virtual.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,11 +1,11 @@
 # Tax Service - Configurable Taxes & Withholdings (SRI Ecuador Standards)
 import sqlite3
-from models import get_db_connection
+from models import get_db_contable
 
 class TaxService:
     @staticmethod
     def get_taxes(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             rows = conn.execute("SELECT * FROM impuestos WHERE activo = 1 ORDER BY id ASC").fetchall()
             return [dict(r) for r in rows]
@@ -14,7 +14,7 @@ class TaxService:
 
     @staticmethod
     def get_tax_by_code(codigo, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("SELECT * FROM impuestos WHERE codigo = ? AND activo = 1", (codigo,)).fetchone()
             return dict(row) if row else None
@@ -23,7 +23,7 @@ class TaxService:
 
     @staticmethod
     def calculate_tax(base_imponible, codigo_impuesto=None, tipo="IVA_VENTAS", db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             if codigo_impuesto:
                 row = conn.execute("SELECT * FROM impuestos WHERE codigo = ? AND activo = 1", (codigo_impuesto,)).fetchone()
@@ -53,7 +53,7 @@ class TaxService:
 
     @staticmethod
     def update_tax(impuesto_id, nombre, porcentaje, tipo, cuenta_contable_id, activo=1, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             conn.execute("""
                 UPDATE impuestos

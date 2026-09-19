@@ -45,6 +45,8 @@ FECHA_TRABAJO = "2026-04-30"
 USUARIO_ADMIN = 1
 
 TABLAS = [
+    "casos_libros_intentos", "casos_libros_trazabilidad", "casos_libros",
+    "casos_libros_reglas", "casos_libros_fuentes",
     "detalle_intentos", "intentos_estudiante", "casos_simulacion", "simulaciones",
     "matriculas", "cursos", "documentos_fuente", "conciliaciones_bancarias", "arqueos_caja",
     "movimientos_bancarios", "movimientos_caja", "bancos", "cajas", "pagos", "cobros",
@@ -1246,6 +1248,10 @@ def _seed_all_interno(db_path=None, reset=True, verbose=True):
     init_db(db_path)
     if reset:
         _reset_tables(db_path)
+        # El reinicio limpia las tablas del banco de casos §61: se vuelven a sembrar.
+        from database.esquema_casos_libros import aplicar as _aplicar_casos, sembrar as _sembrar_casos
+        _aplicar_casos(db_path, verboso=False)
+        _sembrar_casos(db_path, verboso=False)
 
     productos = _seed_maestros(db_path)
     asiento_apertura, numero_apertura = _seed_apertura(db_path, productos)

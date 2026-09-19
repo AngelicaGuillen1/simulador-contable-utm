@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Compra {{ compra.numero_factura }} - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set neto = compra.neto_pagar or compra.total %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1"><i class="bi bi-receipt text-primary me-2"></i>Compra Factura
+      <code>{{ compra.numero_factura }}</code></h3>
+    <p class="text-muted small mb-0">{{ compra.proveedor_nombre }} — RUC {{ compra.proveedor_ruc }} ·
+      Registrada el {{ compra.fecha }} · Forma de pago {{ compra.forma_pago }}</p>
+  </div>
+  <a href="{{ url_for('purchases.list_purchases') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Volver a Compras
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-box-seam me-1 text-primary"></i>Ítems adquiridos</div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Producto</th>
+              <th class="text-end">Cantidad</th>
+              <th class="text-end">Costo Unitario</th>
+              <th class="text-end pe-3">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in compra.detalles %}
+            <tr>
+              <td class="ps-3"><code>{{ d.producto_codigo }}</code> {{ d.producto_nombre }}</td>
+              <td class="text-end">{{ d.cantidad }}</td>
+              <td class="text-end">${{ "{:,.2f}".format(d.costo_unitario) }}</td>
+              <td class="text-end pe-3">${{ "{:,.2f}".format(d.subtotal) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-percent me-1 text-primary"></i>Desglose tributario</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Subtotal (valor del bien o servicio):</span>
+          <strong>${{ "{:,.2f}".format(compra.subtotal) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">IVA Compras {{ compra.iva_porcentaje|round(2) }} % (crédito tributario):</span>
+          <strong class="text-primary">${{ "{:,.2f}".format(compra.iva_valor) }}</strong>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">
+            Retención Renta {{ (compra.retencion_renta_porcentaje or 0)|round(2) }} %
+            {% if compra.retencion_renta_codigo %}<code>{{ compra.retencion_renta_codigo }}</code>{% endif %}
+            <div class="text-muted" style="font-size:.72rem;">sobre ${{ "{:,.2f}".format(compra.subtotal) }} del bien o servicio</div>
+          </span>
+          <strong class="text-danger">− ${{ "{:,.2f}".format(compra.retencion_renta_valor or 0) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">
+            Retención IVA {{ (compra.retencion_iva_porcentaje or 0)|round(2) }} %
+            {% if compra.retencion_iva_codigo %}<code>{{ compra.retencion_iva_codigo }}</code>{% endif %}
+            <div class="text-muted" style="font-size:.72rem;">sobre ${{ "{:,.2f}".format(compra.iva_valor) }} del IVA de la factura</div>
+          </span>
+          <strong class="text-danger">− ${{ "{:,.2f}".format(compra.retencion_iva_valor or 0) }}</strong>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Total de la factura:</span>
+          <strong>${{ "{:,.2f}".format(compra.total) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Total retenido (se declara y paga al SRI):</span>
+          <strong class="text-danger">− ${{ "{:,.2f}".format(compra.total_retenciones or 0) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Neto al proveedor:</span>
+          <span class="fs-4 fw-bold text-dark">${{ "{:,.2f}".format(neto) }}</span>
+        </div>
+        <div class="form-text mt-2 mb-0">
+          {% if compra.proveedor_contribuyente_especial %}
+            El proveedor está marcado como <strong>contribuyente especial</strong>: se aplicó la retención de IVA reducida.
+          {% endif %}
+          Concepto declarado: <strong>{{ compra.tipo_compra or 'SIN_RETENCION' }}</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white fw-semibold">
+    <i class="bi bi-journal-text me-1 text-primary"></i>Asiento contable en el Libro Diario
+    {% if compra.asiento_id %}<span class="badge bg-light text-dark border ms-1">Asiento #{{ compra.asiento_id }}</span>{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Cuenta</th>
+          <th>Detalle</th>
+          <th class="text-end">Debe</th>
+          <th class="text-end pe-3">Haber</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lineas %}
+        <tr>
+          <td class="ps-3"><code>{{ l.cuenta_codigo }}</code> {{ l.cuenta_nombre }}</td>
+          <td class="small text-muted">{{ l.referencia }}</td>
+          <td class="text-end">{% if l.debe %}${% endif %}{{ "{:,.2f}".format(l.debe) if l.debe else '—' }}</td>
+          <td class="text-end pe-3">{% if l.haber %}${% endif %}{{ "{:,.2f}".format(l.haber) if l.haber else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-muted py-4">Esta compra no tiene asiento contable asociado.</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if lineas %}
+      <tfoot class="table-light fw-semibold">
+        <tr>
+          <td class="ps-3" colspan="2">Totales</td>
+          <td class="text-end">${{ "{:,.2f}".format(total_debe) }}</td>
+          <td class="text-end pe-3">${{ "{:,.2f}".format(total_haber) }}</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="text-center small text-muted">
+            Total Debe = Total Haber:
+            <strong>{{ 'asiento cuadrado' if total_debe == total_haber else 'revisar el asiento' }}</strong>
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

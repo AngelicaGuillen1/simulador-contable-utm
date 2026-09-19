@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Panel docente · Banco de casos §61 y trazabilidad §62{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-mortarboard text-primary me-2"></i>Banco de casos prácticos (§61) y trazabilidad de las fuentes (§62)</h4>
+    <p class="text-muted mb-0 small">
+      Ficha completa de cada caso, correcciones de erratas registradas, reglas de trazabilidad y tarifas
+      demostrativas editables antes de cada actividad.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('casos_libros.listado') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journals me-1"></i> Vista del estudiante</a>
+    <a href="{{ url_for('casos_libros.panel_docente', formato='json') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-braces me-1"></i> JSON</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Casos</div><div class="fs-3 fw-bold">{{ resumen.total }}</div></div></div></div>
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Activos</div><div class="fs-3 fw-bold text-success">{{ resumen.activos }}</div></div></div></div>
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Sin solución</div><div class="fs-3 fw-bold text-secondary">{{ resumen.sin_solucion_en_fuente }}</div></div></div></div>
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Erratas corregidas</div><div class="fs-3 fw-bold text-warning-emphasis">{{ resumen.con_correccion_de_erratas }}</div></div></div></div>
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Reconstruidos</div><div class="fs-3 fw-bold text-secondary">{{ resumen.con_dato_reconstruido }}</div></div></div></div>
+  <div class="col-6 col-lg-2"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small text-uppercase fw-bold">Intentos</div><div class="fs-3 fw-bold">{{ intentos|length }}</div></div></div></div>
+</div>
+
+{# ------------------------------------------------------------- Reglas §62 #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong><i class="bi bi-shield-check me-2"></i>Reglas de trazabilidad de las fuentes (§62)</strong>
+    <span class="badge bg-primary-subtle text-primary border">
+      {{ reglas_trazabilidad|length }} reglas de trazabilidad de las fuentes de {{ reglas|length }} en §62
+    </span>
+  </div>
+  <div class="accordion accordion-flush" id="acordeon-reglas">
+    {% for r in reglas %}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#regla-{{ r.numero }}">
+          <span class="badge bg-dark me-2">{{ r.codigo }}</span>
+          <strong>{{ r.titulo }}</strong>
+          {% if r.trazabilidad_fuentes %}
+          <span class="badge bg-success-subtle text-success border ms-2">trazabilidad de fuentes</span>
+          {% else %}
+          <span class="badge bg-secondary-subtle text-secondary border ms-2">catálogo semilla</span>
+          {% endif %}
+        </button>
+      </h2>
+      <div id="regla-{{ r.numero }}" class="accordion-collapse collapse" data-bs-parent="#acordeon-reglas">
+        <div class="accordion-body small">
+          <p class="mb-2">{{ r.texto_fuente }}</p>
+          <div class="text-muted"><strong>Aplicación en el simulador:</strong> {{ r.aplicacion }}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {# ------------------------------------------------------- Tarifas demostrativas #}
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white"><strong><i class="bi bi-percent me-2"></i>Tarifas de las fuentes: {{ advertencias.etiqueta_tasas }} (§62.2)</strong></div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light"><tr><th>Tarifa</th><th>Fuente</th><th class="text-end">Valor</th><th>Fijar</th></tr></thead>
+          <tbody>
+            {% for t in tasas %}
+            <tr>
+              <td class="small"><strong>{{ t.nombre }}</strong>
+                <div class="text-muted">{{ t.etiqueta }} · {{ 'editada por el docente' if t.editada else 'valor de la fuente' }}</div>
+              </td>
+              <td class="small text-muted">{{ t.fuente }}</td>
+              <td class="text-end font-monospace">{{ t.valor_vigente|num_ec(4) }}</td>
+              <td>
+                <form class="d-flex gap-1" method="post" action="{{ url_for('casos_libros.editar_tasa') }}">
+                  <input type="hidden" name="clave" value="{{ t.clave }}">
+                  <input class="form-control form-control-sm" style="width:5.5rem" name="valor" inputmode="decimal" placeholder="{{ t.valor_vigente }}">
+                  <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-save"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer bg-white small text-muted">
+        Ninguna tarifa está fija en código: todas se leen de la tabla <code>parametros</code> de la base de control
+        y se pueden editar antes de cada actividad.
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------- Erratas y catálogo #}
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-tools me-2"></i>Erratas de la fuente que no se replican (§59.10)</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for e in erratas_catalogo %}
+        <li class="list-group-item">
+          <strong>{{ e.titulo }}</strong>: {{ e.texto_fuente }}
+          <div class="text-muted">Regla: {{ e.aplicacion }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white"><strong><i class="bi bi-diagram-3 me-2"></i>Catálogo semilla: punto de partida (§62.8)</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for m in modos_catalogo %}
+        <li class="list-group-item"><strong>{{ m.nombre }}</strong> — {{ m.descripcion }}</li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer bg-white small text-muted">{{ advertencias.catalogo_semilla }}</div>
+    </div>
+  </div>
+</div>
+
+{# ------------------------------------------------------------- Banco de casos #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white"><strong><i class="bi bi-list-ol me-2"></i>Los 19 casos de §61 con su ficha</strong></div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Caso</th><th>Fuente y páginas</th><th>Estado</th><th>Correcciones registradas</th>
+            <th class="text-center">Activo</th><th class="text-end">Intentos</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in casos %}
+        <tr>
+          <td>
+            <div class="fw-semibold small">{{ c.nombre }}</div>
+            <div class="text-muted small font-monospace">{{ c.codigo }} · U{{ c.unidad }} · {{ c.tipo_verificacion }}</div>
+          </td>
+          <td class="small">{{ c.cita_fuente }}
+            <div class="text-muted">Solución en la fuente: {{ 'sí' if c.solucion_en_fuente else 'no' }} ·
+              año {{ c.anio }}</div>
+          </td>
+          <td class="small">
+            <span class="badge bg-dark">{{ c.estado_validacion }}</span>
+            <div class="text-muted mt-1">ficha {{ 'completa' if c.ficha.completa else 'INCOMPLETA' }}</div>
+          </td>
+          <td class="small">
+            {% for corr in c.correcciones %}
+            <div><span class="font-monospace">{{ corr.valor_libro }}</span> →
+              <span class="fw-semibold">{{ corr.valor_corregido }}</span>
+              <div class="text-muted">{{ corr.razon }}</div></div>
+            {% else %}<span class="text-muted">—</span>{% endfor %}
+            {% for etiqueta in c.etiquetas %}
+            <span class="badge bg-secondary-subtle text-secondary border mt-1">{{ etiqueta }}</span>
+            {% endfor %}
+          </td>
+          <td class="text-center">
+            <form method="post" action="{{ url_for('casos_libros.activar', codigo=c.codigo) }}">
+              <input type="hidden" name="activo" value="{{ 0 if c.activo else 1 }}">
+              <button class="btn btn-sm {{ 'btn-success' if c.activo else 'btn-outline-secondary' }}" type="submit">
+                {{ 'Activo' if c.activo else 'Inactivo' }}
+              </button>
+            </form>
+          </td>
+          <td class="text-end small">
+            {% set total = intentos|selectattr('caso_codigo', 'equalto', c.codigo)|list|length %}
+            {{ total }}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('casos_libros.docente_ficha', codigo=c.codigo) }}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-search me-1"></i> Ficha
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ------------------------------------------------------------- Intentos #}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between">
+    <strong><i class="bi bi-people me-2"></i>Intentos registrados de los estudiantes</strong>
+    <span class="badge bg-secondary">{{ intentos|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light"><tr><th>Caso</th><th>Estudiante</th><th>Intento</th><th class="text-end">Puntaje</th>
+        <th>Resultado</th><th>Oficial</th><th>Fecha</th></tr></thead>
+      <tbody>
+        {% for i in intentos %}
+        <tr>
+          <td class="small font-monospace">{{ i.caso_codigo }}</td>
+          <td class="small">#{{ i.estudiante_id }}</td>
+          <td class="small">#{{ i.numero_intento }}</td>
+          <td class="text-end small">{{ (i.puntuacion or 0)|num_ec(2) }}</td>
+          <td class="small">{{ i.resultado or i.estado }}</td>
+          <td class="small">{{ 'sí' if i.oficial else 'no' }}</td>
+          <td class="small text-muted">{{ i.finalizado_en or i.iniciado_en }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay intentos registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm small mt-4">
+  <strong><i class="bi bi-info-circle me-1"></i>IVA y retenciones (§62.3).</strong> {{ advertencias.iva_retenciones }}
+</div>
+{% endblock %}

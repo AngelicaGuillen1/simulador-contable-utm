@@ -5,7 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h3 class="fw-bold mb-1"><i class="bi bi-cart-check text-primary me-2"></i>Ventas de Mercaderías</h3>
-    <p class="text-muted small mb-0">Facturación de productos de primera necesidad con afectación directa a inventario, costo de ventas y contabilidad</p>
+    <p class="text-muted small mb-0">Facturación con afectación directa a inventario, costo de ventas, contabilidad y
+      <strong>retenciones de Renta e IVA que el cliente agente de retención practica a la empresa</strong>.</p>
   </div>
   <a href="{{ url_for('sales.create_sale') }}" class="btn btn-primary">
     <i class="bi bi-plus-circle me-1"></i> Nueva Factura de Venta
@@ -23,16 +24,26 @@
             <th>Cliente</th>
             <th>Forma Pago</th>
             <th class="text-end">Subtotal</th>
-            <th class="text-end">IVA (15%)</th>
+            <th class="text-end">IVA</th>
             <th class="text-end">Total</th>
+            <th class="text-end">Retención Renta</th>
+            <th class="text-end">Retención IVA</th>
+            <th class="text-end">Neto por cobrar</th>
             <th class="text-end">Costo Ventas</th>
             <th class="text-center pe-4">Estado</th>
           </tr>
         </thead>
         <tbody>
           {% for v in ventas %}
+          {% set renta = v.retencion_renta_valor or 0 %}
+          {% set ret_iva = v.retencion_iva_valor or 0 %}
+          {% set neto = v.neto_cobrar if v.neto_cobrar is not none else v.total %}
           <tr>
-            <td class="ps-4 fw-bold"><code>{{ v.numero_factura }}</code></td>
+            <td class="ps-4 fw-bold">
+              <a href="{{ url_for('sales.sale_detail', venta_id=v.id) }}" class="text-decoration-none">
+                <code>{{ v.numero_factura }}</code>
+              </a>
+            </td>
             <td>{{ v.fecha }}</td>
             <td>
               <div class="fw-semibold text-dark">{{ v.cliente_nombre }}</div>
@@ -45,7 +56,25 @@
             </td>
             <td class="text-end">${{ "{:,.2f}".format(v.subtotal) }}</td>
             <td class="text-end text-muted">${{ "{:,.2f}".format(v.iva_valor) }}</td>
-            <td class="text-end fw-bold text-success">${{ "{:,.2f}".format(v.total) }}</td>
+            <td class="text-end fw-bold">${{ "{:,.2f}".format(v.total) }}</td>
+            <td class="text-end {% if renta %}text-danger{% else %}text-muted{% endif %}">
+              {% if renta %}
+                <div>${{ "{:,.2f}".format(renta) }}</div>
+                <small class="text-muted">{{ (v.retencion_renta_porcentaje or 0)|round(2) }} % <code>{{ v.retencion_renta_codigo }}</code></small>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end {% if ret_iva %}text-danger{% else %}text-muted{% endif %}">
+              {% if ret_iva %}
+                <div>${{ "{:,.2f}".format(ret_iva) }}</div>
+                <small class="text-muted">{{ (v.retencion_iva_porcentaje or 0)|round(2) }} % <code>{{ v.retencion_iva_codigo }}</code></small>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end fw-bold text-success">
+              ${{ "{:,.2f}".format(neto) }}
+              {% if (v.total_retenciones or 0) > 0 %}
+                <div><small class="text-muted">factura ${{ "{:,.2f}".format(v.total) }} − ret. ${{ "{:,.2f}".format(v.total_retenciones) }}</small></div>
+              {% endif %}
+            </td>
             <td class="text-end text-muted">${{ "{:,.2f}".format(v.costo_ventas_total) }}</td>
             <td class="text-center pe-4">
               <span class="badge bg-success-subtle text-success border border-success-subtle">{{ v.estado }}</span>
@@ -53,12 +82,53 @@
           </tr>
           {% else %}
           <tr>
-            <td colspan="9" class="text-center py-4 text-muted">No se registran ventas comerciales en el período.</td>
+            <td colspan="12" class="text-center py-4 text-muted">No se registran ventas comerciales en el período.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+  <div class="card-header bg-white fw-semibold small">
+    <i class="bi bi-percent me-1 text-primary"></i> Conceptos de retención configurados en el aula
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-2">
+        <thead class="table-light">
+          <tr>
+            <th>Concepto</th>
+            <th class="text-center">Retención Renta (sobre el valor de la venta)</th>
+            <th class="text-center">Retención IVA (sobre el IVA de la factura)</th>
+            <th class="text-center">Cuenta del vendedor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in conceptos %}
+          <tr>
+            <td class="small">{{ c.etiqueta }}</td>
+            <td class="text-center small">
+              {% if c.renta %}{{ c.renta.porcentaje|round(2) }} % <code>{{ c.renta.codigo }}</code>{% else %}—{% endif %}
+            </td>
+            <td class="text-center small">
+              {% if c.iva %}{{ c.iva.porcentaje|round(2) }} % <code>{{ c.iva.codigo }}</code>{% else %}—{% endif %}
+            </td>
+            <td class="text-center small">
+              {% if c.renta or c.iva %}
+                {% if c.renta %}<code>{{ c.renta.cuenta_codigo }}</code> {{ c.renta.cuenta_nombre }}<br>{% endif %}
+                {% if c.iva %}<code>{{ c.iva.cuenta_codigo }}</code> {{ c.iva.cuenta_nombre }}{% endif %}
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-muted small mb-0">Las retenciones de Renta y de IVA se calculan con los porcentajes y las cuentas
+      del catálogo tributario del aula (tabla <code>impuestos</code>), no con valores escritos en el programa.</p>
   </div>
 </div>
 {% endblock %}

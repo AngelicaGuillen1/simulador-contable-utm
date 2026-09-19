@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Estudiantes y Accesos - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% set estudiantes = estudiantes|default([], true) %}
+{% set solo_sin_ingreso = solo_sin_ingreso|default(false) %}
+{% set con_ingreso = estudiantes|selectattr('ha_ingresado')|list %}
+{% set tiempo_total = estudiantes|sum(attribute='tiempo_seg') %}
+
+<!-- ==================== Encabezado ==================== -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+  <div>
+    <h3 class="fw-bold mb-1">
+      <i class="bi bi-people-fill text-primary me-2"></i>
+      {% if solo_sin_ingreso %}Estudiantes que nunca ingresaron{% else %}Estudiantes del curso{% endif %}
+    </h3>
+    <p class="text-muted small mb-0">
+      Cuentas con rol Estudiante, su estado de matrícula y si ya iniciaron sesión en el simulador contable.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('teacher.accesos') }}" class="btn btn-outline-primary">
+      <i class="bi bi-shield-check me-1"></i> Panel de accesos
+    </a>
+    {% if solo_sin_ingreso %}
+    <a href="{{ url_for('teacher.estudiantes') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Ver todos
+    </a>
+    {% else %}
+    <a href="{{ url_for('teacher.sin_ingresar') }}" class="btn btn-outline-danger">
+      <i class="bi bi-person-x me-1"></i> Nunca ingresaron
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ==================== Indicadores ==================== -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Estudiantes</div>
+          <div class="kpi-value">{{ estudiantes|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-person-vcard me-1"></i> Matriculados en el simulador</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-people-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Ya ingresaron</div>
+          <div class="kpi-value text-success">{{ con_ingreso|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-right me-1"></i> Con al menos una sesión</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-person-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Sin ingresar</div>
+          <div class="kpi-value text-danger">{{ estudiantes|length - con_ingreso|length }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-exclamation-triangle me-1"></i> Requieren seguimiento</div>
+        </div>
+        <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-person-dash"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Tiempo acumulado</div>
+          <div class="kpi-value">{{ (tiempo_total or 0) // 3600 }} h {{ ((tiempo_total or 0) % 3600) // 60 }} min</div>
+          <div class="small text-muted mt-1"><i class="bi bi-stopwatch me-1"></i> Trabajo registrado en el aula</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-stopwatch"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Tabla ==================== -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-person-lines-fill text-primary me-2"></i>Listado de estudiantes</h6>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">Estudiante</th>
+            <th>Matrícula</th>
+            <th>Paralelo</th>
+            <th>Estado</th>
+            <th class="text-center">Ingresó</th>
+            <th class="text-center">Sesiones</th>
+            <th>Último acceso</th>
+            <th>Tiempo de actividad</th>
+            <th class="text-center">Actividades</th>
+            <th class="text-center">Evidencias</th>
+            <th class="pe-4 text-end">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in estudiantes %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-bold text-dark">{{ e.nombre }}</div>
+              <div class="text-muted" style="font-size: 0.72rem;">
+                <code>{{ e.username }}</code> &bull; {{ e.correo }}
+              </div>
+            </td>
+            <td class="small text-muted">{{ e.matricula or '—' }}</td>
+            <td>
+              {% if e.paralelo %}
+              <span class="badge bg-secondary-subtle text-secondary border">{{ e.paralelo }}</span>
+              {% else %}<span class="text-muted small">—</span>{% endif %}
+            </td>
+            <td>
+              {% if e.estado_cuenta == 'Activo' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border px-3">Inactivo</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if e.ha_ingresado %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-check-circle me-1"></i>Sí
+              </span>
+              {% else %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                <i class="bi bi-x-circle me-1"></i>No
+              </span>
+              {% endif %}
+            </td>
+            <td class="text-center fw-bold">{{ e.num_sesiones or 0 }}</td>
+            <td class="small">
+              {% if e.ultimo_acceso %}
+              <div class="fw-semibold text-dark">{{ e.ultimo_acceso }}</div>
+              {% else %}<span class="text-muted">Sin ingresos</span>{% endif %}
+            </td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-stopwatch me-1"></i>{{ e.tiempo_actividad }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">{{ e.actividades_asignadas or 0 }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-info-subtle text-info border border-info-subtle">{{ e.evidencias_generadas or 0 }}</span>
+            </td>
+            <td class="pe-4 text-end">
+              <a href="{{ url_for('teacher.estudiante_detalle', estudiante_id=e.estudiante_id) }}"
+                 class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person-lines-fill me-1"></i>Ficha
+              </a>
+              <a href="{{ url_for('teacher.estudiante_linea_tiempo', estudiante_id=e.estudiante_id) }}"
+                 class="btn btn-sm btn-outline-secondary" title="Línea de tiempo">
+                <i class="bi bi-clock-history"></i>
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="11" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+              {% if solo_sin_ingreso %}
+              ¡Excelente! Todos los estudiantes registrados ya ingresaron al simulador.
+              {% else %}
+              Aún no hay estudiantes registrados en el sistema.
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer bg-white border-0 small text-muted px-4 pb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    Los estudiantes se crean desde <strong>Administración &rsaquo; Gestión Usuarios</strong> con el rol Estudiante
+    y su paralelo asignado.
+  </div>
+</div>
+{% endblock %}

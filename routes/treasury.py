@@ -5,7 +5,7 @@ from services.treasury_service import TreasuryService
 from services.accounting_service import AccountingService
 from services.audit_service import AuditService
 from services.period_service import PeriodService
-from models import get_db_connection
+from models import get_db_contable
 
 treasury_bp = Blueprint("treasury", __name__)
 
@@ -29,7 +29,7 @@ def cash_movement():
             raise ValueError("El monto del movimiento de caja debe ser mayor a 0.")
 
         caja = None
-        conn = get_db_connection()
+        conn = get_db_contable()
         try:
             caja = conn.execute("SELECT * FROM cajas WHERE id = ?", (caja_id,)).fetchone()
         finally:
@@ -52,7 +52,7 @@ def cash_movement():
             if not banco_id:
                 raise ValueError("Debe seleccionar la cuenta bancaria para depósitos y retiros.")
             banco = None
-            conn = get_db_connection()
+            conn = get_db_contable()
             try:
                 banco = conn.execute("SELECT * FROM bancos WHERE id = ?", (int(banco_id),)).fetchone()
             finally:
@@ -132,7 +132,7 @@ def bank_movement():
             raise ValueError("El concepto del movimiento bancario es obligatorio.")
         if monto <= 0:
             raise ValueError("El monto del movimiento bancario debe ser mayor a 0.")
-        conn = get_db_connection()
+        conn = get_db_contable()
         try:
             banco = conn.execute("SELECT * FROM bancos WHERE id = ?", (banco_id,)).fetchone()
         finally:
@@ -180,7 +180,7 @@ def bank_movement():
 @treasury_bp.route("/caja", methods=["GET", "POST"])
 @login_required
 def cash():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             caja_id = int(request.form.get("caja_id", 1))
@@ -217,7 +217,7 @@ def cash():
 @treasury_bp.route("/bancos")
 @login_required
 def banks():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         bancos = TreasuryService.get_banks()
         movimientos = conn.execute("""
@@ -235,7 +235,7 @@ def banks():
 @treasury_bp.route("/conciliacion", methods=["GET", "POST"])
 @login_required
 def reconciliation():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             banco_id = int(request.form.get("banco_id"))

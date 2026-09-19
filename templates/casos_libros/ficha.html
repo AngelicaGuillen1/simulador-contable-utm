@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}{{ caso.codigo }} · {{ caso.nombre }} - Simulador Contable{% endblock %}
+
+{% macro estado_badge(estado) %}
+  {% set e = (estado or '')|upper %}
+  {% if e == 'VERIFICADO' %}<span class="badge bg-success-subtle text-success border border-success-subtle">Verificado</span>
+  {% elif e == 'VERIFICADO_CON_RESERVA' %}<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Verificado con reserva</span>
+  {% elif e == 'CON_ERRATA' %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Con errata corregida</span>
+  {% elif e == 'PARCIAL_CON_ERRATA' %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Parcial / con errata</span>
+  {% else %}<span class="badge bg-secondary-subtle text-secondary border">Sin solución en la fuente</span>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-journal-text text-primary me-2"></i>{{ caso.codigo }} · {{ caso.nombre }}</h4>
+    <p class="text-muted mb-0 small">
+      Unidad {{ caso.unidad }} · {{ caso.tipo }} · dificultad {{ caso.dificultad }} ·
+      {{ caso.intentos_maximos }} intento(s) permitido(s) · {{ caso.puntaje|num_ec(0) }} puntos
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('casos_libros.listado') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Volver al banco</a>
+    <a href="{{ url_for('casos_libros.ficha', codigo=caso.codigo, formato='json') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-braces me-1"></i> JSON</a>
+  </div>
+</div>
+
+{# ------------------------------------------------ Ficha obligatoria del caso (§62.9) #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong><i class="bi bi-card-checklist me-2"></i>Ficha del caso (§62.9)</strong>
+    {{ estado_badge(caso.estado_validacion) }}
+  </div>
+  <div class="card-body">
+    <div class="row g-3 small">
+      <div class="col-md-6"><span class="text-muted d-block">Fuente completa</span>
+        <strong>{{ caso.fuente_nombre }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Página (doble numeración §62.7)</span>
+        <strong>{{ caso.cita_fuente }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Año</span><strong>{{ caso.anio }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Solución en la fuente</span>
+        <strong>{{ 'Sí' if caso.solucion_en_fuente else 'No (práctica)' }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Corrección de erratas</span>
+        <strong>{{ 'Sí' if caso.hubo_correccion else 'No' }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Verificación</span>
+        <strong>{{ caso.tipo_verificacion }}</strong></div>
+      <div class="col-md-3"><span class="text-muted d-block">Contexto normativo (§62.6)</span>
+        <strong>{{ caso.contexto_normativo }}</strong></div>
+    </div>
+
+    {% if caso.correcciones %}
+    <div class="mt-3">
+      <div class="fw-semibold text-warning-emphasis"><i class="bi bi-tools me-1"></i>Erratas de la fuente corregidas (§62.1)</div>
+      <div class="table-responsive">
+        <table class="table table-sm table-warning-subtle mb-0">
+          <thead><tr><th>Campo</th><th>Valor del libro</th><th>Valor aplicado</th><th>Razón</th></tr></thead>
+          <tbody>
+            {% for c in caso.correcciones %}
+            <tr><td class="small">{{ c.campo }}</td><td class="small">{{ c.valor_libro }}</td>
+                <td class="small fw-semibold">{{ c.valor_corregido }}</td><td class="small">{{ c.razon }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if caso.etiquetas %}
+    <div class="mt-3">
+      {% for etiqueta in caso.etiquetas %}
+      <span class="badge bg-secondary-subtle text-secondary border me-1 mb-1"><i class="bi bi-sticky me-1"></i>{{ etiqueta }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if caso.filas_excluidas %}
+    <div class="alert alert-warning small mt-3 mb-0">
+      <strong>Filas excluidas del caso (§59.10 / §61.18):</strong>
+      <ul class="mb-0">{% for fila in caso.filas_excluidas %}<li>{{ fila }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if caso.subcasos %}
+    <div class="mt-3">
+      <div class="fw-semibold"><i class="bi bi-list-check me-1"></i>Subcasos</div>
+      <ul class="small mb-0">
+        {% for s in caso.subcasos %}
+        <li>
+          <span class="font-monospace">{{ s.codigo }}</span> —
+          {% if s.cargable %}<span class="badge bg-success-subtle text-success border">cargable</span>
+          {% else %}<span class="badge bg-danger-subtle text-danger border">no cargable</span>{% endif %}
+          {{ s.nota }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ------------------------------------------------ Advertencias de fidelidad #}
+<div class="alert alert-info border-0 shadow-sm small mb-3">
+  <strong><i class="bi bi-info-circle me-1"></i>Las fuentes no explican el IVA ni las retenciones como normativa (§62.3).</strong>
+  <div class="mt-1">{{ advertencias.iva_retenciones }}</div>
+</div>
+
+{% if caso.advertencia_marco_externo %}
+<div class="alert alert-dark border-0 shadow-sm small mb-3">
+  <strong><i class="bi bi-globe me-1"></i>Marco normativo extranjero o histórico (§62.6).</strong>
+  <div class="mt-1">{{ caso.advertencia_marco_externo }}</div>
+</div>
+{% endif %}
+
+{% for advertencia in caso.advertencias %}
+<div class="alert alert-warning border-0 shadow-sm small mb-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ advertencia }}</div>
+{% endfor %}
+
+{% if not caso.respuesta_oficial_permitida %}
+<div class="alert alert-secondary border-0 shadow-sm small mb-3">
+  <i class="bi bi-shield-exclamation me-1"></i>{{ caso.motivo_no_oficial }}
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {# ------------------------------------------------ Enunciado, datos y solución #}
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-file-text me-2"></i>Enunciado</strong></div>
+      <div class="card-body small">{{ caso.enunciado }}</div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-database me-2"></i>Datos entregados por la fuente</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for dato in caso.datos %}
+        <li class="list-group-item">{{ dato }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if caso.parametros_caso %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-sliders me-2"></i>Parámetros del caso (§62.2)</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for clave, valor in caso.parametros_caso.items() %}
+        <li class="list-group-item d-flex justify-content-between"><span>{{ clave }}</span>
+          <span class="font-monospace">{{ valor if valor is string else valor|num_ec(2) }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if caso.asientos_esperados %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white d-flex justify-content-between">
+        <strong><i class="bi bi-journal-check me-2"></i>Asientos esperados</strong>
+        <span class="badge bg-primary-subtle text-primary border">{{ caso.asientos_esperados|length }} partida(s)</span>
+      </div>
+      <div class="card-body">
+        {% for asiento in caso.asientos_esperados %}
+        <div class="mb-3">
+          <div class="small fw-semibold">
+            {{ asiento.glosa }}
+            <span class="text-muted">
+              {% if asiento.fecha %}· {{ asiento.fecha }}{% endif %}
+              {% if asiento.letra %}· ({{ asiento.letra }}){% endif %}
+              {% if asiento.subcaso %}· {{ asiento.subcaso }}{% endif %}
+            </span>
+          </div>
+          <table class="table table-sm table-bordered mb-1">
+            <thead class="table-light"><tr><th>Código</th><th>Cuenta</th><th class="text-end">Debe</th><th class="text-end">Haber</th></tr></thead>
+            <tbody>
+              {% for linea in asiento.lineas %}
+              <tr>
+                <td class="small font-monospace">{{ linea.codigo or '' }}</td>
+                <td class="small">{{ linea.cuenta }}</td>
+                <td class="text-end small">{% if linea.debe %}{{ linea.debe|num_ec(2) }}{% endif %}</td>
+                <td class="text-end small">{% if linea.haber %}{{ linea.haber|num_ec(2) }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if caso.saldos_finales and (caso.saldos_finales.debitos or caso.saldos_finales.creditos) %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-table me-2"></i>Saldos finales publicados</strong></div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="small fw-bold text-muted text-uppercase">Deudores</div>
+            <ul class="list-unstyled small mb-0">
+              {% for cuenta, valor in (caso.saldos_finales.debitos or {}).items() %}
+              <li class="d-flex justify-content-between"><span>{{ cuenta }}</span><span class="font-monospace">{{ valor|num_ec(2) }}</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <div class="small fw-bold text-muted text-uppercase">Acreedores</div>
+            <ul class="list-unstyled small mb-0">
+              {% for cuenta, valor in (caso.saldos_finales.creditos or {}).items() %}
+              <li class="d-flex justify-content-between"><span>{{ cuenta }}</span><span class="font-monospace">{{ valor|num_ec(2) }}</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if caso.solucion and caso.solucion_visible %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-patch-check me-2"></i>Solución publicada por la fuente</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for linea in caso.solucion %}<li class="list-group-item">{{ linea }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% elif caso.practica_sin_solucion %}
+    <div class="alert alert-secondary small">
+      <i class="bi bi-eye-slash me-1"></i>Este caso se carga como <strong>enunciado de práctica sin solución
+      visible</strong> (§62.5): la corrección es del docente o por reglas mecánicas verificables (asiento
+      cuadrado, cuentas válidas, posición Debe/Haber y balance cuadrado).
+    </div>
+    {% endif %}
+
+    {% if es_docente and caso.solucion_referencial %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-calculator me-2"></i>Solución referencial (no publicada por el libro)</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for clave, valor in caso.solucion_referencial.items() %}
+        <li class="list-group-item d-flex justify-content-between"><span>{{ clave }}</span>
+          <span class="font-monospace">{{ valor|num_ec(2) }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ------------------------------------------------ Resolución y verificación #}
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-pencil-square me-2"></i>Registrar mi respuesta</strong></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('casos_libros.enviar', codigo=caso.codigo) }}">
+          {% set intento_abierto = request.args.get('intento') %}
+          {% if intento_abierto %}
+          <input type="hidden" name="intento_id" value="{{ intento_abierto }}">
+          <div class="small text-muted mb-2">Intento #{{ intento_abierto }} en curso.</div>
+          {% endif %}
+
+          {% if caso.tipo_verificacion == 'ECUACION' %}
+          <div class="row g-2">
+            {% for elemento in ['activo', 'pasivo', 'capital', 'ingresos', 'gastos'] %}
+            <div class="col-6">
+              <label class="form-label small text-uppercase text-muted mb-0">{{ elemento }}</label>
+              <input class="form-control form-control-sm text-end" name="{{ elemento }}" inputmode="decimal" placeholder="0,00">
+            </div>
+            {% endfor %}
+          </div>
+          {% elif caso.tipo_verificacion == 'TOTALES' %}
+          <div class="row g-2 mb-2">
+            {% for clave in caso.totales_verificados.keys() %}
+            <div class="col-6">
+              <label class="form-label small text-uppercase text-muted mb-0">{{ clave }}</label>
+              <input class="form-control form-control-sm text-end" name="totales.{{ clave }}" inputmode="decimal" placeholder="0,00">
+            </div>
+            {% endfor %}
+          </div>
+          <p class="small text-muted mb-2">Nota: en este caso la verificación se hace contra los totales
+            comprobados del caso; el docente puede revisar su procedimiento.</p>
+          {% endif %}
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle" id="tabla-lineas">
+              <thead class="table-light"><tr><th>Cuenta</th><th style="width:28%">Debe</th><th style="width:28%">Haber</th></tr></thead>
+              <tbody>
+                {% for i in range(1, 7) %}
+                <tr>
+                  <td><input class="form-control form-control-sm" name="cuenta_{{ i }}" placeholder="código o nombre"></td>
+                  <td><input class="form-control form-control-sm text-end" name="debe_{{ i }}" inputmode="decimal" placeholder="0,00"></td>
+                  <td><input class="form-control form-control-sm text-end" name="haber_{{ i }}" inputmode="decimal" placeholder="0,00"></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="agregar-linea"><i class="bi bi-plus-lg me-1"></i> Línea</button>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check2-circle me-1"></i> Verificar respuesta</button>
+          </div>
+        </form>
+
+        <hr>
+        <form method="post" action="{{ url_for('casos_libros.abrir_intento', codigo=caso.codigo) }}">
+          <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+            <i class="bi bi-play-circle me-1"></i> Abrir un intento nuevo (máximo {{ caso.intentos_maximos }})
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between">
+        <strong><i class="bi bi-clock-history me-2"></i>Mis intentos</strong>
+        {% if resumen_intentos %}<span class="badge bg-secondary">{{ resumen_intentos.total }}</span>{% endif %}
+      </div>
+      <div class="list-group list-group-flush">
+        {% for i in intentos %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <span class="fw-semibold small">Intento #{{ i.numero_intento }}</span>
+            <span class="small">
+              {% if i.resultado %}
+              <span class="badge {% if i.resultado == 'CORRECTO' %}bg-success{% elif i.resultado == 'PARCIALMENTE_CORRECTO' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ i.resultado }}</span>
+              {% else %}<span class="badge bg-secondary">EN_PROCESO</span>{% endif %}
+            </span>
+          </div>
+          <div class="small text-muted">
+            {{ i.finalizado_en or i.iniciado_en }} · {{ (i.puntuacion or 0)|num_ec(2) }} pts ·
+            {% if i.oficial %}verificación oficial{% else %}verificación no oficial{% endif %}
+            {% if i.requiere_revision_docente %} · requiere revisión del docente{% endif %}
+          </div>
+          {% if i.retroalimentacion %}
+          <pre class="small bg-light border rounded p-2 mt-2 mb-0" style="white-space:pre-wrap">{{ i.retroalimentacion }}</pre>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="list-group-item text-muted small">Aún no hay intentos registrados para este caso.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if es_docente %}
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-header bg-white"><strong><i class="bi bi-shield-check me-2"></i>Trazabilidad del caso (§62)</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for t in caso.trazabilidad %}
+        <li class="list-group-item">
+          <span class="badge bg-dark-subtle text-dark border me-1">{{ t.tipo }}</span>
+          {% if t.regla_codigo %}<span class="badge bg-primary-subtle text-primary border me-1">{{ t.regla_codigo }}</span>{% endif %}
+          {% if t.campo %}<strong>{{ t.campo }}</strong>: {% endif %}
+          {% if t.valor_libro %}<span class="text-muted">libro: {{ t.valor_libro }}</span> → {% endif %}
+          {{ t.valor_aplicado }}
+          {% if t.razon %}<div class="text-muted">{{ t.razon }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.getElementById('agregar-linea')?.addEventListener('click', function () {
+  const cuerpo = document.querySelector('#tabla-lineas tbody');
+  const filas = cuerpo.querySelectorAll('tr');
+  const fila = filas[filas.length - 1].cloneNode(true);
+  fila.querySelectorAll('input').forEach(function (campo) {
+    campo.name = campo.name.replace(/_\d+$/, '_' + (filas.length + 1));
+    campo.value = '';
+  });
+  cuerpo.appendChild(fila);
+});
+</script>
+{% endblock %}

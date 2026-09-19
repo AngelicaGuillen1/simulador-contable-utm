@@ -8,7 +8,7 @@ from tools import (
     generate_trial_balance, generate_income_statement, generate_balance_sheet, generate_cash_flow,
     get_student_progress, audit_transaction, evaluate_student_attempt
 )
-from models import get_db_connection
+from models import get_db_contable as get_db_connection
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 

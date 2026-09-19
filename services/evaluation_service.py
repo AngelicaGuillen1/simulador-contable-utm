@@ -1,7 +1,7 @@
 # Evaluation Engine & Pedagogical Feedback Service
 import sqlite3
 import json
-from models import get_db_connection
+from models import get_db_contable
 from services.audit_service import AuditService
 
 class EvaluationService:
@@ -21,7 +21,7 @@ class EvaluationService:
         - 10% Balanced Double-entry
         Deducts 5 points per hint used.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             caso = cursor.execute("SELECT * FROM casos_simulacion WHERE id = ?", (caso_id,)).fetchone()

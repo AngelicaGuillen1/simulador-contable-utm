@@ -24,8 +24,8 @@ GitHub crea para usted un entorno en la nube con el simulador ya instalado.
 
 1. Entre a **https://codespaces.new/AngelicaGuillen1/simulador-contable-utm**
    (o en el repositorio: botón verde **`Code` → pestaña `Codespaces` → `Create codespace on main`**).
-2. Espere **1–3 minutos**: se instalan las dependencias, se genera la empresa simulada y se ejecutan
-   las 113 pruebas (los mensajes aparecen en la terminal, archivo `.devcontainer/instalar.sh`).
+2. Espere **1–3 minutos**: se instalan las dependencias, se genera la empresa simulada y se ejecuta
+   la suite completa de pruebas (los mensajes aparecen en la terminal, archivo `.devcontainer/instalar.sh`).
 3. En unos segundos se abre sola una **pestaña de vista previa** con el simulador.
    Si no aparece: abra el panel **`PUERTOS` / `PORTS`**, busque el puerto **5000**, pulse el icono del
    globo (*Abrir en el navegador*) y use la dirección
@@ -154,11 +154,17 @@ operaciones de demostración. No afecta a los archivos del repositorio.
 
 El sistema guarda todo lo que usted hace. Para respaldar su trabajo puede:
 
-1. **Exportar los libros** desde *Centro de Reportes* en **CSV**, **Excel** o **versión imprimible**
+1. **Generar la evidencia de la actividad** en *Entorno Universitario & IA → Mis Evidencias*: elija la
+   **actividad del syllabus** y el **tipo de evidencia**, y el sistema arma el informe con las cifras
+   reales de su empresa, un **código** (`CONT1-B-2026-XXXXXXXX`) y una **huella SHA-256** que comprueba
+   que no se alteró después. Desde el detalle puede abrir **Preparar captura** (vista limpia para
+   pantallazo) o **Imprimible / PDF**. Entregue el **código** junto con el archivo o la captura.
+   El paso a paso completo está en el *Manual de Usuario*, sección **6. Guía paso a paso del estudiante**.
+2. **Exportar los libros** desde *Centro de Reportes* en **CSV**, **Excel** o **versión imprimible**
    (esta última: *Imprimir → Guardar como PDF*).
-2. **Descargar sus calificaciones** desde *Mis Evaluaciones* (puntuación, tiempo y estado de cada
+3. **Descargar sus calificaciones** desde *Mis Evaluaciones* (puntuación, tiempo y estado de cada
    intento).
-3. **Mostrar la trazabilidad** en *Administración → Auditoría* (usuario, acción, valor anterior y
+4. **Mostrar la trazabilidad** en *Administración → Auditoría* (usuario, acción, valor anterior y
    valor nuevo de cada operación).
 
 Envíe esos archivos según lo indique el docente (campus virtual o correo del curso).
@@ -185,8 +191,10 @@ Envíe esos archivos según lo indique el docente (campus virtual o correo del c
   o una **URL pública gratuita** con PythonAnywhere (ver `docs/DESPLIEGUE.md`, opción C1).
 * **Publicar una URL única para todo el curso:** `docs/DESPLIEGUE.md` (VPS con Hostinger u otro
   proveedor, Docker o plataforma gestionada).
-* **Manual de usuario:** `docs/MANUAL_DE_USUARIO.md`.
-* **Verificación automática:** cada `push` ejecuta las **113 pruebas** y un arranque real del servidor
+* **Manual de usuario:** `docs/MANUAL_DE_USUARIO.md`. Su **guía paso a paso del docente** (sección 7)
+  cubre el seguimiento de accesos, las actividades del syllabus, las evidencias de los estudiantes y
+  el paquete de calificación (CSV + XLSX).
+* **Verificación automática:** cada `push` ejecuta la suite completa de pruebas y un arranque real del servidor
   en Linux mediante GitHub Actions.
 
 > Nota: GitHub Pages (la portada del curso) **no puede ejecutar el simulador**: solo publica páginas

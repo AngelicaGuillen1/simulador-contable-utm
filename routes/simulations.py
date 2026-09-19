@@ -4,7 +4,7 @@ from routes.auth import login_required, roles_required
 from services.simulation_service import SimulationService
 from services.evaluation_service import EvaluationService
 from services.accounting_service import AccountingService
-from models import get_db_connection
+from models import get_db_contable
 import json
 
 simulations_bp = Blueprint("simulations", __name__)
@@ -77,7 +77,7 @@ def evaluations():
 @roles_required("Docente", "Administrador")
 def teacher_panel():
     analytics = SimulationService.get_teacher_analytics()
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         estudiantes = conn.execute("""
             SELECT u.id, u.nombre_completo, u.email,

@@ -1,14 +1,14 @@
 # Inventory & Multi-Method Kardex (Weighted Average & FIFO) Service
 import sqlite3
 from datetime import datetime, date
-from models import get_db_connection
+from models import get_db_contable
 from services.audit_service import AuditService
 from services.period_service import PeriodService
 
 class InventoryService:
     @staticmethod
     def get_products(categoria=None, activo_only=True, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = "SELECT * FROM productos WHERE 1=1"
             params = []
@@ -25,7 +25,7 @@ class InventoryService:
 
     @staticmethod
     def get_product(producto_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("SELECT * FROM productos WHERE id = ?", (producto_id,)).fetchone()
             return dict(row) if row else None
@@ -34,7 +34,7 @@ class InventoryService:
 
     @staticmethod
     def get_low_stock_alerts(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             rows = conn.execute("""
                 SELECT * FROM productos
@@ -55,7 +55,7 @@ class InventoryService:
         if costo_unitario < 0:
             raise ValueError("El costo unitario no puede ser negativo.")
 
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             p = cursor.execute("SELECT * FROM productos WHERE id = ?", (producto_id,)).fetchone()
@@ -108,7 +108,7 @@ class InventoryService:
         """
         Calculates Cost of Goods Sold for a quantity using First-In-First-Out (FIFO) method.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             lotes = conn.execute("""
                 SELECT * FROM kardex_lotes
@@ -150,7 +150,7 @@ class InventoryService:
         if cantidad <= 0:
             raise ValueError("La cantidad de salida debe ser mayor a 0.")
 
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             p = cursor.execute("SELECT * FROM productos WHERE id = ?", (producto_id,)).fetchone()
@@ -201,7 +201,7 @@ class InventoryService:
         """
         Retrieves full Kardex statement with standard format: Entradas, Salidas, Saldos.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             p = conn.execute("SELECT * FROM productos WHERE id = ?", (producto_id,)).fetchone()
             if not p:

@@ -1,13 +1,13 @@
 # Core Double-Entry Accounting Engine & Financial Statements Service
 import sqlite3
 from datetime import datetime, date
-from models import get_db_connection
+from models import get_db_contable
 from services.audit_service import AuditService
 
 class AccountingService:
     @staticmethod
     def get_accounts(active_only=True, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = "SELECT * FROM cuentas"
             if active_only:
@@ -20,7 +20,7 @@ class AccountingService:
 
     @staticmethod
     def get_account_by_id(account_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("SELECT * FROM cuentas WHERE id = ?", (account_id,)).fetchone()
             return dict(row) if row else None
@@ -29,7 +29,7 @@ class AccountingService:
 
     @staticmethod
     def get_account_by_code(code, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("SELECT * FROM cuentas WHERE codigo = ?", (code,)).fetchone()
             return dict(row) if row else None
@@ -38,7 +38,7 @@ class AccountingService:
 
     @staticmethod
     def create_account(codigo, nombre, naturaleza, clasificacion, cuenta_padre_id=None, nivel=1, acepta_movimiento=1, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -53,7 +53,7 @@ class AccountingService:
 
     @staticmethod
     def update_account(account_id, nombre, naturaleza, clasificacion, activo=1, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             conn.execute("""
                 UPDATE cuentas
@@ -92,7 +92,7 @@ class AccountingService:
         if not is_valid:
             raise ValueError(msg)
 
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             
@@ -134,7 +134,7 @@ class AccountingService:
 
     @staticmethod
     def get_journal_entries(empresa_id=1, fecha_inicio=None, fecha_fin=None, estado=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             query = """
                 SELECT a.*, u.nombre_completo as usuario_nombre
@@ -179,7 +179,7 @@ class AccountingService:
 
     @staticmethod
     def reverse_journal_entry(asiento_id, motivo="Reversión por anulación contable", usuario_id=1, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cursor = conn.cursor()
             asiento = conn.execute("SELECT * FROM asientos WHERE id = ?", (asiento_id,)).fetchone()
@@ -223,7 +223,7 @@ class AccountingService:
 
     @staticmethod
     def get_ledger(cuenta_id=None, codigo_cuenta=None, fecha_inicio=None, fecha_fin=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             if not cuenta_id and codigo_cuenta:
                 cta = conn.execute("SELECT id FROM cuentas WHERE codigo = ?", (codigo_cuenta,)).fetchone()
@@ -289,7 +289,7 @@ class AccountingService:
 
     @staticmethod
     def get_account_balance(cuenta_id, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cta = conn.execute("SELECT * FROM cuentas WHERE id = ?", (cuenta_id,)).fetchone()
             if not cta:
@@ -318,7 +318,7 @@ class AccountingService:
         Sumas Débitos, Sumas Créditos, Saldo Deudor, Saldo Acreedor.
         Validates: Sum(Debits) == Sum(Credits) and Sum(Saldo Deudor) == Sum(Saldo Acreedor).
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             cuentas = conn.execute("SELECT * FROM cuentas WHERE acepta_movimiento = 1 ORDER BY codigo ASC").fetchall()
             
@@ -413,7 +413,7 @@ class AccountingService:
         - Gastos Financieros (6.2.01)
         = Utilidad / (Pérdida) Neta del Período
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             # Helper to calculate net balance for accounts
             def get_account_sum(account_code):
@@ -495,7 +495,7 @@ class AccountingService:
         Activos = Pasivos + Patrimonio
         Validates the fundamental accounting equation dynamically with net profit inclusion.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             trial = AccountingService.get_trial_balance(fecha_corte, db_path=db_path)
             income_stmt = AccountingService.get_income_statement(db_path=db_path)
@@ -580,7 +580,7 @@ class AccountingService:
         Generates Estado de Flujo de Efectivo (Cash Flow Statement - Direct method simulation):
         Actividades de Operación, Actividades de Inversión, Actividades de Financiamiento.
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             # Query cash and bank movements
             caja_bancos_ids = [3, 4, 5] # Caja, Pichincha, Guayaquil
@@ -637,7 +637,7 @@ class AccountingService:
         3. Transfers net income to Retained Earnings (3.3.01)
         4. Locks period (estado = 'CERRADO')
         """
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             income_stmt = AccountingService.get_income_statement(db_path=db_path)
             utilidad_neta = income_stmt["utilidad_neta"]

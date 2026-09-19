@@ -6,7 +6,7 @@ from services.inventory_service import InventoryService
 from services.simulation_service import SimulationService
 from services.period_service import PeriodService
 from services.document_service import DocumentService
-from models import get_db_connection
+from models import get_db_contable
 from datetime import datetime, timedelta
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -20,7 +20,7 @@ def index():
     fecha_inicio = periodo["fecha_inicio"] if periodo else None
     fecha_fin = periodo["fecha_fin"] if periodo else None
 
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         # ---------------- Indicadores financieros (Libro Mayor) ----------------
         caja_balance = AccountingService.get_account_balance(3)      # 1.1.01 Caja General

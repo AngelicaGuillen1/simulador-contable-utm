@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Documento {{ documento.numero }} - Documentos del SRI{% endblock %}
+
+{% macro resultado_badge(resultado) -%}
+  {% if resultado == 'CUMPLE' %}<span class="badge bg-success"><i class="bi bi-check2"></i> Cumple</span>
+  {% elif resultado == 'INCUMPLE' %}<span class="badge bg-danger"><i class="bi bi-x"></i> Incumple</span>
+  {% elif resultado == 'ADVIERTE' %}<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Advertencia</span>
+  {% elif resultado == 'NO_IMPLEMENTADA' %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Revisión manual</span>
+  {% else %}<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Informativa</span>{% endif %}
+{%- endmacro %}
+
+{% block content %}
+{% set estado = (documento.estado or 'EMITIDO') %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">
+      <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+      {% if ficha %}{{ ficha.nombre }}{% else %}{{ documento.tipo }}{% endif %}
+    </h4>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <code class="fs-6">{{ documento.numero_completo or documento.numero }}</code>
+      {% if estado == 'EMITIDO' %}<span class="badge bg-success">EMITIDO</span>
+      {% elif estado == 'ANULADO' %}<span class="badge bg-danger">ANULADO</span>
+      {% elif estado == 'DADO_DE_BAJA' %}<span class="badge bg-secondary">DADO DE BAJA</span>
+      {% else %}<span class="badge bg-info">{{ estado }}</span>{% endif %}
+      {% if documento.tipo %}<span class="badge bg-light text-dark border">{{ documento.tipo }}</span>{% endif %}
+      {% if ficha %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ ficha.categoria_etiqueta }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Volver al listado
+    </a>
+    {% if ficha %}
+    <a href="{{ url_for('documents.nuevo', tipo=documento.tipo) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i> Emitir otro igual
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="alert alert-dark rounded-4 py-2 px-3">
+  <i class="bi bi-mortarboard me-1"></i>
+  <strong>Leyenda educativa:</strong> {{ leyenda }}
+</div>
+
+{% if anulacion %}
+<div class="alert alert-danger rounded-4">
+  <h6 class="fw-bold mb-1"><i class="bi bi-slash-circle me-1"></i>Comprobante anulado</h6>
+  <div class="small">
+    <div><strong>Motivo:</strong> {{ anulacion.motivo }}</div>
+    <div><strong>Fecha de anulación:</strong> {{ anulacion.fecha }}</div>
+    <div class="text-muted">El documento NO se elimina: queda registrado con su motivo (R-57.21).</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <!-- Datos del comprobante -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-card-text me-2"></i>Datos del comprobante</h6>
+      </div>
+      <div class="card-body px-4">
+        <div class="row g-3 small">
+          <div class="col-md-4"><div class="text-muted">Fecha de emisión</div>
+            <div class="fw-semibold">{{ documento.fecha }}</div></div>
+          <div class="col-md-4"><div class="text-muted">N° de autorización de impresión</div>
+            <div class="fw-semibold">{{ documento.numero_autorizacion or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Fecha de autorización</div>
+            <div class="fw-semibold">{{ documento.fecha_autorizacion or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Establecimiento</div>
+            <div class="fw-semibold">{{ documento.establecimiento or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Punto de emisión</div>
+            <div class="fw-semibold">{{ documento.punto_emision or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Secuencial</div>
+            <div class="fw-semibold">{{ documento.secuencial or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Tipo de emisión</div>
+            <div class="fw-semibold">{{ documento.tipo_emision or 'NORMAL' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Caducidad de la autorización</div>
+            <div class="fw-semibold">{{ datos.fecha_caducidad_autorizacion or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Forma de pago</div>
+            <div class="fw-semibold">{{ documento.forma_pago or '—' }}</div></div>
+
+          <div class="col-md-6">
+            <div class="text-muted">Emisor</div>
+            <div class="fw-semibold">{{ documento.emisor }}</div>
+            <div class="text-muted">RUC {{ documento.ruc_emisor or '—' }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted">Adquirente ({{ documento.adquirente_tipo_id or 'sin tipo' }})</div>
+            <div class="fw-semibold">{{ documento.adquirente_nombre or documento.receptor or '—' }}</div>
+            <div class="text-muted">Identificación: {{ documento.adquirente_identificacion or '—' }}</div>
+          </div>
+
+          {% if documento.documento_modificado %}
+          <div class="col-md-6"><div class="text-muted">Comprobante que modifica</div>
+            <div class="fw-semibold">{{ documento.documento_modificado }}</div></div>
+          <div class="col-md-6"><div class="text-muted">Motivo de la modificación</div>
+            <div class="fw-semibold">{{ documento.motivo_modificacion }}</div></div>
+          {% endif %}
+
+          {% if documento.impuesto_retenido %}
+          <div class="col-md-3"><div class="text-muted">Impuesto retenido</div>
+            <div class="fw-semibold">{{ documento.impuesto_retenido }}</div></div>
+          <div class="col-md-3"><div class="text-muted">Base</div>
+            <div class="fw-semibold">{{ documento.base_retencion|money }}</div></div>
+          <div class="col-md-3"><div class="text-muted">Porcentaje</div>
+            <div class="fw-semibold">{{ documento.porcentaje_retencion|num(2) }} %</div></div>
+          <div class="col-md-3"><div class="text-muted">Valor retenido</div>
+            <div class="fw-semibold">{{ documento.valor_retenido|money }}</div></div>
+          {% endif %}
+
+          {% if documento.motivo_traslado or documento.direccion_destino %}
+          <div class="col-md-4"><div class="text-muted">Motivo del traslado</div>
+            <div class="fw-semibold">{{ documento.motivo_traslado or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Partida</div>
+            <div class="fw-semibold">{{ documento.direccion_partida or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Destino</div>
+            <div class="fw-semibold">{{ documento.direccion_destino or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Transportista / conductor</div>
+            <div class="fw-semibold">{{ documento.transportista or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Placa</div>
+            <div class="fw-semibold">{{ documento.placa_vehiculo or '—' }}</div></div>
+          <div class="col-md-4"><div class="text-muted">Inicio del traslado</div>
+            <div class="fw-semibold">{{ datos.fecha_inicio_traslado or '—' }}</div></div>
+          {% endif %}
+
+          {% if documento.descripcion %}
+          <div class="col-12"><div class="text-muted">Descripción o concepto</div>
+            <div>{{ documento.descripcion }}</div></div>
+          {% endif %}
+
+          <div class="col-12">
+            <div class="text-muted">Asiento contable vinculado</div>
+            <div class="fw-semibold">
+              {% if documento.numero_asiento %}
+                #{{ documento.numero_asiento }} ({{ documento.asiento_estado }}) — {{ documento.asiento_glosa }}
+              {% else %}
+                Sin asiento vinculado (documento emitido solo para práctica del SRI)
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desglose de valores -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-calculator me-2"></i>Desglose de valores</h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><td class="ps-4">Subtotal (sin impuestos)</td>
+                  <td class="text-end pe-4">{{ desglose.subtotal|money }}</td></tr>
+              <tr><td class="ps-4">Descuento o bonificación</td>
+                  <td class="text-end pe-4">({{ desglose.descuento|money }})</td></tr>
+              <tr><td class="ps-4">
+                    IVA {% if desglose.iva_tarifa is not none %}({{ desglose.iva_tarifa|num(0) }} %){% endif %}
+                  </td>
+                  <td class="text-end pe-4">{{ desglose.iva_valor|money }}</td></tr>
+              {% if desglose.ice_valor %}
+              <tr><td class="ps-4">ICE</td><td class="text-end pe-4">{{ desglose.ice_valor|money }}</td></tr>
+              {% endif %}
+              {% if desglose.propina %}
+              <tr><td class="ps-4">Propina</td><td class="text-end pe-4">{{ desglose.propina|money }}</td></tr>
+              {% endif %}
+              <tr class="table-light fw-bold"><td class="ps-4">Importe total</td>
+                  <td class="text-end pe-4">{{ desglose.total|money }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reglas aplicadas -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-shield-check me-2"></i>Reglas del reglamento aplicadas</h6>
+        <small class="text-muted">Se vuelven a evaluar sobre los datos guardados del comprobante.</small>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr><th class="ps-4">Código</th><th>Título</th><th class="text-center">Resultado</th>
+                  <th>Qué dice la regla</th></tr>
+            </thead>
+            <tbody>
+              {% for r in (revision.reglas if revision else []) %}
+              <tr>
+                <td class="ps-4"><code>{{ r.codigo }}</code></td>
+                <td class="small fw-semibold">{{ r.titulo }}</td>
+                <td class="text-center">{{ resultado_badge(r.resultado) }}</td>
+                <td class="small text-muted">
+                  {{ r.regla }}
+                  {% if r.pagina_fuente %}<div class="fst-italic">Fuente: {{ r.pagina_fuente }}</div>{% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-3">
+                Este documento no pertenece al catálogo del SRI (documento fuente interno del
+                simulador), por eso no se le aplican reglas del reglamento.
+              </td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Anulación -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-slash-circle me-2"></i>Anular o dar de baja</h6>
+      </div>
+      <div class="card-body px-4">
+        {% if estado == 'ANULADO' %}
+        <p class="small text-muted mb-0">
+          Este comprobante ya está anulado. Recuerda conservarlo en el archivo ordenado
+          secuencialmente: los comprobantes nunca se eliminan.
+        </p>
+        {% else %}
+        <p class="small text-muted">
+          Un comprobante no se borra: se anula con su motivo y se comunica la baja al SRI dentro de
+          los 15 días hábiles siguientes.
+        </p>
+        <form method="POST" action="{{ url_for('documents.anular', doc_id=documento.id) }}">
+          <label class="form-label small fw-semibold">Motivo de la anulación</label>
+          <textarea name="motivo" rows="2" class="form-control form-control-sm mb-2"
+                    placeholder="Por ejemplo: error en el valor facturado"></textarea>
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+            <i class="bi bi-slash-circle me-1"></i> Anular comprobante
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Ficha normativa -->
+    {% if ficha %}
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-info-circle me-2"></i>Ficha del tipo de documento</h6>
+      </div>
+      <div class="card-body px-4 small">
+        <p class="text-muted">{{ ficha.cuando_se_emite }}</p>
+        {% if ficha.requisitos %}
+        <div class="fw-semibold text-uppercase text-muted" style="font-size:.7rem">Requisitos</div>
+        <ul class="ps-3 text-muted">{% for r in ficha.requisitos %}<li>{{ r }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if ficha.pagina_fuente %}<div class="fst-italic text-muted">Fuente: {{ ficha.pagina_fuente }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

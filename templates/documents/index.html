@@ -1,22 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Documentos Fuente - Simulador Integral de Sistema Contable{% endblock %}
 
+{% macro estado_badge(estado) -%}
+  {% set e = estado or 'EMITIDO' %}
+  {% if e == 'EMITIDO' %}<span class="badge bg-success-subtle text-success border border-success-subtle">EMITIDO</span>
+  {% elif e == 'ANULADO' %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">ANULADO</span>
+  {% elif e == 'DADO_DE_BAJA' %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">DADO DE BAJA</span>
+  {% else %}<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">{{ e }}</span>{% endif %}
+{%- endmacro %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
   <div>
     <h4 class="fw-bold mb-1"><i class="bi bi-files me-2 text-primary"></i>Documentos Fuente</h4>
     <p class="text-muted small mb-0">
       Documentos simulados que respaldan cada operación: facturas, comprobantes de ingreso y egreso,
-      notas de crédito y débito, papeletas de depósito, arqueos, roles de pago y órdenes de compra.
+      notas de crédito y débito, papeletas de depósito, arqueos, roles de pago y órdenes —más los
+      comprobantes del SRI que emites en el módulo de Documentos—.
       Cada documento se vincula al asiento contable que generó (cadena verificable documento &rarr; asiento &rarr; diario &rarr; mayor &rarr; estados financieros).
     </p>
   </div>
-  <div class="text-end">
-    <div class="kpi-card">
-      <div class="kpi-label">Monto documentado (filtro actual)</div>
-      <div class="kpi-value">{{ total_monto|money }}</div>
-      <div class="small text-muted mt-1">{{ documentos|length }} documentos</div>
-    </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('documents.catalogo') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-journal-bookmark me-1"></i> Catálogo del SRI
+    </a>
+    <a href="{{ url_for('documents.soporte') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-question-circle me-1"></i> ¿Qué documento necesito?
+    </a>
+    <a href="{{ url_for('documents.nuevo') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i> Emitir comprobante
+    </a>
   </div>
 </div>
 
@@ -24,28 +37,58 @@
 <div class="card border-0 shadow-sm rounded-4 mb-4">
   <div class="card-body">
     <form method="GET" action="{{ url_for('documents.index') }}" class="row g-2 align-items-end">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small fw-semibold mb-1">Tipo de documento</label>
         <select name="tipo" class="form-select form-select-sm">
           <option value="">Todos los tipos</option>
-          {% for codigo, nombre, grupo in tipos %}
-          <option value="{{ codigo }}" {% if selected_tipo == codigo %}selected{% endif %}>{{ nombre }}</option>
+          {% for t in tipos %}
+          <option value="{{ t.codigo }}" {% if selected_tipo == t.codigo %}selected{% endif %}>{{ t.nombre }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Número</label>
+        <input type="text" name="numero" value="{{ numero }}" class="form-control form-control-sm"
+               placeholder="001-002-000000123">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Tercero</label>
+        <input type="text" name="tercero" value="{{ tercero }}" class="form-control form-control-sm"
+               placeholder="Emisor o receptor">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+          <option value="">Todos los estados</option>
+          {% for e in estados %}
+          <option value="{{ e }}" {% if selected_estado == e %}selected{% endif %}>{{ e.replace('_', ' ')|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1">
         <label class="form-label small fw-semibold mb-1">Desde</label>
         <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="form-control form-control-sm">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-1">
         <label class="form-label small fw-semibold mb-1">Hasta</label>
         <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="form-control form-control-sm">
       </div>
-      <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i> Filtrar</button>
-        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i></button>
+        <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>
       </div>
     </form>
+    {% if selected_tipo or numero or tercero or selected_estado or fecha_inicio or fecha_fin %}
+    <div class="small text-muted mt-2">
+      <i class="bi bi-funnel me-1"></i>Filtros activos:
+      {% if selected_tipo %}<span class="badge bg-light text-dark border">tipo: {{ etiqueta(selected_tipo) }}</span>{% endif %}
+      {% if numero %}<span class="badge bg-light text-dark border">número: {{ numero }}</span>{% endif %}
+      {% if tercero %}<span class="badge bg-light text-dark border">tercero: {{ tercero }}</span>{% endif %}
+      {% if selected_estado %}<span class="badge bg-light text-dark border">estado: {{ selected_estado }}</span>{% endif %}
+      {% if fecha_inicio %}<span class="badge bg-light text-dark border">desde: {{ fecha_inicio }}</span>{% endif %}
+      {% if fecha_fin %}<span class="badge bg-light text-dark border">hasta: {{ fecha_fin }}</span>{% endif %}
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -82,7 +125,7 @@
   <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
     <div>
       <h6 class="fw-bold mb-0">Documentos registrados</h6>
-      <small class="text-muted">Ordenados por fecha descendente</small>
+      <small class="text-muted">Ordenados por fecha descendente · {{ documentos|length }} en el filtro actual</small>
     </div>
     <span class="badge bg-light text-dark border">Máximo 300 documentos</span>
   </div>
@@ -95,7 +138,8 @@
             <th>Número</th>
             <th>Fecha</th>
             <th>Emisor</th>
-            <th>Receptor</th>
+            <th>Tercero / adquirente</th>
+            <th class="text-center">Estado</th>
             <th class="text-end">Monto</th>
             <th>Asiento contable</th>
             <th class="text-center">Detalle</th>
@@ -107,10 +151,11 @@
             <td class="ps-4">
               <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ etiqueta(d.tipo) }}</span>
             </td>
-            <td><code>{{ d.numero }}</code></td>
+            <td><code>{{ d.numero_completo or d.numero }}</code></td>
             <td class="text-nowrap">{{ d.fecha }}</td>
             <td class="small">{{ d.emisor }}</td>
-            <td class="small">{{ d.receptor }}</td>
+            <td class="small">{{ d.adquirente_nombre or d.receptor }}</td>
+            <td class="text-center">{{ estado_badge(d.estado) }}</td>
             <td class="text-end fw-semibold">{{ d.monto_total|money }}</td>
             <td>
               {% if d.numero_asiento %}
@@ -121,14 +166,14 @@
               {% endif %}
             </td>
             <td class="text-center">
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="verDocumento({{ d.id }})">
+              <a href="{{ url_for('documents.detail', doc_id=d.id) }}" class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-eye"></i> Ver
-              </button>
+              </a>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-4">
+            <td colspan="9" class="text-center text-muted py-4">
               Sin registros para mostrar con los filtros seleccionados.
             </td>
           </tr>
@@ -138,93 +183,18 @@
     </div>
   </div>
 </div>
-
-<!-- Modal de detalle de documento fuente -->
-<div class="modal fade" id="documentoModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content rounded-4">
-      <div class="modal-header">
-        <h6 class="modal-title fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Documento fuente</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body" id="documentoBody">
-        <div class="text-muted small">Cargando documento...</div>
-      </div>
-      <div class="modal-footer">
-        <a href="{{ url_for('accounting.journal') }}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-journal-text me-1"></i> Ir al Libro Diario
-        </a>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Cerrar</button>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// El detalle se consulta en JSON para el modal que usa el buscador global del simulador.
 function esc(v) {
   return String(v === null || v === undefined ? "" : v)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function verDocumento(id) {
-  const body = document.getElementById("documentoBody");
-  body.innerHTML = '<div class="text-muted small">Cargando documento...</div>';
-  fetch("/documentos/" + id)
-    .then(r => r.json())
-    .then(data => {
-      if (!data.success) {
-        body.innerHTML = '<div class="alert alert-danger mb-0">' + esc(data.error) + '</div>';
-        return;
-      }
-      const d = data.documento;
-      let datos = "";
-      if (d.datos_json) {
-        try {
-          const obj = JSON.parse(d.datos_json);
-          datos = '<table class="table table-sm table-bordered mb-0"><tbody>';
-          Object.keys(obj).forEach(k => {
-            let v = obj[k];
-            if (typeof v === "number") v = v.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            if (Array.isArray(v)) {
-              v = v.map(i => Object.keys(i).map(kk => kk + ": " + i[kk]).join(" | ")).join("<br>");
-            } else {
-              v = esc(v);
-            }
-            datos += '<tr><th class="bg-light" style="width:38%">' + esc(k) + '</th><td>' + v + '</td></tr>';
-          });
-          datos += "</tbody></table>";
-        } catch (e) {
-          datos = '<pre class="small mb-0">' + esc(d.datos_json) + '</pre>';
-        }
-      } else {
-        datos = '<div class="text-muted small">Sin datos estructurados.</div>';
-      }
-
-      body.innerHTML = `
-        <div class="row g-3 mb-3">
-          <div class="col-md-6"><div class="small text-muted">Tipo de documento</div><div class="fw-semibold">${esc(d.tipo)}</div></div>
-          <div class="col-md-6"><div class="small text-muted">Número</div><div class="fw-semibold"><code>${esc(d.numero)}</code></div></div>
-          <div class="col-md-6"><div class="small text-muted">Fecha</div><div class="fw-semibold">${esc(d.fecha)}</div></div>
-          <div class="col-md-6"><div class="small text-muted">Monto total</div><div class="fw-semibold">$${Number(d.monto_total).toLocaleString("es-EC", { minimumFractionDigits: 2 })}</div></div>
-          <div class="col-md-6"><div class="small text-muted">Emisor</div><div class="fw-semibold">${esc(d.emisor)}</div></div>
-          <div class="col-md-6"><div class="small text-muted">Receptor</div><div class="fw-semibold">${esc(d.receptor)}</div></div>
-          <div class="col-12"><div class="small text-muted">Descripción</div><div>${esc(d.descripcion)}</div></div>
-          <div class="col-md-6">
-            <div class="small text-muted">Asiento contable vinculado</div>
-            <div class="fw-semibold">${d.numero_asiento ? "#" + d.numero_asiento + " (" + esc(d.asiento_estado) + ")" : "Sin asiento"}</div>
-          </div>
-          <div class="col-md-6"><div class="small text-muted">Glosa del asiento</div><div class="small">${esc(d.asiento_glosa)}</div></div>
-        </div>
-        <h6 class="fw-bold small text-uppercase text-muted">Datos estructurados del documento</h6>
-        ${datos}
-      `;
-    })
-    .catch(err => {
-      body.innerHTML = '<div class="alert alert-danger mb-0">Error al cargar el documento: ' + esc(err) + '</div>';
-    });
-  new bootstrap.Modal(document.getElementById("documentoModal")).show();
+  window.location.href = "/documentos/" + id;
 }
 </script>
 {% endblock %}

@@ -1,5 +1,5 @@
 # Agente Evaluador - Análisis de Desempeño, Dificultad y Patrones de Error
-from models import get_db_connection
+from models import get_db_contable
 from services.simulation_service import SimulationService
 
 class EvaluatorAgent:
@@ -7,7 +7,7 @@ class EvaluatorAgent:
         self.name = "AgenteEvaluador"
 
     def analyze_student_performance(self, estudiante_id=None):
-        conn = get_db_connection()
+        conn = get_db_contable()
         try:
             query = """
                 SELECT d.*, c.titulo as caso_titulo, s.titulo as simulacion_titulo, s.nivel

@@ -27,6 +27,14 @@ database/*.db-shm
 database/*.bak
 deploy/respaldos/
 
+# Aulas de los estudiantes: cada una es una base de datos personal, no se publican
+database/aulas/
+database/plantilla/
+
+# Credenciales generadas al importar la nómina (se entregan por el aula virtual, no por GitHub)
+credenciales*.csv
+*credenciales*.csv
+
 # Paquetes de despliegue
 dist/
 *.tar.gz
@@ -40,3 +48,11 @@ Thumbs.db
 
 # Configuración de servidor con rutas/dominios propios
 deploy/nginx/local/
+
+# Restos de sesiones de trabajo (cookies de prueba, volcados de pantallas, temporales)
+ck*.txt
+cookies*.txt
+doc_*.html
+*.tmp
+*.bak
+

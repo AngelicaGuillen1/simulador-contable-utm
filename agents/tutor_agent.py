@@ -1,6 +1,6 @@
 # Agente Tutor Contable IA - Andamiaje Pedagógico Progresivo
 import json
-from models import get_db_connection
+from models import get_db_contable
 
 class TutorAgent:
     """
@@ -27,7 +27,7 @@ class TutorAgent:
 
         # Context-specific hint if case_id is provided
         if caso_id:
-            conn = get_db_connection()
+            conn = get_db_contable()
             try:
                 caso = conn.execute("SELECT * FROM casos_simulacion WHERE id = ?", (caso_id,)).fetchone()
                 if caso:

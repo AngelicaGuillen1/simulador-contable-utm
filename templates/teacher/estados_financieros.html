@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Estados financieros de {{ estudiante.nombre_completo or 'estudiante' }} - Simulador Integral de Sistema Contable{% endblock %}
+
+{% macro monto(valor) %}{{ '%.2f'|format(valor or 0) }}{% endmacro %}
+
+{% macro filas_cuentas(cuentas) %}
+  {% for cuenta in cuentas %}
+  <tr>
+    <td class="ps-4 small"><code>{{ cuenta.codigo }}</code> {{ cuenta.nombre }}</td>
+    <td class="text-end small pe-4">{{ monto(cuenta.valor) }}</td>
+  </tr>
+  {% endfor %}
+{% endmacro %}
+
+{% block content %}
+{% include "teacher/_libros_nav.html" %}
+
+{% if libro.existe %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Activo</div>
+      <div class="kpi-value" style="font-size: 1.2rem;">{{ monto(libro.situacion.total_activo) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-bank me-1"></i> Corriente + no corriente</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Pasivo</div>
+      <div class="kpi-value" style="font-size: 1.2rem;">{{ monto(libro.situacion.total_pasivo) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-cash-stack me-1"></i> Obligaciones</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Patrimonio</div>
+      <div class="kpi-value" style="font-size: 1.2rem;">{{ monto(libro.situacion.total_patrimonio) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-wallet2 me-1"></i> Incluye el resultado del ejercicio</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Utilidad / (Pérdida) neta</div>
+      <div class="kpi-value {{ 'text-success' if libro.resultados.utilidad_neta >= 0 else 'text-danger' }}"
+           style="font-size: 1.2rem;">{{ monto(libro.resultados.utilidad_neta) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-graph-up-arrow me-1"></i> Resultado del período</div>
+    </div>
+  </div>
+</div>
+
+<div class="alert {% if libro.situacion.cuadra %}alert-success{% else %}alert-warning{% endif %} border-0 rounded-4">
+  <i class="bi {% if libro.situacion.cuadra %}bi-check2-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+  {% if libro.situacion.cuadra %}
+  <strong>La ecuación contable cuadra:</strong> Activo {{ monto(libro.situacion.total_activo) }} = Pasivo + Patrimonio {{ monto(libro.situacion.total_pasivo_y_patrimonio) }}.
+  {% else %}
+  <strong>La ecuación contable no cuadra:</strong> diferencia de {{ monto(libro.situacion.diferencia) }}
+  (Activo {{ monto(libro.situacion.total_activo) }} vs. Pasivo + Patrimonio {{ monto(libro.situacion.total_pasivo_y_patrimonio) }}).
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bank text-primary me-2"></i>Estado de Situación Financiera</h6>
+        <small class="text-muted">Activo, Pasivo y Patrimonio al cierre del período</small>
+      </div>
+      <div class="card-body px-0 pb-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr class="table-light"><td class="ps-4 fw-bold small">ACTIVO CORRIENTE</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_activo_corriente) }}</td></tr>
+            {{ filas_cuentas(libro.situacion.activos_corrientes) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">ACTIVO NO CORRIENTE</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_activo_no_corriente) }}</td></tr>
+            {{ filas_cuentas(libro.situacion.activos_no_corrientes) }}
+            <tr><td class="ps-4 fw-bold small">TOTAL ACTIVO</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_activo) }}</td></tr>
+
+            <tr class="table-light"><td class="ps-4 fw-bold small">PASIVO CORRIENTE</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_pasivo_corriente) }}</td></tr>
+            {{ filas_cuentas(libro.situacion.pasivos_corrientes) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">PASIVO NO CORRIENTE</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_pasivo_no_corriente) }}</td></tr>
+            {{ filas_cuentas(libro.situacion.pasivos_no_corrientes) }}
+            <tr><td class="ps-4 fw-bold small">TOTAL PASIVO</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_pasivo) }}</td></tr>
+
+            <tr class="table-light"><td class="ps-4 fw-bold small">PATRIMONIO</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_patrimonio) }}</td></tr>
+            {{ filas_cuentas(libro.situacion.patrimonio) }}
+            <tr class="table-dark"><td class="ps-4 fw-bold small">TOTAL PASIVO + PATRIMONIO</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.situacion.total_pasivo_y_patrimonio) }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Estado de Resultados</h6>
+        <small class="text-muted">Ingresos, costos y gastos del período</small>
+      </div>
+      <div class="card-body px-0 pb-0">
+        <table class="table table-sm mb-0">
+          <tbody>
+            {{ filas_cuentas(libro.resultados.ingresos_operacionales) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">TOTAL INGRESOS OPERACIONALES</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.resultados.total_ingresos_operacionales) }}</td></tr>
+            {{ filas_cuentas(libro.resultados.costos) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">TOTAL COSTOS</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.resultados.total_costos) }}</td></tr>
+            <tr><td class="ps-4 fw-semibold small">Utilidad bruta en ventas</td><td class="text-end pe-4 fw-semibold small">{{ monto(libro.resultados.utilidad_bruta) }}</td></tr>
+
+            {{ filas_cuentas(libro.resultados.gastos_administrativos) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">TOTAL GASTOS ADMINISTRATIVOS</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.resultados.total_gastos_administrativos) }}</td></tr>
+            {{ filas_cuentas(libro.resultados.gastos_ventas) }}
+            <tr class="table-light"><td class="ps-4 fw-bold small">TOTAL GASTOS DE VENTAS</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.resultados.total_gastos_ventas) }}</td></tr>
+            <tr><td class="ps-4 fw-semibold small">Utilidad operacional</td><td class="text-end pe-4 fw-semibold small">{{ monto(libro.resultados.utilidad_operacional) }}</td></tr>
+
+            {{ filas_cuentas(libro.resultados.otros_ingresos) }}
+            {{ filas_cuentas(libro.resultados.gastos_financieros) }}
+            <tr class="table-dark"><td class="ps-4 fw-bold small">UTILIDAD / (PÉRDIDA) NETA DEL PERÍODO</td><td class="text-end pe-4 fw-bold small">{{ monto(libro.resultados.utilidad_neta) }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin text-primary me-2"></i>Estado de Flujo de Efectivo (Caja y Bancos)</h6>
+    <small class="text-muted">Movimientos de las cuentas de efectivo clasificados por actividad</small>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">Fecha</th>
+            <th>A.</th>
+            <th>Concepto</th>
+            <th class="text-center">Actividad</th>
+            <th class="text-end pe-4">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grupo, etiqueta in [(libro.efectivo.operacion, 'Operación'), (libro.efectivo.inversion, 'Inversión'), (libro.efectivo.financiamiento, 'Financiamiento')] %}
+            {% for movimiento in grupo %}
+            <tr>
+              <td class="ps-4 small text-muted">{{ movimiento.fecha }}</td>
+              <td class="small text-muted">{{ movimiento.numero_asiento }}</td>
+              <td class="small">{{ movimiento.concepto }}</td>
+              <td class="text-center small"><span class="badge bg-secondary-subtle text-secondary border">{{ etiqueta }}</span></td>
+              <td class="text-end pe-4 small">{{ monto(movimiento.monto) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+          <tr><td colspan="5" class="text-center py-4 text-muted">Sin movimientos de efectivo registrados.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-dark">
+          <tr>
+            <td class="ps-4 fw-bold" colspan="4">
+              Operación {{ monto(libro.efectivo.total_operacion) }} ·
+              Inversión {{ monto(libro.efectivo.total_inversion) }} ·
+              Financiamiento {{ monto(libro.efectivo.total_financiamiento) }} ·
+              VARIACIÓN NETA
+            </td>
+            <td class="text-end fw-bold pe-4">{{ monto(libro.efectivo.variacion_neta) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

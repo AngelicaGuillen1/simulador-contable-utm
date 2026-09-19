@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Emitir comprobante - Documentos del SRI{% endblock %}
+
+{% macro campo_input(c, valores) -%}
+  {% set valor = valores.get(c.nombre, '') %}
+  <div class="col-md-{{ c.ancho or 4 }}">
+    <label class="form-label small fw-semibold mb-1">
+      {{ c.etiqueta }}
+      {% if c.obligatorio %}<span class="text-danger">*</span>{% endif %}
+      {% if c.regla %}<span class="badge bg-light text-dark border ms-1">{{ c.regla }}</span>{% endif %}
+    </label>
+    {% if c.tipo == 'select' %}
+    <select name="{{ c.nombre }}" class="form-select form-select-sm">
+      <option value="">— Selecciona —</option>
+      {% for op in c.opciones %}
+      <option value="{{ op }}" {% if valor|string == op|string %}selected{% endif %}>{{ op.replace('_', ' ')|capitalize }}</option>
+      {% endfor %}
+    </select>
+    {% elif c.tipo == 'textarea' %}
+    <textarea name="{{ c.nombre }}" rows="2" class="form-control form-control-sm">{{ valor }}</textarea>
+    {% elif c.tipo == 'number' %}
+    <input type="number" step="0.01" name="{{ c.nombre }}" value="{{ valor }}" class="form-control form-control-sm">
+    {% elif c.tipo == 'date' %}
+    <input type="date" name="{{ c.nombre }}" value="{{ valor }}" class="form-control form-control-sm">
+    {% else %}
+    <input type="text" name="{{ c.nombre }}" value="{{ valor }}" class="form-control form-control-sm">
+    {% endif %}
+    <div class="form-text small">{{ c.ayuda }}</div>
+  </div>
+{%- endmacro %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>Emitir un comprobante</h4>
+    <p class="text-muted small mb-0">
+      Elige el tipo de documento y llena sus campos obligatorios. El simulador revisa el reglamento
+      antes de guardarlo: los <strong>bloqueos</strong> impiden la emisión y las
+      <strong>advertencias</strong> te avisan de riesgos tributarios.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('documents.catalogo') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-journal-bookmark me-1"></i> Ver catálogo
+    </a>
+    <a href="{{ url_for('documents.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-files me-1"></i> Documentos fuente
+    </a>
+  </div>
+</div>
+
+<!-- Elección del tipo de documento -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <form method="GET" action="{{ url_for('documents.nuevo') }}" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label small fw-semibold mb-1">Tipo de documento</label>
+        <select name="tipo" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for categoria, lista in (tipos|groupby('categoria')) %}
+          <optgroup label="{{ categorias.get(categoria, categoria) }}">
+            {% for t in lista %}
+            <option value="{{ t.codigo }}" {% if t.codigo == tipo_sel %}selected{% endif %}>{{ t.nombre }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-arrow-repeat me-1"></i> Cargar campos</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if ficha %}
+<!-- Explicación normativa del tipo elegido -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h6 class="fw-bold mb-1">{{ ficha.nombre }}</h6>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ ficha.categoria_etiqueta }}</span>
+        <code class="small ms-1">{{ ficha.codigo }}</code>
+      </div>
+      {% if ficha.pagina_fuente %}<span class="small text-muted">Fuente: {{ ficha.pagina_fuente }}</span>{% endif %}
+    </div>
+    <p class="small text-muted mt-2 mb-2"><strong>¿Cuándo se emite?</strong> {{ ficha.cuando_se_emite }}</p>
+    {% if ficha.emisor %}<p class="small text-muted mb-2"><strong>¿Quién lo emite?</strong> {{ ficha.emisor }}</p>{% endif %}
+    {% if ficha.acompanantes and ficha.acompanantes != '—' %}
+    <p class="small text-muted mb-2"><strong>Documentos que lo acompañan:</strong> {{ ficha.acompanantes }}</p>
+    {% endif %}
+    {% if ficha.requisitos %}
+    <div class="small"><strong>Requisitos del reglamento:</strong>
+      <ul class="mb-0 ps-3 text-muted">{% for r in ficha.requisitos %}<li>{{ r }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <div class="small mt-2"><strong>Campos de llenado del formato oficial:</strong>
+      <ul class="mb-0 ps-3 text-muted">{% for r in ficha.campos_llenado %}<li>{{ r }}</li>{% endfor %}</ul>
+    </div>
+    <div class="alert alert-dark py-2 px-3 mt-3 mb-0 small">
+      <i class="bi bi-info-circle me-1"></i> {{ leyenda }}
+    </div>
+  </div>
+</div>
+
+{% if errores %}
+<div class="alert alert-danger rounded-4">
+  <h6 class="fw-bold"><i class="bi bi-x-octagon me-1"></i>El comprobante no puede emitirse ({{ errores|length }} bloqueo{{ '' if errores|length == 1 else 's' }})</h6>
+  <ul class="mb-0 small">{% for e in errores %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if advertencias %}
+<div class="alert alert-warning rounded-4">
+  <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-1"></i>Ten en cuenta ({{ advertencias|length }})</h6>
+  <ul class="mb-0 small">{% for a in advertencias %}<li>{{ a }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% if valido %}
+<div class="alert alert-success rounded-4">
+  <i class="bi bi-check-circle me-1"></i> Todas las validaciones del reglamento se cumplieron.
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('documents.nuevo', tipo=tipo_sel) }}">
+  <input type="hidden" name="tipo" value="{{ tipo_sel }}">
+
+  {% for seccion in secciones %}
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+      <h6 class="fw-bold mb-0"><i class="bi bi-{{ '123' if loop.first else 'card-checklist' }} me-2"></i>{{ seccion.titulo }}</h6>
+    </div>
+    <div class="card-body px-4">
+      <div class="row g-3">
+        {% for c in seccion.campos %}{{ campo_input(c, valores) }}{% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if porcentajes %}
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-0 pt-4 px-4">
+      <h6 class="fw-bold mb-0"><i class="bi bi-percent me-2"></i>Porcentajes del catálogo tributario</h6>
+      <small class="text-muted">Se leen de la tabla de impuestos del simulador; puedes usarlos en los campos de porcentaje.</small>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr><th class="ps-4">Concepto</th><th>Código</th><th>Cód. SRI</th>
+                <th class="text-end">Porcentaje</th><th>Fuente</th><th class="text-center">Aplicar</th></tr>
+          </thead>
+          <tbody>
+            {% for p in porcentajes %}
+            <tr>
+              <td class="ps-4 small">{{ p.nombre }}</td>
+              <td class="small"><code>{{ p.codigo }}</code></td>
+              <td class="small">{{ p.codigo_sri or '—' }}</td>
+              <td class="text-end fw-semibold">{{ p.porcentaje|num(2) }} %</td>
+              <td class="small text-muted">{{ p.fuente }}</td>
+              <td class="text-center">
+                <button type="button" class="btn btn-outline-primary btn-sm"
+                        onclick="usarPorcentaje({{ p.porcentaje }})">
+                  <i class="bi bi-arrow-down-circle"></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-5">
+    <a href="{{ url_for('documents.nuevo') }}" class="btn btn-outline-secondary btn-sm">Limpiar formulario</a>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-save me-1"></i> Validar y emitir el comprobante
+    </button>
+  </div>
+</form>
+{% else %}
+<div class="alert alert-light border">No hay tipos de documento en el catálogo del SRI.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function usarPorcentaje(valor) {
+  ["porcentaje_retencion", "iva_tarifa"].forEach(function (nombre) {
+    const campo = document.querySelector('input[name="' + nombre + '"]');
+    if (campo && !campo.value) campo.value = valor;
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+# =============================================================================
+#  Dependencias adicionales SOLO para el VPS Linux.
+#
+#  Gunicorn no se puede instalar en Windows (usa el módulo fcntl), por eso vive
+#  aquí y no en requirements.txt. El instalador lo añade si se elige ese servidor:
+#
+#      sudo bash deploy/hostinger/instalar_vps.sh --dominio TU-DOMINIO --servidor gunicorn
+#
+#  En Windows (o en Linux si prefiere waitress) no hace falta nada de esto:
+#  requirements.txt ya incluye waitress, que es multiplataforma.
+# =============================================================================
+-r ../requirements.txt
+gunicorn>=22.0

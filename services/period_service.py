@@ -3,7 +3,7 @@
 # Todas las operaciones contables se registran con la fecha de trabajo (por defecto 2026-04-30),
 # lo que permite reproducir un período académico completo (Abril 2026) sin depender del reloj real.
 from datetime import date, datetime, timedelta
-from models import get_db_connection
+from models import get_db_contable
 
 DEFAULT_FECHA_TRABAJO = "2026-04-30"
 PARAM_FECHA_TRABAJO = "fecha_trabajo"
@@ -12,7 +12,7 @@ PARAM_FECHA_TRABAJO = "fecha_trabajo"
 class PeriodService:
     @staticmethod
     def get_param(clave, default=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("SELECT valor FROM parametros WHERE clave = ?", (clave,)).fetchone()
             return row["valor"] if row else default
@@ -21,7 +21,7 @@ class PeriodService:
 
     @staticmethod
     def set_param(clave, valor, descripcion=None, db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             conn.execute("""
                 INSERT INTO parametros (clave, valor, descripcion) VALUES (?, ?, ?)
@@ -35,7 +35,7 @@ class PeriodService:
 
     @staticmethod
     def get_parameters(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             rows = conn.execute("SELECT clave, valor, descripcion FROM parametros ORDER BY clave ASC").fetchall()
             return [dict(r) for r in rows]
@@ -83,7 +83,7 @@ class PeriodService:
 
     @staticmethod
     def get_active_period(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             row = conn.execute("""
                 SELECT * FROM periodos WHERE estado = 'ABIERTO'
@@ -98,7 +98,7 @@ class PeriodService:
 
     @staticmethod
     def get_periods(db_path=None):
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             rows = conn.execute("SELECT * FROM periodos ORDER BY fecha_inicio DESC").fetchall()
             return [dict(r) for r in rows]

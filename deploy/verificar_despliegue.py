@@ -37,6 +37,13 @@ RUTAS_GET = [
     "/estados-financieros/situacion-financiera",
     "/simulador", "/evaluaciones", "/docente/panel", "/tutor/", "/reportes/",
     "/admin/", "/admin/usuarios", "/admin/impuestos", "/admin/auditoria",
+    # Módulo educativo (actividades, evidencias y seguimiento de accesos)
+    "/mis-actividades", "/mis-evidencias",
+    "/docente/actividades", "/docente/evidencias", "/docente/evidencias/verificar",
+    "/docente/accesos", "/docente/estudiantes", "/docente/sin-ingresar",
+    # Banco de casos de los libros (§61) y trazabilidad de las fuentes (§62)
+    "/casos-libros", "/casos-libros/C61.01", "/casos-libros/C61.12",
+    "/docente/casos-libros",
     "/manual",
 ]
 

@@ -29,6 +29,11 @@ tar -czf "$DIST/$NOMBRE" \
   --exclude='./database/*.db-wal' \
   --exclude='./database/*.db-shm' \
   --exclude='./database/*.bak' \
+  --exclude='./database/aulas' \
+  --exclude='./database/plantilla' \
+  --exclude='./credenciales*' \
+  --exclude='./*credenciales*.csv' \
+  --exclude='./datos' \
   --exclude='./deploy/respaldos' \
   .
 

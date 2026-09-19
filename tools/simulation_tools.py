@@ -2,12 +2,12 @@
 from services.simulation_service import SimulationService
 from services.evaluation_service import EvaluationService
 from services.audit_service import AuditService
-from models import get_db_connection
+from models import get_db_contable
 import json
 
 def create_simulation_case(simulacion_id, orden, titulo, fecha, enunciado, doc_tipo, doc_numero, datos_transaccion, solucion_esperada, pistas, explicacion, db_path=None):
     """Creates a new simulation case with expected journal entry and progressive hints."""
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         cursor = conn.cursor()
         cursor.execute("""
@@ -37,7 +37,7 @@ def evaluate_student_attempt(intento_id, caso_id, user_lines, pistas_usadas=0, t
 
 def generate_feedback(caso_id, student_lines, db_path=None):
     """Generates pedagogical explanation and hints for a case without saving attempt."""
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         caso = conn.execute("SELECT * FROM casos_simulacion WHERE id = ?", (int(caso_id),)).fetchone()
         if not caso:

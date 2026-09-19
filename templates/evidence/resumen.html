@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ evidencia.codigo }} - Evidencia verificable{% endblock %}
+
+{# ---------- Vista de captura: se oculta el menú lateral y la barra superior ---------- #}
+{% block extra_head %}
+<style>
+  #sidebar-wrapper, .topbar { display: none !important; }
+  #page-content-wrapper { width: 100% !important; margin-left: 0 !important; }
+  body { background: #ffffff; }
+  .captura-hoja { max-width: 1180px; margin: 0 auto; }
+  .captura-marca { border-bottom: 3px solid #0d6efd; }
+  .captura-tabla { font-size: 0.78rem; }
+  .captura-tabla td, .captura-tabla th { padding: 0.25rem 0.4rem; vertical-align: top; }
+  .captura-codigo { letter-spacing: 0.08em; }
+  @media print {
+    .no-imprimir { display: none !important; }
+    .captura-hoja { max-width: 100%; }
+    .card { border: 0 !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="captura-hoja">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 no-imprimir">
+    <div>
+      <h5 class="mb-0"><i class="bi bi-camera text-primary me-2"></i>Vista limpia para capturar pantalla</h5>
+      <p class="text-muted small mb-0">Esta hoja no incluye el menú lateral: puedes capturarla o imprimirla como evidencia.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('evidence.detalle_evidencia', evidencia_id=evidencia.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+      <a href="{{ url_for('evidence.imprimible_evidencia', evidencia_id=evidencia.id) }}" class="btn btn-sm btn-outline-dark" target="_blank"><i class="bi bi-printer me-1"></i>Imprimible / PDF</a>
+      <button type="button" class="btn btn-sm btn-primary" onclick="window.print()"><i class="bi bi-camera me-1"></i>Imprimir o guardar</button>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="captura-marca pb-3 mb-3 d-flex justify-content-between align-items-start">
+        <div>
+          <h4 class="mb-1"><i class="bi bi-calculator-fill text-primary me-2"></i>SIMULADOR INTEGRAL DE SISTEMA CONTABLE</h4>
+          <div class="text-muted small">Comercial y Servicios Nueva Esperanza S.A. · Entorno universitario de aprendizaje contable</div>
+          <div class="fw-bold mt-2 text-uppercase">Evidencia verificable de trabajo académico · Contabilidad I</div>
+        </div>
+        <div class="text-end">
+          {% if evidencia.estado == 'FINAL' %}
+            <span class="badge bg-success fs-6"><i class="bi bi-patch-check me-1"></i>FINAL</span>
+          {% else %}
+            <span class="badge bg-secondary fs-6">{{ evidencia.estado }}</span>
+          {% endif %}
+          {% if modificada %}
+            <div class="badge bg-danger mt-2"><i class="bi bi-exclamation-triangle me-1"></i>Contenido modificado después de generar</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <table class="table table-sm table-borderless mb-0 captura-tabla">
+            <tr><th style="width: 38%;">Estudiante</th><td>{{ evidencia.estudiante_nombre or '—' }}</td></tr>
+            <tr><th>Usuario / matrícula</th><td>{{ evidencia.username or '—' }}{% if evidencia.paralelo %} · Paralelo {{ evidencia.paralelo }}{% endif %}</td></tr>
+            <tr><th>Actividad</th><td>{{ evidencia.actividad_codigo or '—' }}{% if evidencia.actividad_titulo %} · {{ evidencia.actividad_titulo }}{% endif %}</td></tr>
+            <tr><th>Tipo de evidencia</th><td>{{ resumen.tipo }}</td></tr>
+          </table>
+        </div>
+        <div class="col-md-6">
+          <table class="table table-sm table-borderless mb-0 captura-tabla">
+            <tr><th style="width: 38%;">Código de evidencia</th><td><code class="captura-codigo fw-bold fs-6">{{ evidencia.codigo }}</code></td></tr>
+            <tr><th>Fecha y hora de generación</th><td>{{ evidencia.generada_en }}</td></tr>
+            <tr><th>Estado</th><td>{{ evidencia.estado }}</td></tr>
+            <tr><th>Huella SHA-256</th><td><code class="small">{{ evidencia.huella or 'sin huella (evidencia en borrador)' }}</code></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="alert alert-light border small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Este documento se genera con los datos REALES registrados en el simulador (plan de cuentas, libro diario,
+        libro mayor y balance de comprobación). El docente puede validar el código
+        <strong>{{ evidencia.codigo }}</strong> en el módulo <em>Docencia → Verificar código</em>.
+      </div>
+
+      {% if resumen.vacio %}
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>{{ resumen.aviso }}
+      </div>
+      {% endif %}
+
+      {% for seccion in resumen.secciones %}
+      <h6 class="text-uppercase text-muted fw-bold mt-4 mb-2">{{ seccion.titulo }}</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered captura-tabla mb-0">
+          <thead class="table-light">
+            <tr>{% for columna in seccion.columnas %}<th>{{ columna }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            {% for fila in seccion.filas %}
+            <tr>{% for celda in fila %}<td>{{ celda }}</td>{% endfor %}</tr>
+            {% else %}
+            <tr><td colspan="{{ seccion.columnas|length }}" class="text-muted">Sin registros en esta sección.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+
+      <div class="d-flex justify-content-between align-items-end mt-4 pt-3 border-top">
+        <div class="small text-muted">
+          Documento generado automáticamente por el Simulador Integral de Sistema Contable.<br>
+          Código verificable: <strong>{{ evidencia.codigo }}</strong> · Huella: <code class="small">{{ evidencia.huella or '—' }}</code>
+        </div>
+        <div class="text-center small">
+          <div style="border-top: 1px solid #6c757d; width: 220px; padding-top: 4px;">
+            {{ evidencia.estudiante_nombre or 'Estudiante' }}
+          </div>
+          <div class="text-muted">Firma del estudiante</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if modo_imprimible %}
+  <div class="text-center text-muted small mt-3">Versión imprimible · si tu navegador lo permite, guarda como PDF.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if modo_imprimible %}
+<script>
+  // La vista imprimible abre el diálogo de impresión (permite "Guardar como PDF").
+  window.addEventListener("load", function () { window.print(); });
+</script>
+{% endif %}
+{% endblock %}

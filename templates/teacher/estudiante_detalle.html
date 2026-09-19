@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block title %}Ficha del Estudiante - Simulador Integral de Sistema Contable{% endblock %}
+
+{# ==================== Macros ==================== #}
+{% macro evento_badge(evento) %}
+  {%- set color = 'secondary' -%}
+  {%- if evento == 'LOGIN' -%}{% set color = 'success' %}
+  {%- elif evento == 'LOGOUT' -%}{% set color = 'secondary' %}
+  {%- elif evento in ('CREAR_ASIENTO', 'CREAR_CUENTA', 'CREACION_EVIDENCIA', 'INICIO_ACTIVIDAD') -%}{% set color = 'primary' %}
+  {%- elif evento == 'INTENTO_FALLIDO_ASIENTO' -%}{% set color = 'danger' %}
+  {%- elif evento in ('CORRECCION_ASIENTO', 'MODIFICAR_CUENTA') -%}{% set color = 'warning' %}
+  {%- elif evento in ('GENERACION_BALANCE', 'GENERACION_ESTADO_FINANCIERO') -%}{% set color = 'info' %}
+  {%- elif evento in ('CONSULTA_DIARIO', 'CONSULTA_MAYOR', 'CONSULTA_ACTIVIDAD') -%}{% set color = 'dark' %}{%- endif -%}
+  <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis border border-{{ color }}-subtle">{{ evento or '—' }}</span>
+{% endmacro %}
+
+{% macro estado_asignacion_badge(estado) %}
+  {% if estado == 'ENTREGADA' %}
+  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Entregada</span>
+  {% elif estado == 'REVISADA' %}
+  <span class="badge bg-success-subtle text-success border border-success-subtle">Revisada</span>
+  {% elif estado == 'EN_CURSO' %}
+  <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">En curso</span>
+  {% else %}
+  <span class="badge bg-light text-dark border">Pendiente</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro estado_evidencia_badge(estado) %}
+  {% if estado == 'FINAL' %}
+  <span class="badge bg-success-subtle text-success border border-success-subtle">Final</span>
+  {% elif estado == 'INVALIDADA' %}
+  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Invalidada</span>
+  {% else %}
+  <span class="badge bg-secondary-subtle text-secondary border">Borrador</span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+{% set datos = ficha.datos if ficha else {} %}
+{% set ind = ficha.indicadores if ficha else {} %}
+{% set sesiones = ficha.sesiones if ficha else [] %}
+{% set eventos = ficha.linea_tiempo if ficha else [] %}
+{% set actividades = ficha.actividades if ficha else [] %}
+{% set evidencias = ficha.evidencias if ficha else [] %}
+{% set intentos = ficha.intentos if ficha else [] %}
+
+<!-- ==================== Encabezado ==================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div class="d-flex align-items-center">
+        <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+             style="width: 56px; height: 56px; font-size: 1.2rem;">
+          {{ (datos.nombre or '??')[:2]|upper }}
+        </div>
+        <div>
+          <h4 class="fw-bold mb-1">{{ datos.nombre }}</h4>
+          <div class="text-muted small">
+            <i class="bi bi-person me-1"></i><code>{{ datos.username }}</code>
+            <span class="mx-2">|</span><i class="bi bi-envelope me-1"></i>{{ datos.correo }}
+            {% if datos.matricula %}<span class="mx-2">|</span><i class="bi bi-upc-scan me-1"></i>{{ datos.matricula }}{% endif %}
+          </div>
+          <div class="mt-2 d-flex flex-wrap gap-2">
+            {% if datos.paralelo %}
+            <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-people me-1"></i>Paralelo {{ datos.paralelo }}</span>
+            {% endif %}
+            {% if datos.estado_cuenta == 'Activo' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Cuenta activa</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border">Cuenta inactiva</span>
+            {% endif %}
+            {% if (ind.num_sesiones or 0) > 0 %}
+            <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-door-open me-1"></i>Ya ingresó</span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-exclamation-triangle me-1"></i>Nunca ingresó</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('teacher.accesos', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-shield-check me-1"></i> Ver en el panel de accesos
+        </a>
+        <a href="{{ url_for('teacher.estudiante_detalle', estudiante_id=datos.estudiante_id, formato='json') }}"
+           class="btn btn-outline-secondary btn-sm" target="_blank">
+          <i class="bi bi-braces me-1"></i> JSON
+        </a>
+        <a href="{{ url_for('teacher.estudiantes') }}" class="btn btn-light btn-sm border">
+          <i class="bi bi-arrow-left me-1"></i> Estudiantes
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Libros del estudiante (solo lectura) ==================== -->
+{% set libros = ficha.libros if ficha else {} %}
+{% set avance = ficha.avance if ficha else {} %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-journal-bookmark text-primary me-2"></i>Libros del estudiante (solo lectura)</h6>
+      <small class="text-muted">
+        Se leen directamente del aula propia del estudiante
+        (<code>{{ libros.nombre_archivo or 'sin aula creada' }}</code>) en modo lectura: el panel nunca modifica sus libros.
+      </small>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ url_for('teacher.estudiante_cuentas', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-list-columns-reverse me-1"></i> Plan de cuentas
+      </a>
+      <a href="{{ url_for('teacher.estudiante_diario', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-journal-text me-1"></i> Libro Diario
+      </a>
+      <a href="{{ url_for('teacher.estudiante_mayor', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-journals me-1"></i> Libro Mayor
+      </a>
+      <a href="{{ url_for('teacher.estudiante_balance', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-clipboard-check me-1"></i> Balance
+      </a>
+      <a href="{{ url_for('teacher.estudiante_estados', estudiante_id=datos.estudiante_id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-bar-graph me-1"></i> Estados financieros
+      </a>
+    </div>
+  </div>
+  <div class="card-body px-4 pb-4">
+    {% if not libros.existe %}
+    <div class="alert alert-warning border-0 rounded-3">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      {{ libros.aviso or 'El estudiante aún no tiene aula contable creada.' }}
+    </div>
+    {% elif libros.aviso %}
+    <div class="alert alert-info border-0 rounded-3">
+      <i class="bi bi-info-circle-fill me-2"></i>{{ libros.aviso }}
+    </div>
+    {% endif %}
+    <div class="row g-3">
+      <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Cuentas creadas</div>
+          <div class="kpi-value text-primary">{{ libros.num_cuentas or 0 }}</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-list-columns-reverse me-1"></i>{{ libros.num_cuentas_movimiento or 0 }} aceptan movimiento
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Asientos registrados</div>
+          <div class="kpi-value text-primary">{{ libros.num_asientos or 0 }}</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-list-ol me-1"></i>{{ libros.num_lineas or 0 }} línea(s) de detalle
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Balance de comprobación</div>
+          {% if not libros.existe %}
+          <div class="fw-bold text-muted" style="font-size: 1rem;">Sin datos</div>
+          <div class="small text-muted mt-1"><i class="bi bi-dash-circle me-1"></i>El estudiante no tiene aula</div>
+          {% elif not libros.num_asientos %}
+          <div class="fw-bold text-muted" style="font-size: 1rem;">Sin movimientos</div>
+          <div class="small text-muted mt-1"><i class="bi bi-dash-circle me-1"></i>Aún no registra asientos</div>
+          {% elif libros.cuadrado %}
+          <div class="fw-bold text-success" style="font-size: 1rem;">Cuadra</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-check2-circle me-1"></i>Debe = Haber = {{ '%.2f'|format(libros.total_debe or 0) }}
+          </div>
+          {% else %}
+          <div class="fw-bold text-danger" style="font-size: 1rem;">Descuadra</div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-exclamation-triangle me-1"></i>Diferencia {{ '%.2f'|format(libros.diferencia or 0) }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Avance de actividades</div>
+          <div class="kpi-value text-success">{{ avance.porcentaje or 0 }}%</div>
+          <div class="progress mt-2" style="height: 6px;">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width: {{ avance.porcentaje or 0 }}%"
+                 aria-valuenow="{{ avance.porcentaje or 0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-check2-circle me-1"></i>{{ avance.completadas or 0 }} de {{ avance.asignadas or 0 }} entregadas
+            ({{ avance.en_curso or 0 }} en curso)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Indicadores del estudiante ==================== -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Sesiones</div>
+      <div class="kpi-value">{{ ind.num_sesiones or 0 }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-door-open me-1"></i> Ingresos registrados</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Tiempo de actividad</div>
+      <div class="kpi-value" style="font-size: 1.3rem;">{{ ind.tiempo_actividad or '0 min' }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-stopwatch me-1"></i> Suma de sesiones</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Actividades iniciadas</div>
+      <div class="kpi-value text-primary">{{ ind.actividades_iniciadas or 0 }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-play-circle me-1"></i> {{ ind.actividades_asignadas or 0 }} asignadas</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Actividades completadas</div>
+      <div class="kpi-value text-success">{{ ind.actividades_completadas or 0 }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-check2-circle me-1"></i> Entregadas o revisadas</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Evidencias</div>
+      <div class="kpi-value text-info">{{ ind.evidencias_generadas or 0 }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-file-earmark-check me-1"></i> Generadas por el estudiante</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <div class="kpi-card">
+      <div class="kpi-label">Último acceso</div>
+      <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ ind.ultimo_acceso or 'Sin ingresos' }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-lightning-charge me-1"></i> {{ ind.ultima_accion or 'Sin eventos' }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- ==================== Historial de sesiones ==================== -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-door-open text-primary me-2"></i>Historial de accesos (sesiones)</h6>
+        <small class="text-muted">Inicio, fin, duración, IP y navegador de cada ingreso</small>
+      </div>
+      <div class="card-body px-0 pb-0">
+        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light sticky-top">
+              <tr class="small text-uppercase text-muted">
+                <th class="ps-4">#</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Duración</th>
+                <th>IP</th>
+                <th class="pe-4">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in sesiones %}
+              <tr>
+                <td class="ps-4 text-muted small">{{ s.id }}</td>
+                <td class="small fw-semibold text-dark">{{ s.inicio }}</td>
+                <td class="small text-muted">{{ s.fin or '—' }}</td>
+                <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ s.duracion }}</span></td>
+                <td class="small text-muted">{{ s.ip_origen or '—' }}</td>
+                <td class="pe-4">
+                  {% if s.activa %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">En curso</span>
+                  {% else %}
+                  <span class="badge bg-light text-dark border">Cerrada</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center py-4 text-muted">El estudiante no registra sesiones de acceso.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Línea de tiempo ==================== -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="fw-bold mb-0"><i class="bi bi-clock-history text-primary me-2"></i>Línea de tiempo</h6>
+          <small class="text-muted">Eventos más recientes primero ({{ eventos|length }} registrados)</small>
+        </div>
+        <a href="{{ url_for('teacher.estudiante_linea_tiempo', estudiante_id=datos.estudiante_id, formato='json') }}"
+           class="btn btn-sm btn-outline-secondary" target="_blank"><i class="bi bi-braces"></i></a>
+      </div>
+      <div class="card-body px-4" style="max-height: 420px; overflow-y: auto;">
+        {% if eventos %}
+        <ul class="list-unstyled mb-0">
+          {% for ev in eventos %}
+          <li class="d-flex mb-3">
+            <div class="me-3 text-center" style="min-width: 92px;">
+              <div class="small fw-bold text-dark">{{ ev.fecha }}</div>
+              <div class="text-muted" style="font-size: 0.72rem;">{{ ev.hora }}</div>
+            </div>
+            <div class="flex-grow-1 border-start ps-3">
+              {{ evento_badge(ev.evento) }}
+              {% if ev.modulo %}<span class="badge bg-light text-dark border">{{ ev.modulo }}</span>{% endif %}
+              {% if ev.registro_id %}<span class="text-muted small ms-1">registro #{{ ev.registro_id }}</span>{% endif %}
+              {% if ev.detalle %}<div class="text-muted" style="font-size: 0.72rem;">{{ ev.detalle }}</div>{% endif %}
+              {% if ev.actividad_id %}<div class="text-muted" style="font-size: 0.72rem;">Actividad #{{ ev.actividad_id }}</div>{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center py-4 mb-0">
+          <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+          Sin eventos registrados para este estudiante.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <!-- ==================== Actividades ==================== -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-check text-primary me-2"></i>Actividades del syllabus asignadas</h6>
+        <small class="text-muted">{{ actividades|length }} actividad(es) asignadas</small>
+      </div>
+      <div class="card-body px-0 pb-0">
+        <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light sticky-top">
+              <tr class="small text-uppercase text-muted">
+                <th class="ps-4">Código</th>
+                <th>Actividad</th>
+                <th>Unidad</th>
+                <th class="text-center">Intentos</th>
+                <th>Nota</th>
+                <th class="pe-4">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in actividades %}
+              <tr>
+                <td class="ps-4"><code>{{ a.codigo }}</code></td>
+                <td class="small fw-semibold text-dark">{{ a.titulo }}</td>
+                <td class="small text-muted">U{{ a.unidad }}</td>
+                <td class="text-center small">{{ a.intentos_usados }}</td>
+                <td class="small fw-bold">{{ '%.2f'|format(a.nota) if a.nota is not none else '—' }}</td>
+                <td class="pe-4">{{ estado_asignacion_badge(a.estado_asignacion) }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center py-4 text-muted">Sin actividades asignadas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Evidencias ==================== -->
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+      <div class="card-header bg-white border-0 pt-4 px-4">
+        <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-check text-primary me-2"></i>Evidencias generadas</h6>
+        <small class="text-muted">{{ evidencias|length }} evidencia(s) con código verificable</small>
+      </div>
+      <div class="card-body px-0 pb-0">
+        <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light sticky-top">
+              <tr class="small text-uppercase text-muted">
+                <th class="ps-4">Código</th>
+                <th>Título</th>
+                <th>Actividad</th>
+                <th>Generada</th>
+                <th class="pe-4">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in evidencias %}
+              <tr>
+                <td class="ps-4"><code class="small">{{ v.codigo }}</code></td>
+                <td class="small fw-semibold text-dark">{{ v.titulo }}</td>
+                <td class="small text-muted">{{ v.actividad_codigo or '—' }}</td>
+                <td class="small text-muted">{{ v.fecha }} {{ v.hora }}</td>
+                <td class="pe-4">
+                  {{ estado_evidencia_badge(v.estado) }}
+                  {% if v.modificada_despues %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Modificada</span>{% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center py-4 text-muted">El estudiante aún no ha generado evidencias.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Intentos de simulación ==================== -->
+<div class="card border-0 shadow-sm rounded-4 mt-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-award text-primary me-2"></i>Intentos de evaluación registrados</h6>
+    <small class="text-muted">{{ intentos|length }} intento(s) de simulación y casos de evaluación</small>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">#</th>
+            <th>Casos / Simulación</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th class="text-center">Puntuación</th>
+            <th class="text-center">Tiempo</th>
+            <th class="pe-4">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in intentos %}
+          <tr>
+            <td class="ps-4 text-muted small">{{ i.id }}</td>
+            <td class="small fw-semibold text-dark">{{ i.simulacion_titulo or 'Caso contable' }}</td>
+            <td class="small text-muted">{{ i.fecha_inicio or '—' }}</td>
+            <td class="small text-muted">{{ i.fecha_fin or '—' }}</td>
+            <td class="text-center fw-bold">{{ '%.2f'|format(i.puntuacion_total or 0) }}</td>
+            <td class="text-center small text-muted">{{ i.tiempo_segundos or 0 }} s</td>
+            <td class="pe-4">
+              {% if i.estado == 'COMPLETADO' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Completado</span>
+              {% elif i.estado == 'EN_PROGRESO' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">En progreso</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border">{{ i.estado or '—' }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="text-center py-4 text-muted">Sin intentos de evaluación registrados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

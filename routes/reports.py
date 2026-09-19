@@ -7,7 +7,7 @@ from services.accounting_service import AccountingService
 from services.inventory_service import InventoryService
 from services.simulation_service import SimulationService
 from services.period_service import PeriodService
-from models import get_db_connection
+from models import get_db_contable
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/reportes")
 
@@ -34,7 +34,7 @@ REPORTES = {
 
 def _filas_reporte(tipo, db_path=None):
     """Devuelve (encabezados, filas) con los datos reales de cada reporte."""
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         if tipo == "diario":
             filas = []

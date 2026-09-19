@@ -6,7 +6,7 @@ from routes.auth import login_required
 from services.tax_service import TaxService
 from services.accounting_service import AccountingService
 from services.period_service import PeriodService
-from models import get_db_connection
+from models import get_db_contable
 from datetime import date
 
 taxes_bp = Blueprint("taxes", __name__, url_prefix="/impuestos")
@@ -20,7 +20,7 @@ def index():
     fecha_inicio = periodo["fecha_inicio"] if periodo else None
     fecha_fin = periodo["fecha_fin"] if periodo else None
 
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         cuentas = [dict(r) for r in conn.execute(
             "SELECT id, codigo, nombre FROM cuentas WHERE acepta_movimiento = 1 ORDER BY codigo ASC"

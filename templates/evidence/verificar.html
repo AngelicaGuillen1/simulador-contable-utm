@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Verificar código de evidencia - Panel Docente{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{{ url_for('evidence.docente_evidencias') }}">Evidencias de estudiantes</a></li>
+    <li class="breadcrumb-item active">Verificar código</li>
+  </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0"><i class="bi bi-qr-code-scan text-primary me-2"></i>Verificar una evidencia por su código</h3>
+    <p class="text-muted mb-0 small">Digite el código impreso en la evidencia: CONT1-PARALELO-2026-XXXXXXXX</p>
+  </div>
+  <a href="{{ url_for('evidence.docente_evidencias') }}" class="btn btn-outline-secondary"><i class="bi bi-files me-1"></i>Todas las evidencias</a>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label small mb-1">Código de la evidencia</label>
+        <input type="text" name="codigo" class="form-control font-monospace text-uppercase"
+               value="{{ codigo or '' }}" placeholder="CONT1-B-2026-1A2B3C4D" required>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Verificar</button>
+      </div>
+    </form>
+    {% if codigo and not verificacion %}
+    <div class="alert alert-danger mt-3 mb-0">
+      <i class="bi bi-x-octagon me-1"></i>No existe ninguna evidencia con el código <strong>{{ codigo }}</strong>.
+      Verifica que lo hayas digitado completo (8 caracteres hexadecimales finales).
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if verificacion %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100 {{ 'border-start border-4 border-success' if verificacion.valida else 'border-start border-4 border-danger' }}">
+      <div class="card-body">
+        <div class="text-uppercase text-muted small fw-bold">Resultado de la verificación</div>
+        {% if verificacion.valida %}
+          <div class="fs-4 fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i>Evidencia válida</div>
+          <p class="small text-muted mb-0">Finalizada y sin cambios posteriores: la huella SHA-256 coincide con el contenido.</p>
+        {% else %}
+          <div class="fs-4 fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Revisar</div>
+          <ul class="small text-muted mb-0 ps-3">
+            {% if verificacion.estado != 'FINAL' %}<li>La evidencia está en estado <strong>{{ verificacion.estado }}</strong> (no finalizada).</li>{% endif %}
+            {% if verificacion.modificada_despues %}<li>El contenido fue <strong>modificado después</strong> de generar la evidencia.</li>{% endif %}
+          </ul>
+        {% endif %}
+        <div class="mt-3">
+          <div class="text-muted small">Código</div>
+          <code class="fw-bold fs-6">{{ verificacion.codigo }}</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white"><strong>Datos del estudiante y de la actividad</strong></div>
+      <div class="row g-0">
+        <div class="col-md-6">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Estudiante</span><strong>{{ verificacion.estudiante.nombre_completo or '—' }}</strong></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Usuario</span><span>{{ verificacion.estudiante.username or '—' }}</span></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Paralelo</span><span>{{ verificacion.estudiante.paralelo or '—' }}</span></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Correo institucional</span><span class="small">{{ verificacion.estudiante.email or '—' }}</span></li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Actividad</span><strong>{{ verificacion.actividad.codigo or '—' }}</strong></li>
+            <li class="list-group-item"><div class="text-muted small">Título</div><div>{{ verificacion.actividad.titulo or '—' }}</div></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Unidad</span><span>{{ verificacion.actividad.unidad or '—' }}</span></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Fecha de generación</span><span>{{ verificacion.fecha_generacion }}</span></li>
+            <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Versiones registradas</span><span>{{ verificacion.total_versiones }}</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="card-footer bg-white">
+        <div class="text-muted small">Huella firmada (SHA-256)</div>
+        <code class="small text-break">{{ verificacion.huella or '—' }}</code>
+        <div class="mt-2 d-flex gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('evidence.docente_detalle_evidencia', evidencia_id=verificacion.evidencia_id) }}">
+            <i class="bi bi-file-earmark-text me-1"></i>Abrir la evidencia
+          </a>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('evidence.docente_evidencias', q=verificacion.codigo) }}">
+            <i class="bi bi-list-ul me-1"></i>Ver en el listado docente
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white"><strong><i class="bi bi-file-text me-1"></i>Resumen de la evidencia ({{ verificacion.tipo }})</strong></div>
+  <div class="card-body">
+    <pre class="small bg-light border rounded p-3 mb-0" style="max-height: 460px; overflow: auto; white-space: pre-wrap;">{{ verificacion.resumen }}</pre>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

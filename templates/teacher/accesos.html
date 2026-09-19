@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Panel de Accesos de Estudiantes - Simulador Integral de Sistema Contable{% endblock %}
+
+{# ==================== Macros de apoyo ==================== #}
+{% macro evento_badge(evento) %}
+  {%- set color = 'secondary' -%}
+  {%- if evento in ('LOGIN',) -%}{% set color = 'success' %}
+  {%- elif evento in ('LOGOUT',) -%}{% set color = 'secondary' %}
+  {%- elif evento in ('CREAR_ASIENTO', 'CREAR_CUENTA', 'CREACION_EVIDENCIA') -%}{% set color = 'primary' %}
+  {%- elif evento in ('INTENTO_FALLIDO_ASIENTO',) -%}{% set color = 'danger' %}
+  {%- elif evento in ('CORRECCION_ASIENTO', 'MODIFICAR_CUENTA') -%}{% set color = 'warning' %}
+  {%- elif evento in ('GENERACION_BALANCE', 'GENERACION_ESTADO_FINANCIERO') -%}{% set color = 'info' %}
+  {%- elif evento in ('CONSULTA_DIARIO', 'CONSULTA_MAYOR', 'CONSULTA_ACTIVIDAD') -%}{% set color = 'dark' %}
+  {%- elif evento in ('INICIO_ACTIVIDAD',) -%}{% set color = 'primary' %}{%- endif -%}
+  <span class="badge bg-{{ color }}-subtle text-{{ color }}-emphasis border border-{{ color }}-subtle">{{ evento or '—' }}</span>
+{% endmacro %}
+
+{% macro tiempo_badge(segundos, texto) %}
+  {% if segundos and segundos > 0 %}
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+      <i class="bi bi-stopwatch me-1"></i>{{ texto }}
+    </span>
+  {% else %}
+    <span class="badge bg-light text-muted border">Sin tiempo registrado</span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+{% set filas = filas|default([], true) %}
+{% set filtros = filtros|default({}, true) %}
+{% set totales = totales|default({}, true) %}
+
+<!-- ==================== Encabezado ==================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+  <div class="card-body p-4 p-md-5">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <span class="badge bg-info text-dark px-3 py-2 rounded-pill mb-2 fw-bold">
+          <i class="bi bi-shield-check me-1"></i> Seguimiento Académico
+        </span>
+        <h2 class="fw-bold mb-2">Panel de Accesos de Estudiantes</h2>
+        <p class="mb-0 text-white-50">
+          Control de ingresos, tiempo de trabajo y acciones registradas en el simulador contable.
+          Contabilidad I &bull; UTM &bull; Comercial y Servicios Nueva Esperanza S.A.
+        </p>
+      </div>
+      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <a href="{{ url_for('teacher.accesos_exportar', **filtros) }}" class="btn btn-light fw-bold">
+          <i class="bi bi-file-earmark-arrow-down me-1"></i> Exportar CSV
+        </a>
+        <a href="{{ url_for('teacher.estudiantes') }}" class="btn btn-outline-light mt-2 mt-lg-0">
+          <i class="bi bi-people me-1"></i> Estudiantes
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Indicadores globales ==================== -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Estudiantes listados</div>
+          <div class="kpi-value">{{ totales.estudiantes or 0 }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i> Con los filtros aplicados</div>
+        </div>
+        <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-people-fill"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Ya ingresaron</div>
+          <div class="kpi-value text-success">{{ totales.con_ingreso or 0 }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-right me-1"></i> Con al menos una sesión</div>
+        </div>
+        <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-person-check"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Sesiones registradas</div>
+          <div class="kpi-value">{{ totales.sesiones or 0 }}</div>
+          <div class="small text-muted mt-1"><i class="bi bi-door-open me-1"></i> {{ totales.eventos or 0 }} eventos en total</div>
+        </div>
+        <div class="kpi-icon bg-info-subtle text-info"><i class="bi bi-door-open"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="kpi-label">Tiempo total de trabajo</div>
+          <div class="kpi-value">{{ (totales.tiempo or 0) // 3600 }} h {{ ((totales.tiempo or 0) % 3600) // 60 }} min</div>
+          <div class="small text-muted mt-1"><i class="bi bi-file-earmark-check me-1"></i> {{ totales.evidencias or 0 }} evidencias generadas</div>
+        </div>
+        <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-stopwatch"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Filtros ==================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-funnel text-primary me-2"></i>Filtros de seguimiento</h6>
+  </div>
+  <div class="card-body px-4">
+    <form method="get" action="{{ url_for('teacher.accesos') }}" class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Estudiante</label>
+        <select name="estudiante_id" class="form-select form-select-sm">
+          <option value="">— Todos los estudiantes —</option>
+          {% for e in estudiantes_filtro %}
+          <option value="{{ e.estudiante_id }}" {% if filtros.estudiante_id|string == e.estudiante_id|string %}selected{% endif %}>
+            {{ e.nombre }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Desde</label>
+        <input type="date" name="desde" value="{{ filtros.desde or '' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Hasta</label>
+        <input type="date" name="hasta" value="{{ filtros.hasta or '' }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Actividad</label>
+        <select name="actividad_id" class="form-select form-select-sm">
+          <option value="">— Todas —</option>
+          {% for a in actividades_filtro %}
+          <option value="{{ a.id }}" {% if filtros.actividad_id|string == a.id|string %}selected{% endif %}>
+            {{ a.codigo }} · {{ a.titulo }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+          {% for valor, etiqueta in estados_filtro %}
+          <option value="{{ valor }}" {% if (filtros.estado or '') == valor %}selected{% endif %}>{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-1 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Paralelo</label>
+        <select name="paralelo" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for p in paralelos %}
+          <option value="{{ p }}" {% if filtros.paralelo == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label small fw-semibold text-muted">Buscar por nombre, usuario o correo</label>
+        <input type="text" name="buscar" value="{{ filtros.buscar or '' }}" class="form-control form-control-sm"
+               placeholder="Ej.: Morales, amorales@estudiantes.edu.ec">
+      </div>
+      <div class="col-lg-8 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+          <i class="bi bi-search me-1"></i> Aplicar filtros
+        </button>
+        <a href="{{ url_for('teacher.accesos') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+        </a>
+        <a href="{{ url_for('teacher.accesos_exportar', **filtros) }}" class="btn btn-outline-success btn-sm fw-semibold">
+          <i class="bi bi-filetype-csv me-1"></i> Exportar CSV filtrado
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== Tabla de seguimiento ==================== -->
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-table text-primary me-2"></i>Resumen de accesos por estudiante</h6>
+      <small class="text-muted">{{ filas|length }} estudiante(s) en el reporte</small>
+    </div>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">Estudiante</th>
+            <th>Paralelo</th>
+            <th>Estado</th>
+            <th>Primer acceso</th>
+            <th>Último acceso</th>
+            <th class="text-center">Sesiones</th>
+            <th>Tiempo de actividad</th>
+            <th class="text-center">Actividades<br><span class="fw-normal">iniciadas / asignadas / completadas</span></th>
+            <th class="text-center">Evidencias</th>
+            <th>Última acción</th>
+            <th class="pe-4 text-end">Ficha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="ps-4">
+              <div class="fw-bold text-dark">{{ f.nombre }}</div>
+              <div class="text-muted" style="font-size: 0.72rem;">
+                <code>{{ f.username }}</code> &bull; {{ f.correo }}
+              </div>
+            </td>
+            <td>
+              {% if f.paralelo %}
+              <span class="badge bg-secondary-subtle text-secondary border">{{ f.paralelo }}</span>
+              {% else %}<span class="text-muted small">—</span>{% endif %}
+            </td>
+            <td>
+              {% if f.estado_cuenta == 'Activo' %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span>
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border">Inactivo</span>
+              {% endif %}
+              {% if not f.ha_ingresado %}
+              <div class="mt-1"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                <i class="bi bi-exclamation-triangle me-1"></i>Nunca ingresó
+              </span></div>
+              {% endif %}
+            </td>
+            <td class="small text-muted">
+              {% if f.primer_acceso %}<i class="bi bi-calendar3 me-1"></i>{{ f.primer_acceso }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="small">
+              {% if f.ultimo_acceso %}
+              <div class="fw-semibold text-dark">{{ f.ultimo_acceso }}</div>
+              {% else %}<span class="text-muted">Sin ingresos</span>{% endif %}
+            </td>
+            <td class="text-center fw-bold">{{ f.num_sesiones or 0 }}</td>
+            <td>{{ tiempo_badge(f.tiempo_actividad_segundos, f.tiempo_actividad) }}</td>
+            <td class="text-center small">
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ f.actividades_iniciadas or 0 }}</span>
+              <span class="text-muted">/</span>
+              <span class="badge bg-light text-dark border">{{ f.actividades_asignadas or 0 }}</span>
+              <span class="text-muted">/</span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ f.actividades_completadas or 0 }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-info-subtle text-info border border-info-subtle">{{ f.evidencias_generadas or 0 }}</span>
+            </td>
+            <td>
+              {% if f.ultima_accion %}
+                {{ evento_badge(f.ultima_accion) }}
+                <div class="text-muted" style="font-size: 0.7rem;">{{ f.ultima_accion_fecha or '' }}</div>
+              {% else %}<span class="text-muted small">Sin eventos</span>{% endif %}
+            </td>
+            <td class="pe-4 text-end">
+              <a href="{{ url_for('teacher.estudiante_detalle', estudiante_id=f.estudiante_id) }}"
+                 class="btn btn-sm btn-outline-primary" title="Ver ficha del estudiante">
+                <i class="bi bi-person-lines-fill"></i>
+              </a>
+              <a href="{{ url_for('teacher.estudiante_linea_tiempo', estudiante_id=f.estudiante_id) }}"
+                 class="btn btn-sm btn-outline-secondary" title="Línea de tiempo">
+                <i class="bi bi-clock-history"></i>
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="11" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+              No hay estudiantes que coincidan con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer bg-white border-0 small text-muted px-4 pb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    El tiempo de actividad corresponde a la suma de las sesiones cerradas de cada estudiante.
+    Las sesiones en curso se contabilizan al cerrar la sesión (logout) o al volver a ingresar.
+  </div>
+</div>
+{% endblock %}

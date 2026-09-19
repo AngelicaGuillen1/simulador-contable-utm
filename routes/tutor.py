@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, g
 from routes.auth import login_required
 from agents.tutor_agent import TutorAgent
 from agents.orchestrator import OrchestratorAgent
-from models import get_db_connection
+from models import get_db_contable
 
 tutor_bp = Blueprint("tutor", __name__, url_prefix="/tutor")
 
@@ -17,7 +17,7 @@ def _en_modo_examen(context):
     caso_id = (context or {}).get("caso_id")
     if not caso_id:
         return False
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         row = conn.execute("""
             SELECT s.modo_examen

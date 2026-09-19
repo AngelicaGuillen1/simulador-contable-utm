@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from routes.auth import login_required
 from services.inventory_service import InventoryService
-from models import get_db_connection
+from models import get_db_contable
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventarios")
 
@@ -12,7 +12,7 @@ inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventarios")
 def products():
     categoria = request.args.get("categoria")
     productos = InventoryService.get_products(categoria=categoria, activo_only=False)
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         categorias = conn.execute("SELECT DISTINCT categoria FROM productos ORDER BY categoria ASC").fetchall()
         total_valor = sum(p["stock_actual"] * p["costo_unitario"] for p in productos)

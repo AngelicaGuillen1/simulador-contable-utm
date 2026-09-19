@@ -26,21 +26,35 @@ en el primer arranque, respaldos y arranque automático.
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `SECRET_KEY` | valor del código (inseguro) | Clave de firma de sesiones. **Obligatoria en producción** |
-| `DATABASE_PATH` | `database/simulator.db` | Ruta del archivo SQLite. Apunte a un disco persistente |
+| `DATABASE_PATH` | `database/simulator.db` | Ruta del archivo SQLite de **control**. Apunte a un disco persistente |
+| `RUTA_AULAS` | `database/aulas` | Carpeta con las **aulas** de los estudiantes (`<paralelo>/<usuario>.db`) |
+| `RUTA_PLANTILLA` | `database/plantilla/aula_base.db` | Plantilla desde la que se clona cada aula nueva |
 | `HOST` | `127.0.0.1` | Dirección de escucha. Use `0.0.0.0` en contenedores/hosting |
 | `PORT` | `5000` | Puerto. Los PaaS lo inyectan automáticamente |
 | `THREADS` | `8` | Hilos del servidor de producción |
 | `SIMULADOR_DEBUG` | desactivado | `1` activa el modo desarrollo (no usar en producción) |
+| `SIMULADOR_MULTIESTUDIANTE` | activado | Un aula (base de datos) por estudiante |
 | `SESSION_COOKIE_SECURE` | `false` | `true` cuando el sitio se sirve por HTTPS |
 | `SESSION_COOKIE_SAMESITE` | `Lax` | Política de la cookie de sesión |
+| `SESSION_COOKIE_NAME` | `session` | Nombre de la cookie (permite aislar varias instancias) |
 | `SESSION_HORAS` | `8` | Duración de la sesión |
 | `MAX_CONTENT_MB` | `16` | Tamaño máximo de petición |
 
-Ejemplo de archivo `/etc/simulador/secrets.env` (permisos `600`):
+Para desarrollo local hay una plantilla lista: **`.env.example`** (copiar como `.env`; el proyecto
+lo lee solo, sin dependencias externas, y **el entorno real siempre manda**). El archivo `.env`
+no se publica en Git.
+
+Ejemplo de archivo `/etc/simulador/secrets.env` en el VPS (permisos `600`; el instalador lo genera
+solo con una clave aleatoria):
 
 ```
 SECRET_KEY=pega-aqui-una-cadena-aleatoria-larga
 SESSION_COOKIE_SECURE=true
+SESSION_HORAS=8
+MAX_CONTENT_MB=16
+DATABASE_PATH=/var/datos/simulator.db
+RUTA_AULAS=/var/datos/aulas
+RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db
 ```
 
 ---
@@ -52,6 +66,17 @@ python serve.py                     # waitress, HOST/PORT del entorno
 HOST=0.0.0.0 PORT=8080 python serve.py      # accesible desde la red
 ```
 
+En **Windows** el servidor de producción es waitress (multiplataforma, ya incluido). En un
+**VPS Linux** puede usar el mismo waitress o Gunicorn:
+
+```bash
+.venv/bin/pip install -r deploy/hostinger/requirements-vps.txt   # instala Gunicorn (no existe en Windows)
+.venv/bin/gunicorn --workers 3 --threads 4 --bind 127.0.0.1:8080 --timeout 120 wsgi:application
+```
+
+El punto de entrada WSGI es `wsgi.py` (`application` y `app`). En el instalador de Hostinger se
+elige con `--servidor gunicorn` (por defecto `waitress`).
+
 En el **primer arranque**, si no existe la base, `serve.py` ejecuta la generación de datos de
 demostración automáticamente: el sistema queda operativo sin pasos manuales.
 
@@ -60,6 +85,7 @@ Para probar antes de publicar:
 ```bash
 curl http://127.0.0.1:8080/api/health     # {"estado": "OPERATIVO", ...}
 curl -I http://127.0.0.1:8080/manual      # 200 OK
+python deploy/verificar_produccion.py     # 11 comprobaciones funcionales con evidencia
 ```
 
 ---
@@ -231,29 +257,40 @@ El instalador hace todo y es idempotente (se puede volver a ejecutar para actual
 |---|---|
 | 1 | Instala Python 3, venv, nginx, rsync, curl, ufw y certbot |
 | 2 | Crea el usuario de sistema `simulador` y las carpetas `/opt/simulador`, `/var/datos`, `/var/log/simulador` |
-| 3 | Copia la aplicación a `/opt/simulador` |
-| 4 | Crea el entorno virtual e instala las dependencias |
-| 5 | Genera `/etc/simulador/secrets.env` con **SECRET_KEY aleatoria** (permisos 600) |
+| 3 | Copia la aplicación a `/opt/simulador` (sin las bases ni las aulas: son datos suyos, no código) |
+| 4 | Crea el entorno virtual e instala las dependencias (+ Gunicorn si elige `--servidor gunicorn`) |
+| 5 | Genera `/etc/simulador/secrets.env` con **SECRET_KEY aleatoria** y las rutas de datos (permisos 600) |
 | 6 | Registra y arranca el servicio systemd `simulador-contable` (se reinicia solo si falla) |
 | 7 | Configura Nginx como proxy inverso del dominio y habilita el cortafuegos (SSH + HTTP/HTTPS) |
 | 8 | Espera el primer arranque, que **genera la base de datos de demostración automáticamente** |
+| 8b | Crea la **plantilla de aulas** en `/var/datos/plantilla/` y un respaldo completo de prueba |
 | 9 | Emite el certificado **HTTPS** con Let's Encrypt y activa `SESSION_COOKIE_SECURE` |
-| 10 | Programa el **respaldo diario** de la base a las 22:00 (conserva 30 copias) |
+| 10 | Programa el **respaldo diario** (22:00) de control + plantilla + **todas las aulas** (conserva 30) |
 
 Opciones útiles: `--puerto 8080`, `--ruta /opt/simulador`, `--datos /var/datos`,
-`--usuario simulador`, `--sin-firewall`.
+`--usuario simulador`, `--servidor gunicorn`, `--sin-firewall`.
+
+El **dominio no está fijado en ningún archivo**: se pasa con `--dominio` y el instalador escribe
+él mismo el bloque de Nginx. La plantilla del repositorio
+(`deploy/nginx/simulador-contable.conf`) usa el marcador `__DOMINIO__`.
 
 ### Paso 5 — Contraseñas y verificación
 
 ```bash
 # Cambiar las contraseñas de demostración (obligatorio antes de usar en clase)
 sudo -u simulador bash -c 'cd /opt/simulador && DATABASE_PATH=/var/datos/simulator.db .venv/bin/python deploy/cambiar_credenciales.py'
+
+# Cargar la nómina del paralelo (suba el CSV aparte: no viaja con el código)
+sudo -u simulador env DATABASE_PATH=/var/datos/simulator.db RUTA_AULAS=/var/datos/aulas \
+     RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db \
+     /opt/simulador/.venv/bin/python /opt/simulador/database/importar_nomina.py --csv /root/nomina.csv --paralelo B
 ```
 
 Desde su equipo:
 
 ```bash
-python deploy/verificar_despliegue.py --url https://contabilidad.utm.edu.ec
+python deploy/verificar_despliegue.py --url https://SU-DOMINIO
+python deploy/verificar_produccion.py --base https://SU-DOMINIO
 ```
 
 ### Operación del VPS
@@ -380,20 +417,46 @@ docker run -d --name simulador -p 8080:8080 \
 
 ## 7. Respaldos y restauración
 
+El sistema usa **varias** bases SQLite: la de **control**, la **plantilla** y un **aula por
+estudiante**. El respaldo completo (`--todas`) las incluye todas:
+
 ```bash
-python deploy/backup_db.py                      # respaldo manual en deploy/respaldos/
-python deploy/backup_db.py --conservar 30       # conserva los 30 más recientes
+python deploy/backup_db.py --todas               # COMPLETO: control + plantilla + todas las aulas
+python deploy/backup_db.py --todas --conservar 30
+python deploy/backup_db.py --todas --destino /var/backups/simulador
+python deploy/backup_db.py                       # solo la base de control (rápido)
 python deploy/backup_db.py --origen /var/datos/simulator.db --destino /var/backups/simulador
 ```
 
-Restaurar (con el servicio detenido):
+En el VPS, con las rutas de datos fuera del código:
 
 ```bash
-sudo systemctl stop simulador-contable
-cp /var/backups/simulador/simulator_20260430_220000.db /var/datos/simulator.db
-sudo chown simulador:simulador /var/datos/simulator.db
-sudo systemctl start simulador-contable
+sudo -u simulador env DATABASE_PATH=/var/datos/simulator.db \
+     RUTA_AULAS=/var/datos/aulas RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db \
+     /opt/simulador/.venv/bin/python /opt/simulador/deploy/backup_db.py --todas
 ```
+
+El respaldo completo crea una carpeta con marca de tiempo:
+
+```
+deploy/respaldos/20260919_2200/
+    simulator.db
+    plantilla/aula_base.db
+    aulas/B/ealcivar4002.db
+    aulas/B/javiles8757.db
+```
+
+### Restaurar
+
+```bash
+python deploy/restaurar_db.py --listar                          # ver qué respaldos hay
+python deploy/restaurar_db.py --desde deploy/respaldos/20260919_2200          # SIMULA (no escribe)
+python deploy/restaurar_db.py --desde deploy/respaldos/20260919_2200 --si     # restaura de verdad
+```
+
+Antes de sobrescribir, el script copia el estado actual a
+`deploy/respaldos/antes_de_restaurar_<marca>/`, de modo que la restauración se puede deshacer.
+Nunca borra aulas que no estén en el respaldo. Después, reinicie el servicio.
 
 El respaldo usa la API de copia en caliente de SQLite, por lo que puede ejecutarse con el sistema en
 funcionamiento. Los archivos `-wal` y `-shm` no hace falta copiarlos: la API los consolida.
@@ -408,6 +471,13 @@ git pull                                  # o rsync de los archivos modificados
 .venv/bin/pip install -r requirements.txt # si cambiaron dependencias
 sudo systemctl restart simulador-contable
 curl -s http://127.0.0.1:8080/api/health
+```
+
+En Hostinger, la vía más simple es volver a ejecutar el instalador con el paquete nuevo: es
+**idempotente** (conserva `/etc/simulador/secrets.env`, la base y las aulas de `/var/datos`):
+
+```bash
+sudo bash deploy/hostinger/instalar_vps.sh --dominio TU-DOMINIO
 ```
 
 Las migraciones de esquema se resuelven con `database/db_init.py` (crea tablas faltantes) y, si se

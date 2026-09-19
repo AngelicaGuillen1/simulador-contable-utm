@@ -5,7 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h3 class="fw-bold mb-1"><i class="bi bi-cart-plus text-primary me-2"></i>Punto de Venta / Facturación Comercial</h3>
-    <p class="text-muted small mb-0">Emisión de facturas con cálculo en vivo de IVA, costo de ventas y descarga automática de stock</p>
+    <p class="text-muted small mb-0">Emisión de facturas con cálculo en vivo de IVA, costo de ventas, descarga automática
+      de stock y <strong>retenciones de Renta y de IVA que el cliente agente de retención le practica a la empresa</strong>.</p>
   </div>
   <a href="{{ url_for('sales.list_sales') }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i> Volver al Listado
@@ -13,7 +14,7 @@
 </div>
 
 <form method="POST" action="{{ url_for('sales.create_sale') }}" class="card border-0 shadow-sm rounded-4 p-4">
-  <div class="row g-3 mb-4">
+  <div class="row g-3 mb-3">
     <div class="col-md-4">
       <label class="form-label small fw-semibold">Cliente Receptor</label>
       <select name="cliente_id" class="form-select" required>
@@ -26,7 +27,7 @@
 
     <div class="col-md-3">
       <label class="form-label small fw-semibold">Forma de Pago</label>
-      <select name="forma_pago" id="salesPaymentMethod" class="form-select" onchange="togglePaymentOptions()">
+      <select name="forma_pago" id="salesPaymentMethod" class="form-select" onchange="togglePaymentOptions(); actualizarDesgloseVenta();">
         <option value="EFECTIVO">Efectivo (Caja General 1.1.01)</option>
         <option value="TRANSFERENCIA">Transferencia Bancaria</option>
         <option value="CREDITO">Crédito Comercial (CxC Clientes 1.1.04)</option>
@@ -35,7 +36,7 @@
 
     <div class="col-md-3" id="bankSelectGroup" style="display: none;">
       <label class="form-label small fw-semibold">Banco Receptor</label>
-      <select name="banco_id" class="form-select">
+      <select name="banco_id" id="bancoId" class="form-select" onchange="actualizarDesgloseVenta()">
         {% for b in bancos %}
           <option value="{{ b.id }}">{{ b.nombre_banco }} - {{ b.numero_cuenta }}</option>
         {% endfor %}
@@ -53,6 +54,36 @@
         <option value="PROMEDIO">Promedio Ponderado</option>
         <option value="FIFO">FIFO (PEPS)</option>
       </select>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-7">
+      <label class="form-label small fw-semibold">Concepto de la venta (retenciones que aplica el cliente)</label>
+      <select name="tipo_venta" id="tipoVenta" class="form-select" onchange="actualizarDesgloseVenta()">
+        {% for c in conceptos %}
+        <option value="{{ c.clave }}" data-explicacion="{{ c.explicacion }}" {% if not c.disponible %}disabled{% endif %}>
+          {{ c.etiqueta }}{% if c.renta %} — Renta {{ c.renta.porcentaje|round(2) }} %{% endif %}{% if c.iva %} · IVA {{ c.iva.porcentaje|round(2) }} %{% endif %}{% if not c.disponible %} (no configurado en el catálogo){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="form-text text-muted" id="conceptoExplicacion"></div>
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label small fw-semibold">Situación del cliente</label>
+      <div class="form-check mt-1">
+        <input class="form-check-input" type="checkbox" value="1" id="clienteAgenteRetencion"
+               name="cliente_agente_retencion" onchange="actualizarDesgloseVenta()">
+        <label class="form-check-label small" for="clienteAgenteRetencion">
+          El cliente es <strong>agente de retención</strong> (contribuyente especial): la empresa
+          <strong>sufre</strong> la retención. El cliente retiene Renta sobre el valor de la venta e IVA sobre el
+          IVA de la factura, y paga el <strong>neto</strong>.
+        </label>
+      </div>
+      <div class="form-text text-muted">
+        Si la casilla no está marcada, la venta se cobra completa (sin retenciones), como siempre.
+      </div>
     </div>
   </div>
 
@@ -103,20 +134,110 @@
       <i class="bi bi-plus-lg me-1"></i> Agregar Producto
     </button>
 
-    <!-- Totals Calculation Box -->
-    <div class="card bg-light border p-3 rounded-3" style="width: 320px;">
+    <!-- Totals / withholding breakdown -->
+    <div class="card bg-light border p-3 rounded-3" style="width: 430px;">
       <div class="d-flex justify-content-between mb-2">
-        <span class="text-muted small">Subtotal Base Imponible:</span>
+        <span class="text-muted small">Subtotal (valor de la venta):</span>
         <strong id="saleSubtotalDisplay">$0.00</strong>
       </div>
       <div class="d-flex justify-content-between mb-2">
-        <span class="text-muted small">IVA Ventas (15%):</span>
+        <span class="text-muted small">IVA Ventas (débito fiscal):</span>
         <strong id="saleIvaDisplay" class="text-primary">$0.00</strong>
       </div>
       <hr class="my-2">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="text-muted small">Retención Renta <span id="saleRentaDetalle" class="text-secondary"></span>:</span>
+        <strong id="saleRentaDisplay" class="text-danger">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Retención IVA <span id="saleRetIvaDetalle" class="text-secondary"></span>:</span>
+        <strong id="saleRetIvaDisplay" class="text-danger">$0.00</strong>
+      </div>
+      <hr class="my-2">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Total de la factura:</span>
+        <strong id="saleTotalDisplay" class="fs-5">$0.00</strong>
+      </div>
+      <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted small">Total retenido por el cliente:</span>
+        <strong id="saleRetTotalDisplay" class="text-danger">$0.00</strong>
+      </div>
       <div class="d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Total Factura:</span>
-        <span id="saleTotalDisplay" class="fs-4 fw-bold text-success">$0.00</span>
+        <span class="fw-bold">Neto por cobrar al cliente:</span>
+        <span id="saleNetoDisplay" class="fs-4 fw-bold text-success">$0.00</span>
+      </div>
+      <div class="form-text mt-2 mb-0">
+        La <strong>retención de Renta</strong> se calcula sobre el valor de la venta (subtotal, sin IVA) y la
+        <strong>retención de IVA</strong> sobre el IVA de la factura. Lo retenido queda a favor de la empresa
+        (anticipo de Renta y crédito tributario de IVA) y el neto es lo que realmente cobra.
+      </div>
+      <div class="alert alert-warning small py-2 px-3 mt-2 mb-0 d-none" id="desgloseAviso"></div>
+    </div>
+  </div>
+
+  <div class="card border rounded-3 mb-4">
+    <div class="card-header bg-white fw-semibold small">
+      <i class="bi bi-journal-check me-1 text-primary"></i> Asiento contable que se registrará (partida doble)
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Cuenta</th>
+            <th class="text-end">Debe</th>
+            <th class="text-end pe-3">Haber</th>
+          </tr>
+        </thead>
+        <tbody id="asientoBody">
+          <tr><td colspan="3" class="text-center text-muted py-3">Indique el subtotal para ver el asiento.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="accordion mb-4" id="acordeonTarifas">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed small" type="button" data-bs-toggle="collapse" data-bs-target="#tarifasRetencionVentas">
+          Tarifas de retención vigentes en el catálogo del SRI (dato configurable, no fijo en el programa)
+        </button>
+      </h2>
+      <div id="tarifasRetencionVentas" class="accordion-collapse collapse" data-bs-parent="#acordeonTarifas">
+        <div class="accordion-body">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+              <thead class="table-light">
+                <tr>
+                  <th>Concepto de la venta</th>
+                  <th class="text-center">Retención Renta (sobre el valor de la venta)</th>
+                  <th class="text-center">Retención IVA (sobre el IVA de la factura)</th>
+                  <th class="text-center">Cuenta del vendedor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in conceptos %}
+                <tr>
+                  <td class="small">{{ c.etiqueta }}</td>
+                  <td class="text-center small">
+                    {% if c.renta %}{{ c.renta.porcentaje|round(2) }} % <code>{{ c.renta.codigo }}</code>{% else %}—{% endif %}
+                  </td>
+                  <td class="text-center small">
+                    {% if c.iva %}{{ c.iva.porcentaje|round(2) }} % <code>{{ c.iva.codigo }}</code>{% else %}—{% endif %}
+                  </td>
+                  <td class="text-center small">
+                    {% if c.renta or c.iva %}
+                      {% if c.renta %}<code>{{ c.renta.cuenta_codigo }}</code> {{ c.renta.cuenta_nombre }}<br>{% endif %}
+                      {% if c.iva %}<code>{{ c.iva.cuenta_codigo }}</code> {{ c.iva.cuenta_nombre }}{% endif %}
+                    {% else %}—{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-muted small mb-0">{{ conceptos|length }} conceptos configurados en la tabla <code>impuestos</code> del aula.
+            Los porcentajes y las cuentas se leen de ahí: no están escritos en el programa.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -140,6 +261,13 @@
 
 {% block scripts %}
 <script>
+const URL_DESGLOSE = "{{ url_for('sales.desglose_venta') }}";
+let temporizadorDesglose = null;
+
+function money(valor) {
+  return "$" + (Math.round((parseFloat(valor) || 0) * 100) / 100).toFixed(2);
+}
+
 function togglePaymentOptions() {
   const method = document.getElementById("salesPaymentMethod").value;
   const bankGroup = document.getElementById("bankSelectGroup");
@@ -187,25 +315,128 @@ function updateProductPrice(selectEl) {
   calculateSaleTotals();
 }
 
-function calculateSaleTotals() {
+function subtotalFacturado() {
   const rows = document.querySelectorAll(".sale-item-row");
   let subtotal = 0;
-
   rows.forEach((r) => {
     const cant = parseFloat(r.querySelector(".cant-input").value || 0);
     const price = parseFloat(r.querySelector(".price-input").value || 0);
     const itemSub = Math.round(cant * price * 100) / 100;
-    r.querySelector(".subtotal-display").value = `$${itemSub.toFixed(2)}`;
+    r.querySelector(".subtotal-display").value = money(itemSub);
     subtotal += itemSub;
   });
-
-  subtotal = Math.round(subtotal * 100) / 100;
-  const iva = Math.round(subtotal * 0.15 * 100) / 100;
-  const total = Math.round((subtotal + iva) * 100) / 100;
-
-  document.getElementById("saleSubtotalDisplay").textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById("saleIvaDisplay").textContent = `$${iva.toFixed(2)}`;
-  document.getElementById("saleTotalDisplay").textContent = `$${total.toFixed(2)}`;
+  return Math.round(subtotal * 100) / 100;
 }
+
+function mostrarExplicacionConcepto() {
+  const select = document.getElementById("tipoVenta");
+  const opt = select.options[select.selectedIndex];
+  document.getElementById("conceptoExplicacion").textContent = opt ? (opt.getAttribute("data-explicacion") || "") : "";
+}
+
+function pintarAsiento(lineas) {
+  const cuerpo = document.getElementById("asientoBody");
+  cuerpo.innerHTML = "";
+  lineas.forEach((l) => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td class="ps-3 small">
+        <code>${l.cuenta_codigo || ""}</code> ${l.cuenta_nombre || ""}
+        <div class="text-muted" style="font-size: .75rem;">${l.referencia || ""}</div>
+      </td>
+      <td class="text-end small">${l.debe ? money(l.debe) : "—"}</td>
+      <td class="text-end pe-3 small">${l.haber ? money(l.haber) : "—"}</td>
+    `;
+    cuerpo.appendChild(fila);
+  });
+
+  const debe = lineas.reduce((s, l) => s + (parseFloat(l.debe) || 0), 0);
+  const haber = lineas.reduce((s, l) => s + (parseFloat(l.haber) || 0), 0);
+  const total = document.createElement("tr");
+  total.className = "table-light fw-semibold";
+  total.innerHTML = `<td class="ps-3 small">Totales</td>
+                     <td class="text-end small">${money(debe)}</td>
+                     <td class="text-end pe-3 small">${money(haber)}</td>`;
+  cuerpo.appendChild(total);
+}
+
+function calculateSaleTotals() {
+  actualizarDesgloseVenta();
+}
+
+function actualizarDesgloseVenta() {
+  const subtotal = subtotalFacturado();
+  mostrarExplicacionConcepto();
+
+  if (subtotal <= 0) {
+    document.getElementById("asientoBody").innerHTML =
+      '<tr><td colspan="3" class="text-center text-muted py-3">Indique el subtotal para ver el asiento.</td></tr>';
+    document.getElementById("saleSubtotalDisplay").textContent = money(0);
+    document.getElementById("saleIvaDisplay").textContent = money(0);
+    document.getElementById("saleRentaDisplay").textContent = money(0);
+    document.getElementById("saleRetIvaDisplay").textContent = money(0);
+    document.getElementById("saleTotalDisplay").textContent = money(0);
+    document.getElementById("saleRetTotalDisplay").textContent = money(0);
+    document.getElementById("saleNetoDisplay").textContent = money(0);
+    document.getElementById("saleRentaDetalle").textContent = "";
+    document.getElementById("saleRetIvaDetalle").textContent = "";
+    document.getElementById("desgloseAviso").classList.add("d-none");
+    return;
+  }
+
+  clearTimeout(temporizadorDesglose);
+  temporizadorDesglose = setTimeout(() => {
+    const datos = new URLSearchParams({
+      subtotal: subtotal,
+      tipo_venta: document.getElementById("tipoVenta").value,
+      forma_pago: document.getElementById("salesPaymentMethod").value,
+      banco_id: document.getElementById("bancoId") ? document.getElementById("bancoId").value : "",
+      cliente_agente_retencion: document.getElementById("clienteAgenteRetencion").checked ? "1" : "0",
+      cuenta_ingreso: "4.1.01",
+    });
+
+    fetch(URL_DESGLOSE, { method: "POST", body: datos })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d })))
+      .then(({ ok, data }) => {
+        const aviso = document.getElementById("desgloseAviso");
+        if (!ok || !data.ok) {
+          aviso.textContent = data.mensaje || "No se pudo calcular el desglose.";
+          aviso.classList.remove("d-none");
+          return;
+        }
+        aviso.classList.add("d-none");
+        const d = data.desglose;
+
+        document.getElementById("saleSubtotalDisplay").textContent = money(d.subtotal);
+        document.getElementById("saleIvaDisplay").textContent =
+          money(d.iva_valor) + ` (${d.iva_porcentaje} % · ${d.iva_codigo})`;
+
+        const renta = d.retencion_renta;
+        document.getElementById("saleRentaDisplay").textContent = renta ? "− " + money(renta.valor) : money(0);
+        document.getElementById("saleRentaDetalle").textContent = renta ? `(${renta.porcentaje} % · ${renta.codigo})` : "(no aplica)";
+
+        const riva = d.retencion_iva;
+        document.getElementById("saleRetIvaDisplay").textContent = riva ? "− " + money(riva.valor) : money(0);
+        document.getElementById("saleRetIvaDetalle").textContent = riva ? `(${riva.porcentaje} % · ${riva.codigo})` : "(no aplica)";
+
+        document.getElementById("saleTotalDisplay").textContent = money(d.total_factura);
+        document.getElementById("saleRetTotalDisplay").textContent = "− " + money(d.total_retenciones);
+        document.getElementById("saleNetoDisplay").textContent = money(d.neto_cobrar);
+
+        pintarAsiento(d.lineas);
+      })
+      .catch(() => {
+        const aviso = document.getElementById("desgloseAviso");
+        aviso.textContent = "No se pudo consultar el desglose de retenciones. Verifique el subtotal.";
+        aviso.classList.remove("d-none");
+      });
+  }, 200);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  togglePaymentOptions();
+  mostrarExplicacionConcepto();
+  actualizarDesgloseVenta();
+});
 </script>
 {% endblock %}

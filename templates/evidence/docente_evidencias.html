@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Evidencias de Estudiantes - Panel Docente{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0"><i class="bi bi-clipboard2-data text-primary me-2"></i>Evidencias de los estudiantes</h3>
+    <p class="text-muted mb-0 small">Todas las evidencias generadas en el simulador, con su código verificable y su estado de integridad.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('evidence.verificar_evidencia') }}" class="btn btn-primary"><i class="bi bi-qr-code-scan me-1"></i>Verificar código</a>
+    <a href="{{ url_for('activities.docente_actividades') }}" class="btn btn-outline-secondary"><i class="bi bi-list-check me-1"></i>Actividades</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Evidencias</div>
+      <div class="fs-3 fw-bold">{{ resumen.total }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Finalizadas</div>
+      <div class="fs-3 fw-bold text-success">{{ resumen.finales }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Modificadas después de generar</div>
+      <div class="fs-3 fw-bold {{ 'text-danger' if resumen.modificadas else 'text-success' }}">{{ resumen.modificadas }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Buscar</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ filtros.q or '' }}" placeholder="Código, título o estudiante">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Actividad</label>
+        <select name="actividad_id" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          {% for a in actividades %}
+          <option value="{{ a.id }}" {% if filtros.actividad_id|string == a.id|string %}selected{% endif %}>{{ a.codigo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Estudiante</label>
+        <select name="estudiante_id" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for e in estudiantes %}
+          <option value="{{ e.id }}" {% if filtros.estudiante_id|string == e.id|string %}selected{% endif %}>{{ e.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for e in ['FINAL', 'BORRADOR', 'INVALIDADA'] %}<option value="{{ e }}" {% if filtros.estado == e %}selected{% endif %}>{{ e }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="modificadas" value="1" id="soloModificadas" {% if filtros.modificadas %}checked{% endif %}>
+          <label class="form-check-label small" for="soloModificadas">Solo modificadas</label>
+        </div>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i></button>
+        <a href="{{ url_for('evidence.docente_evidencias') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong><i class="bi bi-files me-2"></i>Listado de evidencias</strong>
+    <a href="{{ url_for('evidence.docente_evidencias', formato='json') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-braces me-1"></i>JSON</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Código</th><th>Estudiante</th><th>Actividad</th><th>Tipo</th><th>Estado</th>
+            <th class="text-center">Versiones</th><th>Generada</th><th>Integridad</th><th class="text-end">Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for ev in evidencias %}
+        <tr>
+          <td><code class="fw-bold">{{ ev.codigo }}</code></td>
+          <td>
+            <div class="fw-semibold">{{ ev.estudiante_nombre or ev.username }}</div>
+            <div class="text-muted small">Paralelo {{ ev.paralelo or '—' }}</div>
+          </td>
+          <td class="small">{{ ev.actividad_codigo or '—' }}</td>
+          <td><span class="badge bg-light text-dark border">{{ ev.tipo }}</span></td>
+          <td>
+            <span class="badge {{ 'bg-success' if ev.estado == 'FINAL' else 'bg-secondary' }}">{{ ev.estado }}</span>
+          </td>
+          <td class="text-center">{{ ev.versiones }}</td>
+          <td class="small">{{ ev.generada_en }}</td>
+          <td>
+            {% if ev.modificada %}
+              <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Modificada</span>
+            {% else %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-shield-check me-1"></i>Íntegra</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('evidence.docente_detalle_evidencia', evidencia_id=ev.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i> Ver</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-muted py-4">
+          <i class="bi bi-clipboard-x fs-3 d-block mb-2"></i>
+          Todavía no hay evidencias generadas con estos filtros.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Libro Mayor de {{ estudiante.nombre_completo or 'estudiante' }} - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% include "teacher/_libros_nav.html" %}
+
+{% if libro.existe %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-journals text-primary me-2"></i>Libro Mayor del estudiante</h6>
+    <small class="text-muted">
+      {{ libro.cuentas|length }} cuenta(s) con movimientos, su detalle y el saldo acumulado
+    </small>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">Cuenta</th>
+            <th>Naturaleza</th>
+            <th class="text-center">Mov.</th>
+            <th class="text-end">Debe</th>
+            <th class="text-end">Haber</th>
+            <th class="text-end pe-4">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cuenta in libro.cuentas %}
+          <tr>
+            <td class="ps-4">
+              <code>{{ cuenta.codigo }}</code> <span class="fw-semibold text-dark">{{ cuenta.nombre }}</span>
+              <div class="text-muted" style="font-size:0.72rem;">{{ cuenta.clasificacion }}</div>
+            </td>
+            <td class="small text-muted">{{ cuenta.naturaleza }}</td>
+            <td class="text-center small">{{ cuenta.num_movimientos }}</td>
+            <td class="text-end small">{{ '%.2f'|format(cuenta.total_debe) }}</td>
+            <td class="text-end small">{{ '%.2f'|format(cuenta.total_haber) }}</td>
+            <td class="text-end pe-4 small fw-bold">
+              {{ '%.2f'|format(cuenta.saldo_deudor or cuenta.saldo_acreedor) }}
+              <span class="text-muted fw-normal">({{ 'Deudor' if cuenta.saldo_deudor else ('Acreedor' if cuenta.saldo_acreedor else 'Saldo cero') }})</span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="6" class="p-0 border-0">
+              <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                  <thead>
+                    <tr class="small text-muted">
+                      <th class="ps-5">Fecha</th>
+                      <th>A.</th>
+                      <th>Concepto</th>
+                      <th class="text-end">Debe</th>
+                      <th class="text-end">Haber</th>
+                      <th class="text-end pe-4">Saldo acumulado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for m in cuenta.movimientos %}
+                    <tr>
+                      <td class="ps-5 small text-muted">{{ m.fecha }}</td>
+                      <td class="small text-muted">{{ m.numero_asiento }}</td>
+                      <td class="small">{{ m.glosa }}{% if m.referencia %} <span class="text-muted">· {{ m.referencia }}</span>{% endif %}</td>
+                      <td class="text-end small {{ 'fw-semibold' if m.debe else 'text-muted' }}">{{ '%.2f'|format(m.debe) }}</td>
+                      <td class="text-end small {{ 'fw-semibold' if m.haber else 'text-muted' }}">{{ '%.2f'|format(m.haber) }}</td>
+                      <td class="text-end pe-4 small text-muted">{{ '%.2f'|format(m.saldo) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center py-4 text-muted">
+            El estudiante aún no tiene movimientos en su Libro Mayor.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+        {% if libro.cuentas %}
+        <tfoot class="table-dark">
+          <tr>
+            <td class="ps-4 fw-bold" colspan="3">TOTALES</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_debe) }}</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_haber) }}</td>
+            <td class="text-end pe-4"></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

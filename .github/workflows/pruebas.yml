@@ -1,8 +1,8 @@
 name: Pruebas automáticas
 
 # Se ejecuta en cada push y en cada pull request: valida el motor contable
-# completo (113 pruebas) y comprueba que el servidor de producción arranca,
-# genera la base de demostración y responde en Linux.
+# completo (275 pruebas, incluido el banco de casos prácticos §61 y las reglas §62) y comprueba
+# que el servidor de producción arranca, genera la base de demostración y responde en Linux.
 on:
   push:
     branches: [main, master]

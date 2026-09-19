@@ -5,7 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h3 class="fw-bold mb-1"><i class="bi bi-bag-plus text-primary me-2"></i>Compras a Proveedores</h3>
-    <p class="text-muted small mb-0">Adquisición de mercaderías con actualización de Kardex, IVA crédito tributario y cuentas por pagar</p>
+    <p class="text-muted small mb-0">Adquisición de bienes y servicios con actualización de Kardex, IVA crédito
+      tributario, <strong>retenciones de Renta y de IVA</strong> y cuentas por pagar por el neto.</p>
   </div>
   <a href="{{ url_for('purchases.create_purchase') }}" class="btn btn-primary">
     <i class="bi bi-plus-circle me-1"></i> Nueva Factura de Compra
@@ -23,38 +24,71 @@
             <th>Proveedor</th>
             <th>Forma Pago</th>
             <th class="text-end">Subtotal</th>
-            <th class="text-end">IVA Compras (15%)</th>
-            <th class="text-end pe-4">Total Factura</th>
-            <th class="text-center">Estado</th>
+            <th class="text-end">IVA Compras</th>
+            <th class="text-end">Ret. Renta</th>
+            <th class="text-end">Ret. IVA</th>
+            <th class="text-end">Total Factura</th>
+            <th class="text-end">Neto a Pagar</th>
+            <th class="text-center pe-4">Detalle</th>
           </tr>
         </thead>
         <tbody>
           {% for c in compras %}
+          {% set neto = c.neto_pagar or c.total %}
           <tr>
             <td class="ps-4 fw-bold"><code>{{ c.numero_factura }}</code></td>
             <td>{{ c.fecha }}</td>
             <td>
               <div class="fw-semibold text-dark">{{ c.proveedor_nombre }}</div>
-              <small class="text-muted">RUC: {{ c.proveedor_ruc }}</small>
+              <small class="text-muted">RUC: {{ c.proveedor_ruc }}
+                {% if c.proveedor_contribuyente_especial %}
+                  · <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Contribuyente especial</span>
+                {% endif %}
+              </small>
             </td>
             <td>
               <span class="badge bg-light text-dark border">{{ c.forma_pago }}</span>
+              {% if c.tipo_compra %}<div class="small text-muted mt-1">{{ c.tipo_compra }}</div>{% endif %}
             </td>
             <td class="text-end">${{ "{:,.2f}".format(c.subtotal) }}</td>
-            <td class="text-end text-muted">${{ "{:,.2f}".format(c.iva_valor) }}</td>
-            <td class="text-end fw-bold text-dark pe-4">${{ "{:,.2f}".format(c.total) }}</td>
-            <td class="text-center">
-              <span class="badge bg-success-subtle text-success border border-success-subtle">{{ c.estado }}</span>
+            <td class="text-end text-muted">${{ "{:,.2f}".format(c.iva_valor) }}
+              {% if c.iva_porcentaje %}<div class="small text-muted">{{ c.iva_porcentaje|round(2) }} %</div>{% endif %}
+            </td>
+            <td class="text-end text-danger">
+              {% if c.retencion_renta_valor %}− ${{ "{:,.2f}".format(c.retencion_renta_valor) }}
+                <div class="small text-muted">{{ (c.retencion_renta_porcentaje or 0)|round(2) }} % · {{ c.retencion_renta_codigo }}</div>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end text-danger">
+              {% if c.retencion_iva_valor %}− ${{ "{:,.2f}".format(c.retencion_iva_valor) }}
+                <div class="small text-muted">{{ (c.retencion_iva_porcentaje or 0)|round(2) }} % · {{ c.retencion_iva_codigo }}</div>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end fw-bold text-dark">${{ "{:,.2f}".format(c.total) }}</td>
+            <td class="text-end fw-bold">${{ "{:,.2f}".format(neto) }}
+              {% if c.total_retenciones %}<div class="small text-muted">retenido ${{ "{:,.2f}".format(c.total_retenciones) }}</div>{% endif %}
+            </td>
+            <td class="text-center pe-4">
+              <a href="{{ url_for('purchases.purchase_detail', compra_id=c.id) }}"
+                 class="btn btn-outline-primary btn-sm" title="Ver desglose de retenciones y asiento">
+                <i class="bi bi-search"></i>
+              </a>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center py-4 text-muted">No se registran compras comerciales en el período.</td>
+            <td colspan="11" class="text-center py-4 text-muted">No se registran compras comerciales en el período.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+</div>
+
+<div class="alert alert-light border small mt-3 mb-0">
+  <strong>Cómo leer esta tabla:</strong> la <em>retención de Renta</em> se descuenta del valor del bien o servicio y la
+  <em>retención de IVA</em> del IVA de la factura; ambas se acreditan a cuentas por pagar al SRI
+  (<code>2.1.03</code> y <code>2.1.04</code>) y el <strong>neto a pagar</strong> es lo que se cancela al proveedor.
 </div>
 {% endblock %}

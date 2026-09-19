@@ -582,5 +582,25 @@ def init_db(db_path=None):
     conn.close()
     print(f"Database initialized successfully at {db_path} with 33 core tables!")
 
+    # Módulo educativo (actividades, asignaciones, sesiones, eventos, evidencias).
+    from database.esquema_educativo import aplicar as _aplicar_educativo
+    _aplicar_educativo(db_path)
+
+    # Catálogo de documentos del SRI (tipos, reglas y columnas del comprobante).
+    from database.esquema_documentos_sri import aplicar as _aplicar_sri, sembrar as _sembrar_sri
+    _aplicar_sri(db_path, verboso=False)
+    _sembrar_sri(db_path, verboso=False)
+
+    # Porcentajes oficiales del SRI (IVA y retenciones), y cuentas asociadas.
+    from database.parametros_tributarios_sri import aplicar as _aplicar_tributario
+    _aplicar_tributario(db_path, verboso=False)
+    print("   Catálogo del SRI y parámetros tributarios aplicados.")
+
+    # Banco de casos prácticos de los libros (§61) y reglas de trazabilidad de las fuentes (§62).
+    from database.esquema_casos_libros import aplicar as _aplicar_casos, sembrar as _sembrar_casos
+    _aplicar_casos(db_path, verboso=False)
+    _sembrar_casos(db_path, verboso=False)
+    print("   Banco de casos prácticos de los libros (§61) y reglas §62 aplicados.")
+
 if __name__ == "__main__":
     init_db()

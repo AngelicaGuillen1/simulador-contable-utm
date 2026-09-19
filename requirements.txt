@@ -18,5 +18,9 @@ openpyxl>=3.1
 # Generación del Manual de Usuario en HTML (python docs/build_manual.py)
 markdown>=3.5
 
+# Vista imprimible/PDF de las evidencias (routes/evidence.py). Si no está instalado,
+# el sistema no falla: cae a la vista HTML lista para imprimir.
+reportlab>=4.0
+
 # Pruebas automáticas (opcional, requerido solo para ejecutar la suite)
 pytest>=8.0

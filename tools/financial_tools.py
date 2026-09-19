@@ -4,7 +4,7 @@ from services.purchase_service import PurchaseService
 from services.treasury_service import TreasuryService
 from services.tax_service import TaxService
 from services.accounting_service import AccountingService
-from models import get_db_connection
+from models import get_db_contable
 
 def create_sale(empresa_id, cliente_id, items, forma_pago="EFECTIVO", banco_id=None, dias_credito=0, usuario_id=1, fecha=None, db_path=None):
     """Executes atomic sale with inventory deduction, COGS and auto-journaling."""
@@ -58,7 +58,7 @@ def create_receivable(cliente_id, monto, numero_documento, fecha_emision, fecha_
     Debe 1.1.04 Cuentas por Cobrar / Haber 4.1.01 Ingresos por Ventas.
     """
     AccountingService_instance = AccountingService
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         cliente = conn.execute("SELECT * FROM clientes WHERE id = ?", (int(cliente_id),)).fetchone()
         if not cliente:
@@ -101,7 +101,7 @@ def create_payable(proveedor_id, monto, numero_factura, fecha_emision, fecha_ven
     por create_purchase. Si crear_asiento=True genera el asiento
     Debe 1.1.06 Inventario / Haber 2.1.01 Cuentas por Pagar Proveedores.
     """
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         prov = conn.execute("SELECT * FROM proveedores WHERE id = ?", (int(proveedor_id),)).fetchone()
         if not prov:
@@ -138,7 +138,7 @@ def create_payable(proveedor_id, monto, numero_factura, fecha_emision, fecha_ven
 
 def get_customer_balance(cliente_id, db_path=None):
     """Retrieves customer details, credit limit and outstanding balance."""
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         c = conn.execute("SELECT * FROM clientes WHERE id = ?", (cliente_id,)).fetchone()
         return dict(c) if c else None
@@ -147,7 +147,7 @@ def get_customer_balance(cliente_id, db_path=None):
 
 def get_supplier_balance(proveedor_id, db_path=None):
     """Retrieves supplier details and outstanding payables."""
-    conn = get_db_connection(db_path)
+    conn = get_db_contable(db_path)
     try:
         p = conn.execute("SELECT * FROM proveedores WHERE id = ?", (proveedor_id,)).fetchone()
         return dict(p) if p else None

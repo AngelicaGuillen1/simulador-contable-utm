@@ -4,7 +4,7 @@ from routes.auth import login_required, roles_required
 from services.accounting_service import AccountingService
 from services.document_service import DocumentService
 from services.period_service import PeriodService
-from models import get_db_connection
+from models import get_db_contable
 
 accounting_bp = Blueprint("accounting", __name__, url_prefix="/contabilidad")
 
@@ -220,7 +220,7 @@ def closing():
             flash(f"Error al ejecutar el cierre contable: {str(e)}", "danger")
         return redirect(url_for("accounting.closing"))
 
-    conn = get_db_connection()
+    conn = get_db_contable()
     periodo = conn.execute("SELECT * FROM periodos WHERE id = 1").fetchone()
     conn.close()
 

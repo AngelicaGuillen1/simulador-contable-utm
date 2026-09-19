@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Casos prácticos de los libros · §61 - Simulador Contable{% endblock %}
+
+{% macro estado_badge(estado) %}
+  {% set e = (estado or '')|upper %}
+  {% if e == 'VERIFICADO' %}
+    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-patch-check me-1"></i>Verificado</span>
+  {% elif e == 'VERIFICADO_CON_RESERVA' %}
+    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-exclamation-circle me-1"></i>Verificado con reserva</span>
+  {% elif e == 'CON_ERRATA' %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-tools me-1"></i>Con errata (corregida)</span>
+  {% elif e == 'PARCIAL_CON_ERRATA' %}
+    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-tools me-1"></i>Parcial / con errata</span>
+  {% else %}
+    <span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-mortarboard me-1"></i>Sin solución en la fuente</span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0"><i class="bi bi-journal-bookmark text-primary me-2"></i>Casos prácticos de los libros (§61)</h3>
+    <p class="text-muted mb-0 small">
+      {{ resumen.total }} casos cargados como datos, con fuente, página impresa y del PDF, año, solución de la
+      fuente y corrección de erratas registrada (§62.9).
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('casos_libros.mis_intentos') }}" class="btn btn-outline-primary">
+      <i class="bi bi-clock-history me-1"></i> Mis intentos
+    </a>
+    <a href="{{ url_for('casos_libros.listado', formato='json') }}" class="btn btn-outline-secondary btn-sm" title="Respuesta JSON del banco de casos">
+      <i class="bi bi-braces me-1"></i> JSON
+    </a>
+    {% if g.user and g.user.rol_nombre in ['Docente', 'Administrador'] %}
+    <a href="{{ url_for('casos_libros.panel_docente') }}" class="btn btn-outline-dark">
+      <i class="bi bi-mortarboard me-1"></i> Panel docente §61/§62
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm small mb-4">
+  <strong><i class="bi bi-info-circle me-1"></i>Aviso de trazabilidad (§62.3 y §62.6).</strong>
+  {{ advertencias.iva_retenciones }}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Casos cargados</div>
+      <div class="fs-3 fw-bold">{{ resumen.total }}</div>
+      <div class="small text-muted">{{ resumen.activos }} activos para estudiantes</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Con solución en la fuente</div>
+      <div class="fs-3 fw-bold text-success">{{ resumen.total - resumen.sin_solucion_en_fuente }}</div>
+      <div class="small text-muted">{{ resumen.sin_solucion_en_fuente }} sin solución (práctica)</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Erratas corregidas</div>
+      <div class="fs-3 fw-bold text-warning-emphasis">{{ resumen.con_correccion_de_erratas }}</div>
+      <div class="small text-muted">registradas en la ficha del caso</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small text-uppercase fw-bold">Con dato reconstruido</div>
+      <div class="fs-3 fw-bold text-secondary">{{ resumen.con_dato_reconstruido }}</div>
+      <div class="small text-muted">pendientes del facsímil</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center">
+    <strong><i class="bi bi-list-ol me-2"></i>Banco de casos §61</strong>
+    <form class="d-flex gap-2" method="get">
+      <input class="form-control form-control-sm" type="search" name="q" value="{{ filtros.q or '' }}" placeholder="Buscar caso…">
+      <select class="form-select form-select-sm" name="unidad">
+        <option value="">Unidad</option>
+        {% for u in [1, 2, 3, 4] %}
+        <option value="{{ u }}" {% if filtros.unidad == u|string %}selected{% endif %}>U{{ u }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search"></i></button>
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Caso</th><th>Fuente</th><th>Unidad</th><th>Validación</th>
+          <th class="text-center">Intentos</th><th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in casos %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ c.nombre }}</div>
+            <div class="text-muted small font-monospace">{{ c.codigo }} · {{ c.tipo }}</div>
+          </td>
+          <td class="small">
+            <div>{{ c.cita_fuente }}</div>
+            {% if c.contexto_normativo and 'EXTRANJERO' in (c.contexto_normativo|upper) %}
+            <span class="badge bg-dark-subtle text-dark border mt-1"><i class="bi bi-globe me-1"></i>Marco extranjero/histórico</span>
+            {% endif %}
+          </td>
+          <td>U{{ c.unidad }}</td>
+          <td>
+            {{ estado_badge(c.estado_validacion) }}
+            {% if c.correcciones %}<div class="small text-warning-emphasis mt-1"><i class="bi bi-tools me-1"></i>{{ c.correcciones|length }} corrección(es) de errata</div>{% endif %}
+            {% if c.etiquetas %}<div class="small text-secondary mt-1"><i class="bi bi-sticky me-1"></i>{{ c.etiquetas|length }} etiqueta(s) de fidelidad</div>{% endif %}
+            {% if c.practica_sin_solucion %}<div class="small text-muted mt-1"><i class="bi bi-eye-slash me-1"></i>Sin solución visible (§62.5)</div>{% endif %}
+          </td>
+          <td class="text-center">{{ c.intentos_maximos }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('casos_libros.ficha', codigo=c.codigo) }}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Abrir caso
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No hay casos que coincidan con el filtro.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-header bg-white"><strong><i class="bi bi-collection me-2"></i>Fuentes y su correlación de páginas (§62.7)</strong></div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>Fuente</th><th>Edición / año</th><th>Correlación de páginas</th><th>Páginas sin texto (§62.4)</th></tr></thead>
+      <tbody>
+        {% for f in fuentes %}
+        <tr>
+          <td><strong>{{ f.codigo }}</strong><div class="small text-muted">{{ f.nombre }}</div></td>
+          <td class="small">{{ f.edicion }}<br>{{ f.anio }}</td>
+          <td class="small font-monospace">{{ f.correlacion_paginas }}</td>
+          <td class="small text-muted">{{ f.paginas_sin_texto }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

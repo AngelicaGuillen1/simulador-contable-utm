@@ -2,7 +2,7 @@
 from tools.financial_tools import generate_trial_balance, generate_balance_sheet
 from services.accounting_service import AccountingService
 from services.inventory_service import InventoryService
-from models import get_db_connection
+from models import get_db_contable
 
 class AuditAgent:
     def __init__(self):
@@ -10,7 +10,7 @@ class AuditAgent:
 
     def audit_system(self, db_path=None):
         anomalias = []
-        conn = get_db_connection(db_path)
+        conn = get_db_contable(db_path)
         try:
             # 1. Audit Journal balance for all entries
             asientos = conn.execute("SELECT id, numero_asiento, fecha, glosa FROM asientos WHERE estado = 'CONTABILIZADO'").fetchall()

@@ -14,6 +14,7 @@
 #     --ruta RUTA            carpeta de instalación (por defecto /opt/simulador)
 #     --datos RUTA           carpeta de la base de datos (por defecto /var/datos)
 #     --usuario USUARIO      usuario Linux de servicio (por defecto simulador)
+#     --servidor SERVIDOR    waitress (por defecto) o gunicorn
 #     --sin-firewall         no configurar ufw
 #
 #  El script es idempotente: puede volver a ejecutarse para actualizar el sistema.
@@ -26,6 +27,7 @@ PUERTO="8080"
 PROYECTO_DIR="/opt/simulador"
 DATOS_DIR="/var/datos"
 USUARIO="simulador"
+SERVIDOR="waitress"
 FIREWALL="si"
 
 while [[ $# -gt 0 ]]; do
@@ -36,6 +38,7 @@ while [[ $# -gt 0 ]]; do
     --ruta) PROYECTO_DIR="${2:-}"; shift 2 ;;
     --datos) DATOS_DIR="${2:-}"; shift 2 ;;
     --usuario) USUARIO="${2:-}"; shift 2 ;;
+    --servidor) SERVIDOR="${2:-}"; shift 2 ;;
     --sin-firewall) FIREWALL="no"; shift ;;
     -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
     *) echo "Opción desconocida: $1"; exit 1 ;;
@@ -98,6 +101,9 @@ rsync -a --delete \
   --exclude '.venv' --exclude '__pycache__' --exclude '.git' --exclude '.pytest_cache' \
   --exclude 'logs' --exclude '*.pyc' \
   --exclude 'database/*.db' --exclude 'database/*.db-wal' --exclude 'database/*.db-shm' \
+  --exclude 'database/aulas' --exclude 'database/plantilla' \
+  --exclude 'credenciales*' --exclude '*credenciales*.csv' --exclude 'datos' \
+  --exclude '.env' \
   --exclude 'deploy/respaldos' \
   "$ORIGEN_DIR/" "$PROYECTO_DIR/"
 verde "    Archivos copiados"
@@ -109,20 +115,34 @@ if [[ ! -x "$PROYECTO_DIR/.venv/bin/python" ]]; then
 fi
 "$PROYECTO_DIR/.venv/bin/pip" install --quiet --upgrade pip
 "$PROYECTO_DIR/.venv/bin/pip" install --quiet -r "$PROYECTO_DIR/requirements.txt"
-verde "    Flask + waitress + openpyxl instalados"
+if [[ "$SERVIDOR" == "gunicorn" ]]; then
+  "$PROYECTO_DIR/.venv/bin/pip" install --quiet -r "$PROYECTO_DIR/deploy/hostinger/requirements-vps.txt"
+  verde "    Flask + waitress + gunicorn + openpyxl instalados"
+else
+  verde "    Flask + waitress + openpyxl instalados"
+fi
 
 # --------------------------------------------------------- 5) Secretos
 paso "5/9 Configurando secretos"
 if [[ ! -f /etc/simulador/secrets.env ]]; then
   CLAVE="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+  if [[ -n "$CORREO" ]]; then SEGURO="true"; else SEGURO="false"; fi
   cat > /etc/simulador/secrets.env <<EOF
 # Generado por instalar_vps.sh - permisos 600, no versionar.
 SECRET_KEY=$CLAVE
-SESSION_COOKIE_SECURE=false
+# true cuando el sitio se sirve por HTTPS (con --correo se activa Let's Encrypt).
+SESSION_COOKIE_SECURE=$SEGURO
+SESSION_HORAS=8
+MAX_CONTENT_MB=16
+# Datos FUERA de la carpeta del código: las actualizaciones no los tocan.
+DATABASE_PATH=$DATOS_DIR/simulator.db
+RUTA_AULAS=$DATOS_DIR/aulas
+RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db
 EOF
-  verde "    SECRET_KEY aleatoria generada"
+  verde "    SECRET_KEY aleatoria generada y rutas de datos configuradas"
 else
   verde "    Se conserva el archivo de secretos existente"
+  amarillo "    Revise /etc/simulador/secrets.env: debe apuntar a $DATOS_DIR"
 fi
 chmod 600 /etc/simulador/secrets.env
 chown "$USUARIO:$USUARIO" /etc/simulador/secrets.env
@@ -131,9 +151,16 @@ chown -R "$USUARIO:$USUARIO" "$PROYECTO_DIR" "$DATOS_DIR" "$LOG_DIR"
 
 # --------------------------------------------------------- 6) Servicio systemd
 paso "6/9 Registrando el servicio systemd"
+if [[ "$SERVIDOR" == "gunicorn" ]]; then
+  DESCRIPCION="Simulador Integral de Sistema Contable (gunicorn)"
+  EXEC_START="$PROYECTO_DIR/.venv/bin/gunicorn --workers 3 --threads 4 --bind 127.0.0.1:$PUERTO --timeout 120 --access-logfile - --error-logfile - wsgi:application"
+else
+  DESCRIPCION="Simulador Integral de Sistema Contable (waitress)"
+  EXEC_START="$PROYECTO_DIR/.venv/bin/python serve.py"
+fi
 cat > /etc/systemd/system/simulador-contable.service <<EOF
 [Unit]
-Description=Simulador Integral de Sistema Contable (waitress)
+Description=$DESCRIPCION
 After=network.target
 
 [Service]
@@ -145,8 +172,10 @@ Environment=HOST=127.0.0.1
 Environment=PORT=$PUERTO
 Environment=THREADS=8
 Environment=DATABASE_PATH=$DATOS_DIR/simulator.db
+Environment=RUTA_AULAS=$DATOS_DIR/aulas
+Environment=RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db
 EnvironmentFile=-/etc/simulador/secrets.env
-ExecStart=$PROYECTO_DIR/.venv/bin/python serve.py
+ExecStart=$EXEC_START
 Restart=always
 RestartSec=3
 KillSignal=SIGINT
@@ -226,6 +255,35 @@ else
   amarillo "    La aplicación aún no responde. Revise:  journalctl -u simulador-contable -n 50"
 fi
 
+# ------------------------------- 8b) Plantilla de aulas y carpeta de datos
+paso "8/9 Plantilla de aulas y carpeta de datos"
+mkdir -p "$DATOS_DIR/aulas" "$DATOS_DIR/plantilla"
+chown -R "$USUARIO:$USUARIO" "$DATOS_DIR"
+
+ENTORNO="DATABASE_PATH=$DATOS_DIR/simulator.db RUTA_AULAS=$DATOS_DIR/aulas RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db"
+
+if [[ ! -f "$DATOS_DIR/plantilla/aula_base.db" ]]; then
+  if sudo -u "$USUARIO" env $ENTORNO \
+       "$PROYECTO_DIR/.venv/bin/python" "$PROYECTO_DIR/database/crear_aula.py" --plantilla >/tmp/plantilla.log 2>&1; then
+    verde "    Plantilla de aulas creada en $DATOS_DIR/plantilla/aula_base.db"
+  else
+    amarillo "    No se pudo crear la plantilla de aulas. Revise /tmp/plantilla.log"
+  fi
+else
+  verde "    La plantilla de aulas ya existía (se conserva)"
+fi
+
+if sudo -u "$USUARIO" env $ENTORNO \
+     "$PROYECTO_DIR/.venv/bin/python" "$PROYECTO_DIR/deploy/backup_db.py" --todas \
+     --destino "$PROYECTO_DIR/deploy/respaldos" --conservar 30 >/tmp/respaldo.log 2>&1; then
+  verde "    Respaldo completo de prueba creado (detalle en /tmp/respaldo.log)"
+else
+  amarillo "    No se pudo crear el respaldo de prueba. Revise /tmp/respaldo.log"
+fi
+
+# Las NÓMINAS y las CREDENCIALES no viajan con el código: súbalas aparte y luego
+#   sudo -u $USUARIO env $ENTORNO $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/database/importar_nomina.py --csv /root/nomina.csv --paralelo B
+
 # --------------------------------------------------------- 9) HTTPS
 paso "9/9 Certificado HTTPS"
 if [[ -n "$CORREO" ]]; then
@@ -247,7 +305,7 @@ fi
 # ------------------------------------------------ 10) Respaldos diarios
 cat > /etc/cron.d/simulador-respaldo <<EOF
 # Respaldo diario de la base de datos del simulador (22:00) y limpieza de antiguos (conserva 30)
-0 22 * * * $USUARIO cd $PROYECTO_DIR && DATABASE_PATH=$DATOS_DIR/simulator.db $PROYECTO_DIR/.venv/bin/python deploy/backup_db.py --origen $DATOS_DIR/simulator.db --destino $PROYECTO_DIR/deploy/respaldos --conservar 30 >> $LOG_DIR/respaldo.log 2>&1
+0 22 * * * $USUARIO cd $PROYECTO_DIR && DATABASE_PATH=$DATOS_DIR/simulator.db RUTA_AULAS=$DATOS_DIR/aulas RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db $PROYECTO_DIR/.venv/bin/python deploy/backup_db.py --todas --destino $PROYECTO_DIR/deploy/respaldos --conservar 30 >> $LOG_DIR/respaldo.log 2>&1
 EOF
 chmod 644 /etc/cron.d/simulador-respaldo
 
@@ -260,9 +318,39 @@ echo " Estado del servicio: systemctl status simulador-contable --no-pager"
 echo " Registros          : journalctl -u simulador-contable -n 50   |   $LOG_DIR/servidor.log"
 echo " Base de datos      : $DATOS_DIR/simulator.db  (respaldos diarios en $PROYECTO_DIR/deploy/respaldos)"
 echo
+echo " COMANDOS DEL DÍA A DÍA (cópielos tal cual):"
+echo "   Estado del servicio : sudo systemctl status simulador-contable --no-pager"
+echo "   Reiniciar           : sudo systemctl restart simulador-contable"
+echo "   Detener / arrancar  : sudo systemctl stop simulador-contable  |  sudo systemctl start simulador-contable"
+echo "   Registros en vivo   : sudo journalctl -u simulador-contable -f"
+echo "   Salud de la app     : curl -s http://127.0.0.1:$PUERTO/api/health"
+echo
+echo " DATOS Y RESPALDOS:"
+echo "   Base de control     : $DATOS_DIR/simulator.db"
+echo "   Aulas de estudiantes: $DATOS_DIR/aulas/B/<usuario>.db"
+echo "   Plantilla de aulas  : $DATOS_DIR/plantilla/aula_base.db"
+echo "   Respaldo manual     : sudo -u $USUARIO env DATABASE_PATH=$DATOS_DIR/simulator.db RUTA_AULAS=$DATOS_DIR/aulas RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/deploy/backup_db.py --todas"
+echo "   Ver respaldos       : $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/deploy/restaurar_db.py --listar"
+echo "   Restaurar (simular) : $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/deploy/restaurar_db.py --desde <carpeta>"
+echo "   Restaurar (real)    : $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/deploy/restaurar_db.py --desde <carpeta> --si"
+echo "   (el respaldo diario de las 22:00 ya incluye control + plantilla + TODAS las aulas)"
+echo
+echo " ACTUALIZAR EL SISTEMA (cuando cambie el código):"
+echo "   suba el nuevo paquete y repita:  sudo bash deploy/hostinger/instalar_vps.sh --dominio $DOMINIO"
+echo "   (el instalador es idempotente: conserva /etc/simulador/secrets.env y $DATOS_DIR)"
+echo
+echo " NÓMINA Y CREDENCIALES (no viajan con el código):"
+echo "   sudo -u $USUARIO env DATABASE_PATH=$DATOS_DIR/simulator.db RUTA_AULAS=$DATOS_DIR/aulas RUTA_PLANTILLA=$DATOS_DIR/plantilla/aula_base.db $PROYECTO_DIR/.venv/bin/python $PROYECTO_DIR/database/importar_nomina.py --csv /root/nomina.csv --paralelo B"
+echo
+echo " HTTPS MANUAL (si no usó --correo):"
+echo "   sudo certbot --nginx -d $DOMINIO --redirect"
+echo "   sudo sed -i 's/^SESSION_COOKIE_SECURE=false/SESSION_COOKIE_SECURE=true/' /etc/simulador/secrets.env"
+echo "   sudo systemctl restart simulador-contable"
+echo
 amarillo " PENDIENTE OBLIGATORIO DE SEGURIDAD: cambie las contraseñas de demostración"
 echo "     sudo -u $USUARIO bash -c 'cd $PROYECTO_DIR && DATABASE_PATH=$DATOS_DIR/simulator.db .venv/bin/python deploy/cambiar_credenciales.py'"
 echo
 echo " Verificación del despliegue desde su equipo:"
 echo "     python deploy/verificar_despliegue.py --url http://$DOMINIO"
+echo "     python deploy/verificar_produccion.py --base https://$DOMINIO     (11 comprobaciones funcionales)"
 echo "==============================================================================="

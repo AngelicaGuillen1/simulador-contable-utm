@@ -22,6 +22,34 @@ from datetime import timedelta
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
+def cargar_env(ruta=None):
+    """Carga las variables de un archivo .env, sin dependencias externas.
+
+    El entorno REAL siempre manda: los valores ya definidos no se sobrescriben, así
+    que en producción (/etc/simulador/secrets.env, panel del hosting) el .env se
+    ignora. Sirve para desarrollo local: copie .env.example como .env y ajuste.
+    """
+    ruta = ruta or os.path.join(BASE_DIR, ".env")
+    if not os.path.exists(ruta):
+        return 0
+    cargadas = 0
+    with open(ruta, encoding="utf-8") as archivo:
+        for linea in archivo:
+            linea = linea.strip()
+            if not linea or linea.startswith("#") or "=" not in linea:
+                continue
+            clave, valor = linea.split("=", 1)
+            clave = clave.strip()
+            valor = valor.strip().strip('"').strip("'")
+            if clave and clave not in os.environ:
+                os.environ[clave] = valor
+                cargadas += 1
+    return cargadas
+
+
+cargar_env()
+
+
 def _bool_env(nombre, por_defecto=False):
     """Lee una variable de entorno booleana admitiendo 1/true/si/on."""
     valor = os.environ.get(nombre)
@@ -48,6 +76,16 @@ class Config:
     # ----------------------------------------------------------------- Base de datos
     DATABASE_PATH = os.environ.get("DATABASE_PATH") or os.path.join(
         BASE_DIR, "database", "simulator.db"
+    )
+
+    # ------------------------------------------------------------------ Aulas
+    # Un aula (base de datos propia) por estudiante. Cuando el modo multiestudiante está
+    # activo, cada estudiante trabaja en su archivo y la base de control conserva usuarios,
+    # roles, cursos y la definición de las actividades del syllabus.
+    MULTIESTUDIANTE = _bool_env("SIMULADOR_MULTIESTUDIANTE", True)
+    RUTA_AULAS = os.environ.get("RUTA_AULAS") or os.path.join(BASE_DIR, "database", "aulas")
+    RUTA_PLANTILLA = os.environ.get("RUTA_PLANTILLA") or os.path.join(
+        BASE_DIR, "database", "plantilla", "aula_base.db"
     )
 
     # ---------------------------------------------------------------------- Servidor

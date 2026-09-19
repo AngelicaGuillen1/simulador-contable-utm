@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Balance de comprobación de {{ estudiante.nombre_completo or 'estudiante' }} - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% include "teacher/_libros_nav.html" %}
+
+{% if libro.existe %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Sumas Débitos</div>
+      <div class="kpi-value" style="font-size: 1.2rem;">{{ '%.2f'|format(libro.total_debitos) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-arrow-up-right me-1"></i> Total Debe</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Sumas Créditos</div>
+      <div class="kpi-value" style="font-size: 1.2rem;">{{ '%.2f'|format(libro.total_creditos) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-arrow-down-left me-1"></i> Total Haber</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Saldo Deudor</div>
+      <div class="kpi-value text-primary" style="font-size: 1.2rem;">{{ '%.2f'|format(libro.total_saldo_deudor) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-arrow-left-right me-1"></i> Cuentas con saldo deudor</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="kpi-card">
+      <div class="kpi-label">Saldo Acreedor</div>
+      <div class="kpi-value text-primary" style="font-size: 1.2rem;">{{ '%.2f'|format(libro.total_saldo_acreedor) }}</div>
+      <div class="small text-muted mt-1"><i class="bi bi-arrow-left-right me-1"></i> Cuentas con saldo acreedor</div>
+    </div>
+  </div>
+</div>
+
+<div class="alert {% if not libro.hay_movimientos %}alert-secondary{% elif libro.cuadrado %}alert-success{% else %}alert-danger{% endif %} border-0 rounded-4">
+  {% if not libro.hay_movimientos %}
+  <i class="bi bi-dash-circle me-2"></i>
+  <strong>Sin movimientos todavía.</strong>
+  El estudiante no ha registrado asientos, así que no hay sumas ni saldos que comprobar.
+  {% elif libro.cuadrado %}
+  <i class="bi bi-check2-circle me-2"></i>
+  <strong>El balance cuadra.</strong>
+  Sumas: Debe {{ '%.2f'|format(libro.total_debitos) }} = Haber {{ '%.2f'|format(libro.total_creditos) }} ·
+  Saldos: Deudor {{ '%.2f'|format(libro.total_saldo_deudor) }} = Acreedor {{ '%.2f'|format(libro.total_saldo_acreedor) }}.
+  {% else %}
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>El balance NO cuadra.</strong>
+  Diferencia en sumas: {{ '%.2f'|format(libro.diferencia_sumas) }} ·
+  Diferencia en saldos: {{ '%.2f'|format(libro.diferencia_saldos) }}.
+  {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+  <div class="card-header bg-white border-0 pt-4 px-4">
+    <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-check text-primary me-2"></i>Balance de comprobación de sumas y saldos</h6>
+    <small class="text-muted">{{ libro.cuentas|length }} cuenta(s) con movimientos en el aula del estudiante</small>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">Código</th>
+            <th>Cuenta</th>
+            <th class="text-end">Sumas Debe</th>
+            <th class="text-end">Sumas Haber</th>
+            <th class="text-end">Saldo Deudor</th>
+            <th class="text-end pe-4">Saldo Acreedor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cuenta in libro.cuentas %}
+          <tr>
+            <td class="ps-4"><code>{{ cuenta.codigo }}</code></td>
+            <td class="small fw-semibold text-dark">{{ cuenta.nombre }}
+              <div class="text-muted" style="font-size:0.72rem;">{{ cuenta.clasificacion }} · {{ cuenta.naturaleza }}</div>
+            </td>
+            <td class="text-end small">{{ '%.2f'|format(cuenta.debitos) }}</td>
+            <td class="text-end small">{{ '%.2f'|format(cuenta.creditos) }}</td>
+            <td class="text-end small {{ 'fw-bold' if cuenta.saldo_deudor else 'text-muted' }}">{{ '%.2f'|format(cuenta.saldo_deudor) }}</td>
+            <td class="text-end small pe-4 {{ 'fw-bold' if cuenta.saldo_acreedor else 'text-muted' }}">{{ '%.2f'|format(cuenta.saldo_acreedor) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center py-4 text-muted">
+            El estudiante aún no ha registrado movimientos: su balance está en cero.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-dark">
+          <tr>
+            <td class="ps-4 fw-bold" colspan="2">TOTALES</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_debitos) }}</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_creditos) }}</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_saldo_deudor) }}</td>
+            <td class="text-end fw-bold pe-4">{{ '%.2f'|format(libro.total_saldo_acreedor) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

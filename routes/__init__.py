@@ -13,6 +13,10 @@ from routes.tutor import tutor_bp
 from routes.reports import reports_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
+from routes.activities import activities_bp
+from routes.evidence import evidence_bp
+from routes.teacher import teacher_bp
+from routes.casos_libros import casos_bp
 
 def register_blueprints(app):
     app.register_blueprint(auth_bp)
@@ -29,3 +33,7 @@ def register_blueprints(app):
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(activities_bp)
+    app.register_blueprint(evidence_bp)
+    app.register_blueprint(teacher_bp)
+    app.register_blueprint(casos_bp)

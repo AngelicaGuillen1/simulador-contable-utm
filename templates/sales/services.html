@@ -5,7 +5,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h3 class="fw-bold mb-1"><i class="bi bi-headset text-primary me-2"></i>Prestación de Servicios</h3>
-    <p class="text-muted small mb-0">Facturación de servicios de logística, asesoría y mantenimiento (Ingresos por Servicios 4.1.02)</p>
+    <p class="text-muted small mb-0">Facturación de servicios de logística, asesoría y mantenimiento (Ingresos por Servicios 4.1.02),
+      con las <strong>retenciones de Renta y de IVA que el cliente agente de retención le practica a la empresa</strong>.</p>
   </div>
   <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newServiceModal">
     <i class="bi bi-plus-circle me-1"></i> Facturar Nuevo Servicio
@@ -28,12 +29,18 @@
             <th>Servicio Realizado</th>
             <th class="text-center">Forma Pago</th>
             <th class="text-end">Subtotal</th>
-            <th class="text-end">IVA (15%)</th>
+            <th class="text-end">IVA</th>
+            <th class="text-end">Retención Renta</th>
+            <th class="text-end">Retención IVA</th>
+            <th class="text-end">Neto por cobrar</th>
             <th class="text-end pe-4">Total</th>
           </tr>
         </thead>
         <tbody>
           {% for s in tx_servicios %}
+          {% set s_renta = s.retencion_renta_valor or 0 %}
+          {% set s_ret_iva = s.retencion_iva_valor or 0 %}
+          {% set s_neto = s.neto_cobrar if s.neto_cobrar is not none else s.total %}
           <tr>
             <td class="ps-4 fw-bold"><code>{{ s.numero_factura }}</code></td>
             <td>{{ s.fecha }}</td>
@@ -47,11 +54,29 @@
             </td>
             <td class="text-end">${{ "{:,.2f}".format(s.subtotal) }}</td>
             <td class="text-end text-muted">${{ "{:,.2f}".format(s.iva_valor) }}</td>
-            <td class="text-end fw-bold text-success pe-4">${{ "{:,.2f}".format(s.total) }}</td>
+            <td class="text-end {% if s_renta %}text-danger{% else %}text-muted{% endif %}">
+              {% if s_renta %}
+                <div>${{ "{:,.2f}".format(s_renta) }}</div>
+                <small class="text-muted">{{ (s.retencion_renta_porcentaje or 0)|round(2) }} % <code>{{ s.retencion_renta_codigo }}</code></small>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end {% if s_ret_iva %}text-danger{% else %}text-muted{% endif %}">
+              {% if s_ret_iva %}
+                <div>${{ "{:,.2f}".format(s_ret_iva) }}</div>
+                <small class="text-muted">{{ (s.retencion_iva_porcentaje or 0)|round(2) }} % <code>{{ s.retencion_iva_codigo }}</code></small>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end fw-bold text-success">
+              ${{ "{:,.2f}".format(s_neto) }}
+              {% if (s.total_retenciones or 0) > 0 %}
+                <div><small class="text-muted">factura ${{ "{:,.2f}".format(s.total) }} − ret. ${{ "{:,.2f}".format(s.total_retenciones) }}</small></div>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold pe-4">${{ "{:,.2f}".format(s.total) }}</td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="text-center py-4 text-muted">No se registran servicios facturados en el período.</td>
+            <td colspan="11" class="text-center py-4 text-muted">No se registran servicios facturados en el período.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -101,11 +126,36 @@
           </div>
           <div class="col-md-4">
             <label class="form-label small fw-semibold">Forma de Pago</label>
-            <select name="forma_pago" class="form-select">
+            <select name="forma_pago" id="servicioFormaPago" class="form-select" onchange="calcServiceTotal()">
               <option value="EFECTIVO">Efectivo (Caja 1.1.01)</option>
               <option value="TRANSFERENCIA">Transferencia Bancaria</option>
               <option value="CREDITO">Crédito Comercial (CxC 1.1.04)</option>
             </select>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-7">
+            <label class="form-label small fw-semibold">Concepto del servicio (retenciones que aplica el cliente)</label>
+            <select name="tipo_venta" id="tipoVentaServicio" class="form-select" onchange="calcServiceTotal()">
+              {% for c in conceptos %}
+              <option value="{{ c.clave }}" data-explicacion="{{ c.explicacion }}" {% if c.clave in ('SERVICIOS_MANO_OBRA', 'SERVICIOS_PROFESIONALES') %}selected{% endif %} {% if not c.disponible %}disabled{% endif %}>
+                {{ c.etiqueta }}{% if c.renta %} — Renta {{ c.renta.porcentaje|round(2) }} %{% endif %}{% if c.iva %} · IVA {{ c.iva.porcentaje|round(2) }} %{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-muted" id="servicioExplicacion"></div>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label small fw-semibold">Situación del cliente</label>
+            <div class="form-check mt-1">
+              <input class="form-check-input" type="checkbox" value="1" id="clienteAgenteRetencionServicio"
+                     name="cliente_agente_retencion" onchange="calcServiceTotal()">
+              <label class="form-check-label small" for="clienteAgenteRetencionServicio">
+                El cliente es <strong>agente de retención</strong>: la empresa <strong>sufre</strong> la retención de
+                Renta (sobre el valor del servicio) y de IVA (sobre el IVA de la factura), y cobra el neto.
+              </label>
+            </div>
           </div>
         </div>
 
@@ -116,17 +166,54 @@
 
         <div class="bg-light p-3 rounded-3 border">
           <div class="d-flex justify-content-between mb-1">
-            <span class="text-muted small">Subtotal:</span>
+            <span class="text-muted small">Subtotal (valor del servicio):</span>
             <strong id="srvSubtotalDisplay">$0.00</strong>
           </div>
           <div class="d-flex justify-content-between mb-1">
-            <span class="text-muted small">IVA 15%:</span>
+            <span class="text-muted small">IVA Ventas (débito fiscal):</span>
             <strong id="srvIvaDisplay" class="text-primary">$0.00</strong>
           </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Retención Renta <span id="srvRentaDetalle" class="text-secondary"></span>:</span>
+            <strong id="srvRentaDisplay" class="text-danger">$0.00</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Retención IVA <span id="srvRetIvaDetalle" class="text-secondary"></span>:</span>
+            <strong id="srvRetIvaDisplay" class="text-danger">$0.00</strong>
+          </div>
           <hr class="my-2">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Total de la factura:</span>
+            <strong id="srvTotalDisplay" class="fs-5">$0.00</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Total retenido por el cliente:</span>
+            <strong id="srvRetTotalDisplay" class="text-danger">$0.00</strong>
+          </div>
           <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold">Total Factura Servicio:</span>
-            <span id="srvTotalDisplay" class="fs-4 fw-bold text-success">$0.00</span>
+            <span class="fw-bold">Neto por cobrar al cliente:</span>
+            <span id="srvNetoDisplay" class="fs-4 fw-bold text-success">$0.00</span>
+          </div>
+          <div class="alert alert-warning small py-2 px-3 mt-2 mb-0 d-none" id="srvDesgloseAviso"></div>
+        </div>
+
+        <div class="card border rounded-3 mt-3">
+          <div class="card-header bg-white fw-semibold small">
+            <i class="bi bi-journal-check me-1 text-primary"></i> Asiento contable que se registrará
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">Cuenta</th>
+                  <th class="text-end">Debe</th>
+                  <th class="text-end pe-3">Haber</th>
+                </tr>
+              </thead>
+              <tbody id="asientoServiciosBody">
+                <tr><td colspan="3" class="text-center text-muted py-3">Indique el valor del servicio para ver el asiento.</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -141,6 +228,13 @@
 
 {% block scripts %}
 <script>
+const URL_DESGLOSE_SERVICIO = "{{ url_for('sales.desglose_venta') }}";
+let temporizadorServicio = null;
+
+function money(valor) {
+  return "$" + (Math.round((parseFloat(valor) || 0) * 100) / 100).toFixed(2);
+}
+
 function updateServiceRate(selectEl) {
   const opt = selectEl.options[selectEl.selectedIndex];
   const rate = opt.getAttribute("data-rate") || 0;
@@ -148,16 +242,102 @@ function updateServiceRate(selectEl) {
   calcServiceTotal();
 }
 
+function pintarAsientoServicio(lineas) {
+  const cuerpo = document.getElementById("asientoServiciosBody");
+  cuerpo.innerHTML = "";
+  lineas.forEach((l) => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td class="ps-3 small">
+        <code>${l.cuenta_codigo || ""}</code> ${l.cuenta_nombre || ""}
+        <div class="text-muted" style="font-size: .75rem;">${l.referencia || ""}</div>
+      </td>
+      <td class="text-end small">${l.debe ? money(l.debe) : "—"}</td>
+      <td class="text-end pe-3 small">${l.haber ? money(l.haber) : "—"}</td>
+    `;
+    cuerpo.appendChild(fila);
+  });
+  const debe = lineas.reduce((s, l) => s + (parseFloat(l.debe) || 0), 0);
+  const haber = lineas.reduce((s, l) => s + (parseFloat(l.haber) || 0), 0);
+  const total = document.createElement("tr");
+  total.className = "table-light fw-semibold";
+  total.innerHTML = `<td class="ps-3 small">Totales</td>
+                     <td class="text-end small">${money(debe)}</td>
+                     <td class="text-end pe-3 small">${money(haber)}</td>`;
+  cuerpo.appendChild(total);
+}
+
 function calcServiceTotal() {
   const qty = parseFloat(document.getElementById("serviceQty").value || 0);
   const rate = parseFloat(document.getElementById("serviceRate").value || 0);
   const sub = Math.round(qty * rate * 100) / 100;
-  const iva = Math.round(sub * 0.15 * 100) / 100;
-  const tot = Math.round((sub + iva) * 100) / 100;
 
-  document.getElementById("srvSubtotalDisplay").textContent = `$${sub.toFixed(2)}`;
-  document.getElementById("srvIvaDisplay").textContent = `$${iva.toFixed(2)}`;
-  document.getElementById("srvTotalDisplay").textContent = `$${tot.toFixed(2)}`;
+  const select = document.getElementById("tipoVentaServicio");
+  const opt = select.options[select.selectedIndex];
+  document.getElementById("servicioExplicacion").textContent = opt ? (opt.getAttribute("data-explicacion") || "") : "";
+
+  if (sub <= 0) {
+    document.getElementById("srvSubtotalDisplay").textContent = money(0);
+    document.getElementById("srvIvaDisplay").textContent = money(0);
+    document.getElementById("srvRentaDisplay").textContent = money(0);
+    document.getElementById("srvRetIvaDisplay").textContent = money(0);
+    document.getElementById("srvTotalDisplay").textContent = money(0);
+    document.getElementById("srvRetTotalDisplay").textContent = money(0);
+    document.getElementById("srvNetoDisplay").textContent = money(0);
+    document.getElementById("srvRentaDetalle").textContent = "";
+    document.getElementById("srvRetIvaDetalle").textContent = "";
+    document.getElementById("srvDesgloseAviso").classList.add("d-none");
+    return;
+  }
+
+  clearTimeout(temporizadorServicio);
+  temporizadorServicio = setTimeout(() => {
+    const datos = new URLSearchParams({
+      subtotal: sub,
+      tipo_venta: select.value,
+      forma_pago: document.getElementById("servicioFormaPago").value,
+      cliente_agente_retencion: document.getElementById("clienteAgenteRetencionServicio").checked ? "1" : "0",
+      cuenta_ingreso: "4.1.02",
+    });
+
+    fetch(URL_DESGLOSE_SERVICIO, { method: "POST", body: datos })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d })))
+      .then(({ ok, data }) => {
+        const aviso = document.getElementById("srvDesgloseAviso");
+        if (!ok || !data.ok) {
+          aviso.textContent = data.mensaje || "No se pudo calcular el desglose.";
+          aviso.classList.remove("d-none");
+          return;
+        }
+        aviso.classList.add("d-none");
+        const d = data.desglose;
+
+        document.getElementById("srvSubtotalDisplay").textContent = money(d.subtotal);
+        document.getElementById("srvIvaDisplay").textContent =
+          money(d.iva_valor) + ` (${d.iva_porcentaje} % · ${d.iva_codigo})`;
+
+        const renta = d.retencion_renta;
+        document.getElementById("srvRentaDisplay").textContent = renta ? "− " + money(renta.valor) : money(0);
+        document.getElementById("srvRentaDetalle").textContent = renta ? `(${renta.porcentaje} % · ${renta.codigo})` : "(no aplica)";
+
+        const riva = d.retencion_iva;
+        document.getElementById("srvRetIvaDisplay").textContent = riva ? "− " + money(riva.valor) : money(0);
+        document.getElementById("srvRetIvaDetalle").textContent = riva ? `(${riva.porcentaje} % · ${riva.codigo})` : "(no aplica)";
+
+        document.getElementById("srvTotalDisplay").textContent = money(d.total_factura);
+        document.getElementById("srvRetTotalDisplay").textContent = "− " + money(d.total_retenciones);
+        document.getElementById("srvNetoDisplay").textContent = money(d.neto_cobrar);
+
+        pintarAsientoServicio(d.lineas);
+      })
+      .catch(() => {
+        const aviso = document.getElementById("srvDesgloseAviso");
+        aviso.textContent = "No se pudo consultar el desglose de retenciones. Verifique el valor del servicio.";
+        aviso.classList.remove("d-none");
+      });
+  }, 200);
 }
+
+document.addEventListener("DOMContentLoaded", calcServiceTotal);
 </script>
 {% endblock %}

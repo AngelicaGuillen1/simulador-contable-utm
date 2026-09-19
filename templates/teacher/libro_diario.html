@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Libro Diario de {{ estudiante.nombre_completo or 'estudiante' }} - Simulador Integral de Sistema Contable{% endblock %}
+
+{% block content %}
+{% include "teacher/_libros_nav.html" %}
+
+{% if libro.existe %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+  <div class="card-header bg-white border-0 pt-4 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h6 class="fw-bold mb-0"><i class="bi bi-journal-text text-primary me-2"></i>Libro Diario del estudiante</h6>
+      <small class="text-muted">Asientos con fecha, concepto, cuentas, Debe y Haber ({{ libro.asientos|length }} asiento(s))</small>
+    </div>
+    <form class="d-flex flex-wrap gap-2" method="get">
+      <input type="date" name="desde" class="form-control form-control-sm" value="{{ libro.desde or '' }}">
+      <input type="date" name="hasta" class="form-control form-control-sm" value="{{ libro.hasta or '' }}">
+      <button class="btn btn-sm btn-outline-primary"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      <a class="btn btn-sm btn-light border" href="{{ url_for('teacher.estudiante_diario', estudiante_id=estudiante_id) }}">Limpiar</a>
+    </form>
+  </div>
+  <div class="card-body px-0 pb-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-uppercase text-muted">
+            <th class="ps-4">#</th>
+            <th>Fecha</th>
+            <th>Concepto</th>
+            <th>Documento</th>
+            <th>Cuenta</th>
+            <th class="text-end">Debe</th>
+            <th class="text-end pe-4">Haber</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for asiento in libro.asientos %}
+            {% for linea in asiento.lineas %}
+            <tr>
+              {% if loop.first %}
+              <td class="ps-4 text-muted small" rowspan="{{ asiento.lineas|length }}">
+                {{ asiento.numero_asiento }}
+                {% if not asiento.cuadrado %}
+                <div><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Descuadra</span></div>
+                {% endif %}
+                {% if asiento.estado == 'REVERTIDO' %}
+                <div><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Revertido</span></div>
+                {% endif %}
+              </td>
+              <td class="small fw-semibold text-dark" rowspan="{{ asiento.lineas|length }}">{{ asiento.fecha }}</td>
+              <td class="small" rowspan="{{ asiento.lineas|length }}">
+                {{ asiento.glosa }}
+                {% if asiento.origen_modulo %}<div class="text-muted" style="font-size:0.72rem;">Módulo: {{ asiento.origen_modulo }}</div>{% endif %}
+              </td>
+              <td class="small text-muted" rowspan="{{ asiento.lineas|length }}">{{ asiento.tipo_documento or '—' }}{% if asiento.numero_documento %} · {{ asiento.numero_documento }}{% endif %}</td>
+              {% endif %}
+              <td class="small"><code>{{ linea.codigo }}</code> {{ linea.nombre }}
+                {% if linea.referencia %}<div class="text-muted" style="font-size:0.72rem;">{{ linea.referencia }}</div>{% endif %}
+              </td>
+              <td class="text-end small {{ 'fw-bold' if linea.debe else 'text-muted' }}">{{ '%.2f'|format(linea.debe or 0) }}</td>
+              <td class="text-end small pe-4 {{ 'fw-bold' if linea.haber else 'text-muted' }}">{{ '%.2f'|format(linea.haber or 0) }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="table-light">
+              <td class="ps-4 small text-muted" colspan="4">Totales del asiento #{{ asiento.numero_asiento }}</td>
+              <td class="small text-end fw-bold">{{ '%.2f'|format(asiento.total_debe) }}</td>
+              <td class="small text-end fw-bold pe-4">{{ '%.2f'|format(asiento.total_haber) }}</td>
+            </tr>
+          {% else %}
+          <tr><td colspan="7" class="text-center py-4 text-muted">
+            El estudiante aún no ha registrado asientos en su Libro Diario.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+        {% if libro.asientos %}
+        <tfoot class="table-dark">
+          <tr>
+            <td class="ps-4 fw-bold" colspan="5">TOTALES DEL LIBRO DIARIO</td>
+            <td class="text-end fw-bold">{{ '%.2f'|format(libro.total_debe) }}</td>
+            <td class="text-end fw-bold pe-4">{{ '%.2f'|format(libro.total_haber) }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

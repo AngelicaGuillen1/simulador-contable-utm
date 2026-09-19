@@ -4,14 +4,14 @@ from routes.auth import login_required
 from services.sales_service import SalesService
 from services.purchase_service import PurchaseService
 from services.period_service import PeriodService
-from models import get_db_connection
+from models import get_db_contable
 
 partners_bp = Blueprint("partners", __name__)
 
 @partners_bp.route("/clientes", methods=["GET", "POST"])
 @login_required
 def customers():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             ident = request.form.get("identificacion", "").strip()
@@ -42,7 +42,7 @@ def customers():
 @partners_bp.route("/proveedores", methods=["GET", "POST"])
 @login_required
 def suppliers():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             ident = request.form.get("identificacion", "").strip()
@@ -72,7 +72,7 @@ def suppliers():
 @partners_bp.route("/cuentas-cobrar", methods=["GET", "POST"])
 @login_required
 def receivables():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             cxc_id = int(request.form.get("cuenta_cobrar_id"))
@@ -109,7 +109,7 @@ def receivables():
 @partners_bp.route("/cuentas-pagar", methods=["GET", "POST"])
 @login_required
 def payables():
-    conn = get_db_connection()
+    conn = get_db_contable()
     try:
         if request.method == "POST":
             cxp_id = int(request.form.get("cuenta_pagar_id"))
