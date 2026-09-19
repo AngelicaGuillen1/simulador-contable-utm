@@ -74,12 +74,19 @@ PARAM_PARALELO=()
 sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/importar_nomina.py" \
   --nomina "$CSV_ACCESIBLE" --credenciales "$DATOS_DIR/credenciales_aplicadas.csv" "${PARAM_PARALELO[@]}"
 
-# ---- 2) Simulador de práctica en las aulas ---------------------------------
-azul "==> 2/5 Sembrando el simulador de práctica (niveles y casos)"
-sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/sembrar_simulaciones.py" | tail -3
+# ---- 2) Catálogo tributario oficial en TODAS las bases (control, plantilla y aulas)
+# Las aulas se clonan de la plantilla que crea el instalador; si esa plantilla trae el
+# catálogo heredado del seed (1,75 % / 2,75 %), las compras retendrían con tasas viejas.
+azul "==> 2/6 Aplicando el catálogo tributario del SRI (IVA y retenciones)"
+sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/parametros_tributarios_sri.py" \
+  --todas-las-aulas | tail -3
 
-# ---- 3) Actividades del sílabo (las 6 tareas de la asignatura) --------------
-azul "==> 3/5 Cargando las actividades del sílabo y asignándolas"
+# ---- 3) Simulador de práctica en las aulas ---------------------------------
+azul "==> 3/6 Sembrando el simulador de práctica (niveles y casos)"
+sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/sembrar_simulaciones.py" | tail -2
+
+# ---- 4) Actividades del sílabo (las 6 tareas de la asignatura) --------------
+azul "==> 4/6 Cargando las actividades del sílabo y asignándolas"
 if sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/database/seed_actividades.py" --todos \
      >/tmp/actividades.log 2>&1; then
   verde "    Actividades cargadas (detalle en /tmp/actividades.log)"
@@ -87,13 +94,13 @@ else
   rojo "    No se pudieron cargar las actividades. Revise /tmp/actividades.log"
 fi
 
-# ---- 4) Reinicio del servicio ----------------------------------------------
-azul "==> 4/5 Reiniciando el servicio"
+# ---- 5) Reinicio del servicio ----------------------------------------------
+azul "==> 5/6 Reiniciando el servicio"
 systemctl restart simulador-contable
 sleep 5
 
-# ---- 5) Comprobación --------------------------------------------------------
-azul "==> 5/5 Comprobación"
+# ---- 6) Comprobación --------------------------------------------------------
+azul "==> 6/6 Comprobación"
 sudo -u "$USUARIO" env $ENTORNO PROYECTO_DIR="$PROYECTO_DIR" "$PY" - <<'PYFIN'
 import glob, os, sqlite3, sys
 sys.path.insert(0, os.environ.get("PROYECTO_DIR", "/opt/simulador"))

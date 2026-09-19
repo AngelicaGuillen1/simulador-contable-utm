@@ -283,15 +283,24 @@ def _resolver_cuenta(conn, palabras, nombre_nuevo, naturaleza, clasificacion,
 
 
 def _asegurar_cuenta_retencion(conn):
-    """Devuelve el id de la cuenta donde se acredita la retención de IVA por pagar.
+    """Devuelve el id de la cuenta donde se ACREDITA la retención de IVA por pagar.
 
-    Cuidado: en el plan de cuentas pedagógico el código 2.1.04 ya está ocupado por «Sueldos y
-    Beneficios Sociales por Pagar». Primero se busca una cuenta cuyo nombre sea de retención de
-    IVA; si no existe, se crea con el primer código libre de la serie 2.1.0x.
+    Ojo con dos trampas del plan de cuentas pedagógico:
+      1. el código 2.1.04 ya está ocupado por «Sueldos y Beneficios Sociales por Pagar»;
+      2. existe una cuenta de retención de IVA pero del lado CONTRARIO: «Retención en la
+         Fuente de IVA por **Cobrar**» (activo, la que usa el vendedor cuando su cliente
+         le retiene). Si no se filtra por naturaleza, se acaba acreditando una cuenta de
+         activo al registrar una compra: por eso se exige que sea de PASIVO.
+
+    Primero busca una cuenta de retención de IVA con naturaleza acreedora (pasivo); si no
+    existe, la crea con el primer código libre de la serie 2.1.0x.
     """
     fila = conn.execute("""SELECT id FROM cuentas
                            WHERE REPLACE(LOWER(nombre), 'ó', 'o') LIKE '%retencion%'
                              AND LOWER(nombre) LIKE '%iva%'
+                             AND (LOWER(nombre) LIKE '%pagar%'
+                                  OR LOWER(COALESCE(clasificacion, '')) LIKE 'pasivo%'
+                                  OR UPPER(COALESCE(naturaleza, '')) LIKE 'ACREED%')
                            ORDER BY id LIMIT 1""").fetchone()
     if fila:
         return fila["id"]
