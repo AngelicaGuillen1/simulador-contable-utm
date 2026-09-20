@@ -72,6 +72,46 @@ def contar(ruta):
     return resumen
 
 
+def restaurar_catalogo(ruta, plantilla=None, confirmar=False):
+    """Devuelve los productos del aula a los valores de la plantilla (stock y costo).
+
+    Las operaciones no solo crean asientos: también mueven el stock y el costo promedio de
+    los productos. Al limpiar un aula hay que devolver el catálogo a su punto de partida,
+    o el aula quedaría «en cero» contablemente pero con mercadería de más.
+    """
+    plantilla = plantilla or Config.RUTA_PLANTILLA
+    if not os.path.exists(plantilla) or os.path.abspath(plantilla) == os.path.abspath(ruta):
+        return 0
+    origen = _conectar(plantilla)
+    try:
+        base = {f["codigo"]: dict(f) for f in origen.execute(
+            "SELECT codigo, stock_actual, costo_unitario, precio_venta FROM productos")}
+    finally:
+        origen.close()
+
+    destino = _conectar(ruta)
+    cambiados = 0
+    try:
+        for fila in destino.execute("SELECT id, codigo, stock_actual, costo_unitario, precio_venta FROM productos"):
+            esperado = base.get(fila["codigo"])
+            if not esperado:
+                continue
+            if (fila["stock_actual"] != esperado["stock_actual"]
+                    or fila["costo_unitario"] != esperado["costo_unitario"]
+                    or fila["precio_venta"] != esperado["precio_venta"]):
+                cambiados += 1
+                if confirmar:
+                    destino.execute("UPDATE productos SET stock_actual = ?, costo_unitario = ?, "
+                                    "precio_venta = ? WHERE id = ?",
+                                    (esperado["stock_actual"], esperado["costo_unitario"],
+                                     esperado["precio_venta"], fila["id"]))
+        if confirmar:
+            destino.commit()
+    finally:
+        destino.close()
+    return cambiados
+
+
 def limpiar(ruta, confirmar=False):
     """Vacía las operaciones del aula. Devuelve el resumen después de limpiar."""
     conexion = _conectar(ruta)
@@ -140,13 +180,23 @@ def main():
     con_datos = []
 
     print("Aulas encontradas: %d" % len(rutas))
+    catalogo_movido = []
     for ruta in rutas:
         antes = contar(ruta)
         if antes["asientos"] or antes["ventas"] or antes["compras"]:
             con_datos.append((os.path.basename(ruta), antes["asientos"], antes["ventas"],
                               antes["compras"]))
+        movidos = restaurar_catalogo(ruta, confirmar=confirmar)
+        if movidos:
+            catalogo_movido.append((os.path.basename(ruta), movidos))
         if confirmar:
             limpiar(ruta, confirmar=True)
+
+    if catalogo_movido:
+        print("\nCatálogo devuelto a su punto de partida (stock/costo) en %d aulas:"
+              % len(catalogo_movido))
+        for nombre, n in catalogo_movido[:10]:
+            print("   %-28s %s producto(s) restaurado(s)" % (nombre, n))
 
     if con_datos:
         print("\nAulas que TENÍAN movimientos: %d" % len(con_datos))

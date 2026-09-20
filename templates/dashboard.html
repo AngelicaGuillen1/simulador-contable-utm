@@ -55,6 +55,36 @@
   </div>
 </div>
 
+<!-- ============ aviso de empresa sin operaciones (ver aporte inicial) ============ -->
+{% set inventario_catalogo = (inventario_por_categoria | sum(attribute='valor')) if inventario_por_categoria else 0 %}
+{% if total_asientos == 0 and inventario_catalogo > 0 %}
+<div class="alert alert-warning border-warning shadow-sm mb-4">
+  <h6 class="fw-bold mb-2">
+    <i class="bi bi-box-seam me-1"></i> Tu empresa ya tiene mercadería y todavía no registra operaciones
+  </h6>
+  <p class="mb-2">
+    En bodega tienes <strong>{{ total_productos }} productos</strong> por
+    <strong>{{ inventario_catalogo | money }}</strong> al costo (lo ves en <em>Catálogo de Productos</em>).
+    Ese inventario entró con el aporte de los socios, así que tu primer asiento es el
+    <strong>aporte inicial</strong>:
+  </p>
+  <ul class="mb-3">
+    <li><strong>Debe</strong> 1.1.06 Inventario de Mercaderías … {{ inventario_catalogo | money }}</li>
+    <li><strong>Debe</strong> 1.1.01 Caja General … el efectivo que aportan los socios</li>
+    <li><strong>Haber</strong> 3.1.01 Capital Social Suscrito y Pagado … la suma de los dos anteriores</li>
+  </ul>
+  <p class="mb-2 small text-muted">
+    Ejemplo: si los socios aportan $1.500,00 en efectivo, el asiento es
+    Debe Caja 1.500,00 + Debe Inventario {{ inventario_catalogo | money }} contra
+    Haber Capital {{ (inventario_catalogo + 1500) | money }}. Recuerda que el total del Debe
+    debe ser igual al del Haber.
+  </p>
+  <a class="btn btn-primary btn-sm fw-semibold" href="{{ url_for('accounting.journal') }}">
+    <i class="bi bi-journal-text me-1"></i> Registrar el aporte inicial en el Libro Diario
+  </a>
+</div>
+{% endif %}
+
 <!-- ===================== INDICADORES FINANCIEROS ===================== -->
 <h6 class="text-uppercase text-muted fw-bold small mb-3">Indicadores financieros (libro mayor)</h6>
 <div class="row g-3 mb-4">
