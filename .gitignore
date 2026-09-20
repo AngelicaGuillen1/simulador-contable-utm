@@ -56,3 +56,8 @@ doc_*.html
 *.tmp
 *.bak
 
+
+# Archivos con claves: nunca al repositorio
+ACCESOS_*.txt
+clave*.txt
+claves*.txt

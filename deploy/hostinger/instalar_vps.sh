@@ -347,7 +347,53 @@ echo "   sudo certbot --nginx -d $DOMINIO --redirect"
 echo "   sudo sed -i 's/^SESSION_COOKIE_SECURE=false/SESSION_COOKIE_SECURE=true/' /etc/simulador/secrets.env"
 echo "   sudo systemctl restart simulador-contable"
 echo
-amarillo " PENDIENTE OBLIGATORIO DE SEGURIDAD: cambie las contraseñas de demostración"
+# ------------------------------------------------ 10.b Claves de administración
+# Las cuentas de fábrica (admin, docente, auditor, estudiante) traen contraseñas
+# conocidas. En un sistema publicado hay que cambiarlas: se generan claves nuevas y se
+# guardan en un archivo del servidor para que el responsable las tenga a mano.
+# Solo se cambian las que AÚN tienen la clave de fábrica, así una reinstalación no
+# invalida las claves ya en uso.
+ARCHIVO_ACCESOS="$DATOS_DIR/ACCESOS_DEL_SERVIDOR.txt"
+TEMPORAL_CLAVE="$(mktemp)"
+CAMBIADAS=""
+for CUENTA in admin docente auditor estudiante; do
+  printf '%s123\n' "$CUENTA" > "$TEMPORAL_CLAVE"
+  if sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/deploy/fijar_clave.py" \
+       --usuario "$CUENTA" --comprobar --archivo "$TEMPORAL_CLAVE" >/dev/null 2>&1; then
+    if [ ! -f "$ARCHIVO_ACCESOS" ]; then
+      {
+        echo "ACCESOS DE ADMINISTRACION - SERVIDOR DEL SIMULADOR CONTABLE"
+        echo "Generados automaticamente al instalar el $(date '+%d/%m/%Y %H:%M')."
+        echo "NO comparta este archivo: contiene las contrasenas del sistema."
+        echo
+      } > "$ARCHIVO_ACCESOS"
+    fi
+    sudo -u "$USUARIO" env $ENTORNO "$PY" "$PROYECTO_DIR/deploy/fijar_clave.py" \
+         --usuario "$CUENTA" --generar --archivo "/tmp/clave_${CUENTA}.txt" >/dev/null 2>&1
+    {
+      echo "  $CUENTA"
+      echo "      usuario: $CUENTA"
+      echo "      contrasena: $(cat /tmp/clave_${CUENTA}.txt)"
+      echo
+    } >> "$ARCHIVO_ACCESOS"
+    rm -f "/tmp/clave_${CUENTA}.txt"
+    CAMBIADAS="$CAMBIADAS $CUENTA"
+  fi
+done
+rm -f "$TEMPORAL_CLAVE"
+if [ -n "$CAMBIADAS" ]; then
+  chown "$USUARIO:$USUARIO" "$ARCHIVO_ACCESOS" 2>/dev/null || true
+  chmod 600 "$ARCHIVO_ACCESOS"
+  amarillo " Claves de fábrica reemplazadas en:$CAMBIADAS"
+  echo "     Se guardaron en: $ARCHIVO_ACCESOS   (léalo con: sudo cat $ARCHIVO_ACCESOS)"
+else
+  verde " Ninguna cuenta conserva la clave de fábrica."
+fi
+
+echo
+amarillo " PENDIENTE OBLIGATORIO DE SEGURIDAD: revise las claves de administración"
+echo "     sudo cat $ARCHIVO_ACCESOS        (nombres de usuario y contrasenas generadas)"
+echo "     Para cambiarlas cuando quiera:"
 echo "     sudo -u $USUARIO bash -c 'cd $PROYECTO_DIR && DATABASE_PATH=$DATOS_DIR/simulator.db .venv/bin/python deploy/cambiar_credenciales.py'"
 echo
 echo " Verificación del despliegue desde su equipo:"
