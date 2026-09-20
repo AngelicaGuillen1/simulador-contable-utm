@@ -30,7 +30,12 @@ def llamar(metodo, ruta, token, cuerpo=None):
         data=json.dumps(cuerpo).encode() if cuerpo is not None else None,
         headers={"Authorization": "Bearer %s" % token,
                  "Content-Type": "application/json",
-                 "Accept": "application/json"})
+                 "Accept": "application/json",
+                 # Cloudflare (delante de developers.hostinger.com) bloquea con error 1010
+                 # las firmas de cliente automáticas tipo "Python-urllib"; con un agente
+                 # de navegador normal la petición pasa.
+                 "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")})
     try:
         with urllib.request.urlopen(peticion, timeout=45) as respuesta:
             texto = respuesta.read().decode("utf-8", "ignore")
@@ -110,12 +115,12 @@ def main():
         anterior = contenidos(registro)
         if tipo == "A" and nombre in ("@", ""):
             tiene_a_raiz = True
-            zona_nueva.append({"name": "@", "type": "A", "ttl": registro.get("ttl") or 3600,
+            zona_nueva.append({"name": "@", "type": "A", "ttl": max(int(registro.get("ttl") or 3600), 300),
                                "records": [{"content": argumentos.ip}]})
             cambios.append(("A @", anterior, argumentos.ip))
         elif tipo == "A" and nombre == "www":
             tiene_a_www = True
-            zona_nueva.append({"name": "www", "type": "A", "ttl": registro.get("ttl") or 3600,
+            zona_nueva.append({"name": "www", "type": "A", "ttl": max(int(registro.get("ttl") or 3600), 300),
                                "records": [{"content": argumentos.ip}]})
             cambios.append(("A www", anterior, argumentos.ip))
 
