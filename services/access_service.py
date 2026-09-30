@@ -650,7 +650,6 @@ def listado_docente_estudiantes(db_path=None):
               JOIN roles r ON u.rol_id = r.id
              WHERE r.nombre = 'Estudiante'
                AND COALESCE(u.es_demo, 0) = 0
-           AND COALESCE(u.es_demo, 0) = 0
              ORDER BY u.nombre_completo COLLATE NOCASE ASC
         """).fetchall()
     finally:
