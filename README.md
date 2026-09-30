@@ -415,3 +415,5 @@ auditoría. **Asientos descuadrados: 0**.
 * Motor de retenciones por proveedor y generación de comprobantes de retención.
 * Modo multiusuario concurrente con PostgreSQL para grupos grandes.
 * Editor visual de casos para el docente (hoy se generan por script y por el agente generador).
+
+- `python database/variar_catalogos.py --aplicar`: valores propios por estudiante.
