@@ -277,3 +277,68 @@ def cambiar_estado_actividad(actividad_id):
 
     flash("Actividad %s marcada como %s." % (actividad["codigo"], nuevo_estado), "success")
     return redirect(url_for("activities.docente_detalle_actividad", actividad_id=actividad_id))
+
+
+@activities_bp.route("/docente/actividades/<int:actividad_id>/fechas", methods=["POST"])
+@login_required
+@roles_required("Docente", "Administrador")
+def cambiar_fechas_actividad(actividad_id):
+    """Cambia la ventana de disponibilidad (del ... al ...) de una actividad del sílabo.
+
+    La docente necesita poder abrir una tarea antes de la semana que le asignó el cronograma
+    (por ejemplo, para que los estudiantes trabajen durante toda la unidad) sin depender de
+    nadie: sus fechas de entrega son las del plan, pero la disponibilidad en la plataforma es
+    suya.
+    """
+    datos = _datos_peticion()
+
+    def _fecha(valor):
+        texto = str(valor or "").strip().replace("T", " ")
+        if not texto:
+            return None
+        if len(texto) == 10:            # solo fecha: se completa la hora
+            texto += " 00:00"
+        from datetime import datetime
+        try:
+            datetime.strptime(texto[:16], "%Y-%m-%d %H:%M")
+        except ValueError:
+            return "ERROR"
+        return texto[:16]
+
+    apertura = _fecha(datos.get("fecha_apertura"))
+    cierre = _fecha(datos.get("fecha_cierre"))
+    if apertura == "ERROR" or cierre == "ERROR":
+        e = ErrorActividad("Formato de fecha inválido. Use AAAA-MM-DD HH:MM.")
+        return _error(e, redireccion=url_for("activities.docente_detalle_actividad",
+                                             actividad_id=actividad_id))
+    if apertura and cierre and apertura > cierre:
+        e = ErrorActividad("La apertura no puede ser posterior al cierre.")
+        return _error(e, redireccion=url_for("activities.docente_detalle_actividad",
+                                             actividad_id=actividad_id))
+
+    actividad = ActivityService.obtener_actividad(actividad_id)
+    if not actividad:
+        abort(404)
+
+    conn = get_db_connection()
+    try:
+        conn.execute("UPDATE actividades SET fecha_apertura = ?, fecha_cierre = ? WHERE id = ?",
+                     (apertura, cierre, actividad_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+    AuditService.log(_usuario_actual(), session.get("username", "docente"),
+                     "CAMBIAR_FECHAS_ACTIVIDAD", "ACTIVIDADES", actividad_id,
+                     {"fecha_apertura": actividad.get("fecha_apertura"),
+                      "fecha_cierre": actividad.get("fecha_cierre")},
+                     {"fecha_apertura": apertura, "fecha_cierre": cierre},
+                     ip_origen=request.remote_addr or "127.0.0.1")
+
+    if _quiere_json():
+        return jsonify({"success": True, "actividad_id": actividad_id,
+                        "fecha_apertura": apertura, "fecha_cierre": cierre})
+
+    flash("Actividad %s: disponible del %s al %s."
+          % (actividad["codigo"], apertura or "sin límite", cierre or "sin límite"), "success")
+    return redirect(url_for("activities.docente_detalle_actividad", actividad_id=actividad_id))

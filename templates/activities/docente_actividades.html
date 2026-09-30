@@ -202,6 +202,31 @@
 </div>
 
 {% if detalle %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header bg-white">
+    <strong><i class="bi bi-calendar-range me-2"></i>{{ detalle.codigo }} · Ventana de disponibilidad</strong>
+  </div>
+  <form method="post" action="{{ url_for('activities.cambiar_fechas_actividad', actividad_id=detalle.id) }}"
+        class="card-body row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Disponible desde (AAAA-MM-DD HH:MM)</label>
+      <input type="text" name="fecha_apertura" class="form-control"
+             value="{{ (detalle.fecha_apertura or '')[:16] }}" placeholder="2026-09-21 00:00">
+      <div class="form-text">El estudiante puede empezar a trabajarla a partir de aquí.</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Fecha límite de entrega (AAAA-MM-DD HH:MM)</label>
+      <input type="text" name="fecha_cierre" class="form-control"
+             value="{{ (detalle.fecha_cierre or '')[:16] }}" placeholder="2026-10-10 23:59">
+      <div class="form-text">Es la fecha del cronograma; aquí no se cambia el plan.</div>
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar fechas</button>
+      <span class="ms-2 small text-muted">Estado actual: {{ detalle.estado }}</span>
+    </div>
+  </form>
+</div>
+
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
     <strong><i class="bi bi-people me-2"></i>{{ detalle.codigo }} · Asignaciones por estudiante</strong>
