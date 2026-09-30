@@ -27,7 +27,12 @@ body {
 
 /* Sidebar Styling — TONO CLARO (institucional) */
 #sidebar-wrapper {
-  min-height: 100vh;
+  /* Altura FIJA, no mínima: con `min-height` la barra crece más allá de la pantalla y,
+     al ser `position: fixed`, el final del menú queda inalcanzable (había que alejar con
+     Ctrl+ para verlo). Con `height: 100vh` la barra se desplaza por dentro y se llega a
+     todos los enlaces con la rueda del ratón. */
+  height: 100vh;
+  max-height: 100vh;
   width: var(--sidebar-width);
   background: #ffffff;
   border-right: 1px solid var(--border-color);
@@ -38,7 +43,30 @@ body {
   z-index: 1040;
   transition: all 0.3s ease;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
   box-shadow: 2px 0 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Barra de desplazamiento visible en la barra lateral (Chrome/Edge/Safari) */
+#sidebar-wrapper::-webkit-scrollbar {
+  width: 10px;
+}
+
+#sidebar-wrapper::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+#sidebar-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+  border: 2px solid #f8fafc;
+}
+
+#sidebar-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .sidebar-heading {
