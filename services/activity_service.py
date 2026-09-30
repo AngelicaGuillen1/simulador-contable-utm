@@ -527,6 +527,7 @@ def estudiantes_activos(db_path=None):
             SELECT u.id, u.username, u.nombre_completo, u.paralelo
             FROM usuarios u JOIN roles r ON u.rol_id = r.id
             WHERE r.nombre = 'Estudiante' AND u.activo = 1
+              AND COALESCE(u.es_demo, 0) = 0
             ORDER BY u.id
         """).fetchall()
         return dicts_from_rows(filas)

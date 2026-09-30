@@ -229,6 +229,7 @@ def _estudiante_de_prueba(db_path):
             SELECT u.id, u.username, u.nombre_completo
             FROM usuarios u JOIN roles r ON u.rol_id = r.id
             WHERE r.nombre = 'Estudiante' AND u.activo = 1
+              AND COALESCE(u.es_demo, 0) = 0
             ORDER BY (u.username = 'estudiante') DESC, u.id ASC
             LIMIT 1
         """).fetchone()

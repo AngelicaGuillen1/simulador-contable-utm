@@ -112,6 +112,11 @@ ROLES_SEGUIDOS = ("Estudiante",)
 # ---------------------------------------------------------------------------
 # Utilidades internas
 # ---------------------------------------------------------------------------
+# Cuentas de demostración del sistema: NO son estudiantes reales del curso y no deben
+# aparecer en los listados del panel docente (la docente contaba 60 estudiantes cuando
+# son 59: el número de más era la cuenta de prueba «estudiante»).
+CUENTAS_DE_DEMOSTRACION = ("estudiante", "demo")
+
 def _conexion(db_path=None):
     return get_db_connection(db_path)
 
@@ -491,6 +496,7 @@ def resumen_accesos(filtros=None, db_path=None):
           FROM usuarios u
           JOIN roles r ON u.rol_id = r.id
          WHERE r.nombre = 'Estudiante'
+           AND COALESCE(u.es_demo, 0) = 0
     ) t
     WHERE 1 = 1
     """
@@ -643,6 +649,8 @@ def listado_docente_estudiantes(db_path=None):
               FROM usuarios u
               JOIN roles r ON u.rol_id = r.id
              WHERE r.nombre = 'Estudiante'
+               AND COALESCE(u.es_demo, 0) = 0
+           AND COALESCE(u.es_demo, 0) = 0
              ORDER BY u.nombre_completo COLLATE NOCASE ASC
         """).fetchall()
     finally:
@@ -846,6 +854,7 @@ def paralelos_disponibles(db_path=None):
             SELECT DISTINCT u.paralelo FROM usuarios u
               JOIN roles r ON u.rol_id = r.id
              WHERE r.nombre = 'Estudiante' AND u.paralelo IS NOT NULL AND TRIM(u.paralelo) <> ''
+               AND COALESCE(u.es_demo, 0) = 0
              ORDER BY u.paralelo
         """).fetchall()
     finally:

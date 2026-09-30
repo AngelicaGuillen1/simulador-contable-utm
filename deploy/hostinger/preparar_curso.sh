@@ -94,6 +94,31 @@ else
   rojo "    No se pudieron cargar las actividades. Revise /tmp/actividades.log"
 fi
 
+# ---- 4b) Cuentas de demostración marcadas (no son estudiantes del curso) ----
+azul "==> 4b/6 Marcando las cuentas de demostración (para que no cuenten como estudiantes)"
+sudo -u "$USUARIO" env $ENTORNO PROYECTO_DIR="$PROYECTO_DIR" "$PY" - <<'PYDEMO'
+import glob, os, sqlite3, sys
+sys.path.insert(0, os.environ.get("PROYECTO_DIR", "/opt/simulador"))
+from config import Config
+from database import esquema_educativo
+
+rutas = [Config.DATABASE_PATH, Config.RUTA_PLANTILLA] + sorted(
+    glob.glob(os.path.join(Config.RUTA_AULAS, "*", "*.db")))
+marcadas = 0
+for ruta in rutas:
+    if not os.path.exists(ruta):
+        continue
+    esquema_educativo.aplicar(db_path=ruta, verboso=False)
+    con = sqlite3.connect(ruta)
+    try:
+        con.execute("UPDATE usuarios SET es_demo = 1 WHERE username IN ('estudiante', 'demo')")
+        con.commit()
+        marcadas += con.total_changes
+    finally:
+        con.close()
+print("    Bases revisadas: %d | cuentas de demostración marcadas: %d" % (len(rutas), marcadas))
+PYDEMO
+
 # ---- 5) Reinicio del servicio ----------------------------------------------
 azul "==> 5/6 Reiniciando el servicio"
 systemctl restart simulador-contable
@@ -108,7 +133,8 @@ from config import Config
 
 control = sqlite3.connect(Config.DATABASE_PATH)
 estudiantes = control.execute(
-    "SELECT COUNT(*) FROM usuarios WHERE paralelo IS NOT NULL AND paralelo <> ''").fetchone()[0]
+    "SELECT COUNT(*) FROM usuarios WHERE paralelo IS NOT NULL AND paralelo <> '' "
+    "AND COALESCE(es_demo, 0) = 0").fetchone()[0]
 con_aula = 0
 sin_datos = 0
 for ruta in glob.glob(os.path.join(Config.RUTA_AULAS, "*", "*.db")):

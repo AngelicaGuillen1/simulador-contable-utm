@@ -169,6 +169,11 @@ CREATE INDEX IF NOT EXISTS idx_evidencias_codigo ON evidencias(codigo);
 COLUMNAS_NUEVAS = [
     ("usuarios", "paralelo", "TEXT"),                 # A, B, C...
     ("usuarios", "matricula", "TEXT"),
+    # Marca de cuenta de demostración. Las cuentas del sistema (estudiante, docente,
+    # admin, auditor) no son estudiantes del curso: si aparecen en el panel docente, la
+    # docente cuenta un estudiante de más (veía 60 sobre una nómina de 59). Se marcan como
+    # dato, no por su nombre escrito en cada consulta.
+    ("usuarios", "es_demo", "INTEGER DEFAULT 0"),
     ("empresas", "estudiante_id", "INTEGER"),         # empresa simulada de cada estudiante
     ("empresas", "es_demo", "INTEGER DEFAULT 0"),
     ("impuestos", "es_demo", "INTEGER DEFAULT 0"),
