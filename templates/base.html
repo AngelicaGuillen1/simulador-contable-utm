@@ -41,6 +41,31 @@
         <i class="bi bi-speedometer2"></i> Dashboard General
       </a>
 
+      {% if g.user.rol_nombre in ['Docente', 'Administrador'] %}
+      <div class="nav-section-title">Panel Docente</div>
+      <a href="{{ url_for('simulations.teacher_panel') }}" class="sidebar-link text-warning {% if 'simulations.teacher_panel' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-mortarboard text-warning"></i> Panel Analítica Docente
+      </a>
+      <a href="{{ url_for('teacher.estudiantes') }}" class="sidebar-link text-warning {% if request.endpoint in ('teacher.estudiantes', 'teacher.estudiante_detalle', 'teacher.estudiante_linea_tiempo', 'teacher.sin_ingresar') %}active{% endif %}">
+        <i class="bi bi-people text-warning"></i> Mis Estudiantes
+      </a>
+      <a href="{{ url_for('teacher.accesos') }}" class="sidebar-link text-warning {% if 'teacher.accesos' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-shield-check text-warning"></i> Seguimiento de Accesos
+      </a>
+      <a href="{{ url_for('activities.docente_actividades') }}" class="sidebar-link text-warning {% if request.endpoint in ['activities.docente_actividades','activities.docente_detalle_actividad'] %}active{% endif %}">
+        <i class="bi bi-journal-check text-warning"></i> Actividades del Syllabus
+      </a>
+      <a href="{{ url_for('evidence.docente_evidencias') }}" class="sidebar-link text-warning {% if request.endpoint in ['evidence.docente_evidencias','evidence.docente_detalle_evidencia'] %}active{% endif %}">
+        <i class="bi bi-clipboard2-data text-warning"></i> Evidencias de Estudiantes
+      </a>
+      <a href="{{ url_for('evidence.verificar_evidencia') }}" class="sidebar-link text-warning {% if request.endpoint == 'evidence.verificar_evidencia' %}active{% endif %}">
+        <i class="bi bi-qr-code-scan text-warning"></i> Verificar Código
+      </a>
+      <a href="{{ url_for('casos_libros.panel_docente') }}" class="sidebar-link text-warning {% if 'casos_libros.panel_docente' in (request.endpoint or '') or 'casos_libros.docente_ficha' in (request.endpoint or '') %}active{% endif %}">
+        <i class="bi bi-journal-bookmark-fill text-warning"></i> Banco de casos §61 y §62
+      </a>
+      {% endif %}
+
       <div class="nav-section-title">Contabilidad Central</div>
       <a href="{{ url_for('accounting.accounts') }}" class="sidebar-link {% if 'accounting.accounts' in (request.endpoint or '') %}active{% endif %}">
         <i class="bi bi-diagram-3"></i> Plan de Cuentas
@@ -139,29 +164,6 @@
       <a href="{{ url_for('casos_libros.listado') }}" class="sidebar-link {% if 'casos_libros' in (request.endpoint or '') and 'docente' not in (request.endpoint or '') %}active{% endif %}">
         <i class="bi bi-journal-bookmark"></i> Casos de los libros (§61)
       </a>
-      {% if g.user.rol_nombre in ['Docente', 'Administrador'] %}
-      <a href="{{ url_for('simulations.teacher_panel') }}" class="sidebar-link {% if 'simulations.teacher_panel' in (request.endpoint or '') %}active{% endif %}">
-        <i class="bi bi-mortarboard"></i> Panel Analítica Docente
-      </a>
-      <a href="{{ url_for('teacher.accesos') }}" class="sidebar-link {% if 'teacher.accesos' in (request.endpoint or '') %}active{% endif %}">
-        <i class="bi bi-shield-check"></i> Seguimiento de Accesos
-      </a>
-      <a href="{{ url_for('teacher.estudiantes') }}" class="sidebar-link {% if request.endpoint in ('teacher.estudiantes', 'teacher.estudiante_detalle', 'teacher.estudiante_linea_tiempo', 'teacher.sin_ingresar') %}active{% endif %}">
-        <i class="bi bi-people"></i> Mis Estudiantes
-      </a>
-      <a href="{{ url_for('activities.docente_actividades') }}" class="sidebar-link {% if request.endpoint in ['activities.docente_actividades','activities.docente_detalle_actividad'] %}active{% endif %}">
-        <i class="bi bi-journal-check"></i> Actividades del Syllabus
-      </a>
-      <a href="{{ url_for('evidence.docente_evidencias') }}" class="sidebar-link {% if request.endpoint in ['evidence.docente_evidencias','evidence.docente_detalle_evidencia'] %}active{% endif %}">
-        <i class="bi bi-clipboard2-data"></i> Evidencias de Estudiantes
-      </a>
-      <a href="{{ url_for('evidence.verificar_evidencia') }}" class="sidebar-link {% if request.endpoint == 'evidence.verificar_evidencia' %}active{% endif %}">
-        <i class="bi bi-qr-code-scan"></i> Verificar Código
-      </a>
-      <a href="{{ url_for('casos_libros.panel_docente') }}" class="sidebar-link {% if 'casos_libros.panel_docente' in (request.endpoint or '') or 'casos_libros.docente_ficha' in (request.endpoint or '') %}active{% endif %}">
-        <i class="bi bi-journal-bookmark-fill"></i> Banco de casos §61 y §62
-      </a>
-      {% endif %}
       <a href="{{ url_for('tutor.chat') }}" class="sidebar-link text-info {% if 'tutor' in (request.endpoint or '') %}active{% endif %}">
         <i class="bi bi-robot text-info"></i> Tutor Contable IA
       </a>

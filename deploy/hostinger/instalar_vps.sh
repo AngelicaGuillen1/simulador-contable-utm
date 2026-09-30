@@ -196,11 +196,72 @@ verde "    Servicio habilitado y arrancado"
 
 # --------------------------------------------------------- 7) Nginx
 paso "7/9 Configurando Nginx para $DOMINIO"
+# La IP pública se usa para el bloque que redirige las visitas por IP al dominio.
+IP_PUBLICA="$(curl -s --max-time 10 https://api.ipify.org 2>/dev/null || true)"
+[[ -z "$IP_PUBLICA" ]] && IP_PUBLICA="$(hostname -I | awk '{print $1}')"
+CERTIFICADO="/etc/letsencrypt/live/$DOMINIO/fullchain.pem"
+mkdir -p /var/www/html
+
+if [[ -f "$CERTIFICADO" ]]; then
+  # El dominio YA tiene certificado: el instalador reescribe este archivo en cada
+  # actualización, así que hay que volver a escribir el bloque con HTTPS (el anterior
+  # lo añadía certbot) o el sitio quedaría solo en HTTP y el navegador daría error.
+  amarillo "    El dominio ya tiene certificado: se conserva el HTTPS"
+  cat > /etc/nginx/sites-available/simulador-contable <<EOF
+# Simulador Integral de Sistema Contable
+# HTTPS (certificado Let's Encrypt) + redirección de HTTP y de la IP al dominio.
+server {
+    server_name $DOMINIO www.$DOMINIO;
+
+    client_max_body_size 16m;
+    access_log /var/log/nginx/simulador-access.log;
+    error_log  /var/log/nginx/simulador-error.log;
+
+    location /static/ {
+        proxy_pass http://127.0.0.1:$PUERTO;
+        expires 7d;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:$PUERTO;
+        proxy_http_version 1.1;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+        proxy_connect_timeout 10s;
+    }
+
+    listen [::]:443 ssl ipv6only=on;
+    listen 443 ssl;
+    ssl_certificate $CERTIFICADO;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMINIO/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMINIO www.$DOMINIO;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://\$host\$request_uri; }
+}
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $IP_PUBLICA;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    return 301 https://$DOMINIO\$request_uri;
+}
+EOF
+else
 cat > /etc/nginx/sites-available/simulador-contable <<EOF
 server {
     listen 80;
     listen [::]:80;
-    server_name $DOMINIO;
+    server_name $DOMINIO www.$DOMINIO $IP_PUBLICA;
 
     client_max_body_size 16m;
     access_log /var/log/nginx/simulador-access.log;
@@ -224,6 +285,7 @@ server {
     }
 }
 EOF
+fi
 
 ln -sf /etc/nginx/sites-available/simulador-contable /etc/nginx/sites-enabled/simulador-contable
 rm -f /etc/nginx/sites-enabled/default
