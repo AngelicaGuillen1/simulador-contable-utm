@@ -42,8 +42,6 @@ RUTAS_GET = [
     "/docente/actividades", "/docente/evidencias", "/docente/evidencias/verificar",
     "/docente/accesos", "/docente/estudiantes", "/docente/sin-ingresar",
     # Banco de casos de los libros (§61) y trazabilidad de las fuentes (§62)
-    "/casos-libros", "/casos-libros/C61.01", "/casos-libros/C61.12",
-    "/docente/casos-libros",
     "/manual",
 ]
 

@@ -1897,104 +1897,6 @@ Qué mirar:  el par "valor anterior → valor nuevo" y la herramienta usada:
 
 ---
 
-### 10.43 Casos de los libros (§61)
-
-**Rol:** todos · **Rutas:** `/casos-libros`, `/casos-libros/<codigo>`,
-`POST /casos-libros/<codigo>/intentos`, `POST /casos-libros/<codigo>/enviar`,
-`/casos-libros/mis-intentos`
-
-El **banco de casos prácticos con las cifras de los libros de la asignatura**: **19 casos**
-(`C61.01` … `C61.19`) cargados como **datos** en la base de control, no escritos en el código.
-
-Cada caso tiene su **ficha obligatoria** antes de poder activarse: **fuente** (libro y edición),
-**página con doble numeración** (impresa y PDF), **año**, **unidad** del syllabus, **dificultad**
-(BÁSICO / INTERMEDIO / AVANZADO), **tipo de verificación** (ASIENTO / TOTALES / ECUACIÓN / MECÁNICA),
-enunciado, datos entregados por la fuente, **asientos esperados**, saldos finales y las
-**correcciones de erratas** con su razón.
-
-* **Estados de validación del caso:** `VERIFICADO · VERIFICADO_CON_RESERVA · SIN_SOLUCION ·
-  CON_ERRATA · PARCIAL_CON_ERRATA`. Los casos **SIN_SOLUCION** se cargan como *práctica sin solución
-  visible*: se resuelven, pero el sistema no publica la respuesta.
-* **Resolución:** el estudiante abre el caso, **inicia un intento** (con control de intentos
-  máximos) y envía su respuesta como **líneas de asiento** (cuenta, Debe, Haber) o como
-  **totales/ecuación**, según el tipo de verificación del caso.
-* **Puntaje:** la misma rúbrica del simulador (cuentas 40 / posición 30 / importes 20 / cuadre 10),
-  con umbrales de CORRECTO (85), PARCIALMENTE CORRECTO (50) y el aviso de que la verificación es
-  **mecánica y no oficial** cuando la fuente no trae solución.
-* **Mis intentos:** historial de intentos del estudiante con caso, número de intento, fecha,
-  puntaje, resultado y tipo de verificación.
-* **Avisos de fidelidad:** la lista y la ficha muestran las advertencias de trazabilidad (IVA y
-  retenciones solo como cuenta/línea de cálculo, marco normativo de la fuente, páginas sin texto,
-  datos reconstruidos y erratas corregidas) para que nadie confunda un ejemplo del libro con
-  normativa vigente.
-
-```
-📷 CAPTURA 32 · "Casos prácticos de los libros · §61"
-Rol: todos                 Ruta: /casos-libros
-+------------------------------------------------------------------------+
-|  Casos prácticos de los libros (§61)                                   |
-|  Resumen del banco: total · activos · sin solución · con erratas        |
-|  Filtros: Unidad [Todas▾] Validación [Todas▾] Fuente [Todas▾] Buscar    |
-|  --------------------------------------------------------------------  |
-|  Caso      Fuente  Unidad  Validación              Intentos  Acciones   |
-|  C61.01    U2      2       VERIFICADO              0         [ Abrir ]  |
-|  C61.05    U3      3       SIN_SOLUCION            0         [ Abrir ]  |
-|  ...                                                                    |
-|  Fuente · Edición / año · Correlación de páginas · Páginas sin texto     |
-|  (§62.4)                                                              |
-+------------------------------------------------------------------------+
-Qué mirar:  el estado de validación: te dice si el caso trae solución en el
-            libro, si se carga corregido o si es práctica sin solución.
-Qué hacer:  abre la ficha, revisa la fuente y la página, inicia el intento y
-            envía tu asiento. El sistema te dice qué criterio falló.
-```
-
-### 10.44 Banco de casos y trazabilidad (docente)
-
-**Rol:** Docente y Administrador · **Rutas:** `/docente/casos-libros`,
-`/docente/casos-libros/<codigo>`, `POST /docente/casos-libros/<codigo>/activar`,
-`POST /docente/casos-libros/tasas`
-
-Panel de administración del banco de casos y de las **reglas de trazabilidad §62**:
-
-* **Banco completo** (también los casos no visibles para el estudiante) con fuente y páginas,
-  estado de validación, **correcciones registradas** e intentos.
-* **Activar / desactivar** un caso (un caso incompleto no se puede activar: la ficha es obligatoria
-  antes de publicarlo).
-* **Tarifas demostrativas editables (§62.2):** el IVA de los ejemplos, los aportes al IESS, la
-  participación de trabajadores, el impuesto a la renta implícito y los porcentajes de depreciación
-  (edificios, maquinaria, muebles, computación) se muestran con su valor vigente y se pueden fijar
-  como **configuración académica** — nunca como afirmación de la fuente.
-* **Reglas §62** (9 en total, 8 de trazabilidad de fuentes) y **erratas del catálogo semilla**, con
-  su aviso correspondiente.
-* **Intentos del curso:** caso, estudiante, número de intento, puntaje, resultado, si la verificación
-  es **oficial** y la fecha.
-
-```
-📷 CAPTURA 33 · "Panel docente · Banco de casos §61 y trazabilidad §62"
-Rol: Docente / Administrador            Ruta: /docente/casos-libros
-+------------------------------------------------------------------------+
-|  Banco de casos §61 y trazabilidad §62                                 |
-|  Resumen del banco · Reglas §62 · Erratas del catálogo · Fuentes        |
-|  Tarifas demostrativas (editables)                                     |
-|   Tarifa            Fuente                 Valor        [ Fijar ]      |
-|   IVA de los ejemplos (U4 2024)   ...      15 %                        |
-|   Aporte personal al IESS         ...      9,45 %                      |
-|   Depreciación de edificios       ...      5 %                         |
-|  Banco completo                                                        |
-|   Caso   Fuente y páginas   Estado   Correcciones   Activo   Intentos   |
-|   C61.01 U2 imp. 140–142    VERIFIC. —             [x]      3           |
-|  Intentos del curso                                                    |
-|   Caso   Estudiante  Intento  Puntaje  Resultado  Oficial  Fecha        |
-+------------------------------------------------------------------------+
-Qué mirar:  la columna "Oficial": distingue una verificación contra la
-            solución de la fuente de una verificación mecánica.
-Qué hacer:  antes de activar un caso para el curso, revisa su ficha, su
-            fuente y sus correcciones de erratas.
-```
-
----
-
 ## 11. Un aula por estudiante: el aislamiento de los datos
 
 El simulador nació como **una sola empresa compartida**. Con un curso completo escribiendo en la
@@ -2239,7 +2141,7 @@ credenciales **no se versionan en el repositorio**: viven en la carpeta de la as
 | No abre `http://127.0.0.1:5000` | El servidor no está corriendo | Ejecuta `python app.py` y espera el mensaje *“Servidor Flask disponible…”* |
 | *“Address already in use”* | Ya hay otro servidor en el puerto 5000 | Cierra el proceso anterior (`taskkill /PID <pid> /F`) o cambia el puerto en `app.py` |
 | *“ModuleNotFoundError: flask”* | Dependencias no instaladas | `pip install -r requirements.txt` (o activa el entorno virtual `.venv`) |
-| *“no such table: …”* | Base de datos sin inicializar | `python database/seed_data.py` (y `python database/cargar_casos_libros.py` para el banco §61) |
+| *“no such table: …”* | Base de datos sin inicializar | `python database/seed_data.py` |
 | *“Credenciales incorrectas o usuario inactivo”* | Usuario o contraseña mal escritos, o cuenta inactiva | Verifica usuario/correo y contraseña; el docente restablece la contraseña con la importación de la nómina (`--reset-passwords`) |
 | *“El periodo contable esta CERRADO…”* | Se ejecutó el cierre del período | Regenera los datos en una base de práctica: `python database/seed_data.py` |
 | *“La fecha … esta fuera del periodo abierto”* | La fecha usada no pertenece al período | Cambia la **fecha de trabajo** en Administración o usa una fecha dentro del período |
@@ -2569,15 +2471,6 @@ sirve la pantalla y procesa el formulario.
 
 | Ruta | Métodos |
 |---|---|
-| `/casos-libros` | GET |
-| `/casos-libros/<codigo>` | GET |
-| `/casos-libros/<codigo>/enviar` | POST |
-| `/casos-libros/<codigo>/intentos` | POST |
-| `/casos-libros/mis-intentos` | GET |
-| `/docente/casos-libros` | GET |
-| `/docente/casos-libros/<codigo>` | GET |
-| `/docente/casos-libros/<codigo>/activar` | POST |
-| `/docente/casos-libros/tasas` | POST |
 
 **Recursos estáticos**
 
@@ -2633,9 +2526,6 @@ Se consultan en `GET /api/tools`, que debe devolver `faltantes: []`.
 **Módulo educativo (base de control):** `actividades`, `asignaciones_actividad`,
 `sesiones_usuario`, `eventos_estudiante`, `evidencias`, `versiones_evidencia`, `evidencias_indice`.
 
-**Banco de casos de los libros (§61):** `casos_libros_fuentes`, `casos_libros`,
-`casos_libros_trazabilidad`, `casos_libros_reglas`, `casos_libros_intentos` (se crean con
-`python database/cargar_casos_libros.py`).
 
 Son **48 tablas de negocio** en la base de control (más la tabla interna `sqlite_sequence`, que
 `/api/health` cuenta: informa **49**). Cada **aula** de estudiante tiene las tablas contables y su
@@ -2655,7 +2545,6 @@ propio período; el detalle de dónde vive cada dato está en
 | `python database/importar_nomina.py --paralelo B --curso <curso>` | Importar la nómina y crear usuarios, matrículas y aulas |
 | `python database/importar_nomina.py ... --reset-passwords` | Restablecer contraseñas iniciales |
 | `python database/seed_actividades.py --todos` | Cargar/actualizar las actividades del syllabus |
-| `python database/cargar_casos_libros.py` | Cargar el banco de casos §61 y las reglas §62 |
 | `python database/parametros_tributarios_sri.py --todas-las-aulas` | Actualizar los porcentajes tributarios |
 | `python deploy/cambiar_credenciales.py` | Cambiar las contraseñas de demostración |
 | `python deploy/multiaula/exportar_evidencias.py` | Paquete XLSX + CSV de evidencias del curso |
@@ -2667,7 +2556,6 @@ propio período; el detalle de dónde vive cada dato está en
 ```bash
 python -m pytest tests -q                                            # suite de pruebas automáticas
 python database/seed_data.py                                        # regenerar datos de demostración
-python database/cargar_casos_libros.py --listar                      # estado del banco de casos §61
 python deploy/verificar_despliegue.py --url http://127.0.0.1:8080    # verificación de despliegue
 curl http://127.0.0.1:5000/api/health                                # estado del sistema
 python docs/build_manual.py                                          # regenerar este manual

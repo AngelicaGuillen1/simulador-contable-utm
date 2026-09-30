@@ -58,16 +58,16 @@ def create_app():
         except (TypeError, ValueError):
             return "0"
 
-    # §62.6 — las cifras de las fuentes se muestran en formato es-EC (1.234,56) sin alterar
-    # ningún valor: `num_ec` y `money_ec` son las versiones normalizadas de `num` y `money`.
+    # Las cifras se muestran en formato es-EC (1.234,56) sin alterar ningún valor:
+    # `num_ec` y `money_ec` son las versiones normalizadas de `num` y `money`.
     @app.template_filter("num_ec")
     def num_ec_filter(value, decimales=2):
-        from database.banco_casos_libros import formato_es_ec
+        from services.formato import formato_es_ec
         return formato_es_ec(value, decimales)
 
     @app.template_filter("money_ec")
     def money_ec_filter(value, decimales=2):
-        from database.banco_casos_libros import formato_es_ec
+        from services.formato import formato_es_ec
         return "$%s" % formato_es_ec(value, decimales)
 
     @app.template_filter("fecha_legible")

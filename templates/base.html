@@ -61,9 +61,6 @@
    <a href="{{ url_for('evidence.verificar_evidencia') }}" class="sidebar-link text-warning {% if request.endpoint == 'evidence.verificar_evidencia' %}active{% endif %}">
     <i class="bi bi-qr-code-scan text-warning"></i> Verificar Código
    </a>
-   <a href="{{ url_for('casos_libros.panel_docente') }}" class="sidebar-link text-warning {% if 'casos_libros.panel_docente' in (request.endpoint or '') or 'casos_libros.docente_ficha' in (request.endpoint or '') %}active{% endif %}">
-    <i class="bi bi-journal-bookmark-fill text-warning"></i> Banco de casos de los libros
-   </a>
    {% endif %}
 
    <div class="nav-section-title">Contabilidad Central</div>
@@ -160,9 +157,6 @@
    </a>
    <a href="{{ url_for('evidence.mis_evidencias') }}" class="sidebar-link {% if request.endpoint in ['evidence.mis_evidencias','evidence.detalle_evidencia','evidence.captura_evidencia','evidence.imprimible_evidencia'] %}active{% endif %}">
     <i class="bi bi-clipboard2-check"></i> Mis Evidencias
-   </a>
-   <a href="{{ url_for('casos_libros.listado') }}" class="sidebar-link {% if 'casos_libros' in (request.endpoint or '') and 'docente' not in (request.endpoint or '') %}active{% endif %}">
-    <i class="bi bi-journal-bookmark"></i> Casos de práctica (libros)
    </a>
    <a href="{{ url_for('tutor.chat') }}" class="sidebar-link text-info {% if 'tutor' in (request.endpoint or '') %}active{% endif %}">
     <i class="bi bi-robot text-info"></i> Tutor Contable IA

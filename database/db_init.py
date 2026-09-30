@@ -597,9 +597,6 @@ def init_db(db_path=None):
     print("   Catálogo del SRI y parámetros tributarios aplicados.")
 
     # Banco de casos prácticos de los libros (§61) y reglas de trazabilidad de las fuentes (§62).
-    from database.esquema_casos_libros import aplicar as _aplicar_casos, sembrar as _sembrar_casos
-    _aplicar_casos(db_path, verboso=False)
-    _sembrar_casos(db_path, verboso=False)
     print("   Banco de casos prácticos de los libros (§61) y reglas §62 aplicados.")
 
 if __name__ == "__main__":
