@@ -94,12 +94,18 @@ def create_app():
             fecha_trabajo = None
 
         alertas = {"stock_bajo": 0, "cxc_vencidas": 0, "cxp_proximas": 0, "periodo": None}
+        # Nombre de la empresa con la que se está trabajando: cada estudiante tiene la suya
+        # (misma estructura, identidad propia), así que la interfaz no puede llevar un nombre
+        # fijo en la plantilla.
+        empresa_nombre = "Comercial y Servicios Nueva Esperanza S.A."
         try:
-            # Los indicadores dependen de los libros de quien está en sesión: se leen del aula
-            # del estudiante y, para los perfiles administrativos, de la base de control.
             from models import get_db_contable
             conn = get_db_contable()
             try:
+                fila = conn.execute(
+                    "SELECT razon_social FROM empresas WHERE id = 1").fetchone()
+                if fila and fila["razon_social"]:
+                    empresa_nombre = fila["razon_social"]
                 alertas["stock_bajo"] = len(InventoryService.get_low_stock_alerts())
                 alertas["cxc_vencidas"] = conn.execute("""
                     SELECT COUNT(*) as cnt FROM cuentas_cobrar
@@ -143,7 +149,7 @@ def create_app():
         return {
             "app_name": Config.APP_NAME,
             "app_subtitle": Config.APP_SUBTITLE,
-            "empresa_nombre": Config.COMPANY_NAME,
+            "empresa_nombre": empresa_nombre,
             "empresa_ruc": Config.COMPANY_RUC,
             "periodo_activo": periodo,
             "fecha_trabajo": fecha_trabajo,
