@@ -56,11 +56,14 @@ export DATABASE_PATH="$DATOS/simulator.db" RUTA_AULAS="$DATOS/aulas" RUTA_PLANTI
 paso "4/5 Valores propios por estudiante"
 "$PROYECTO/.venv/bin/python" database/variar_catalogos.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/variar_terceros.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
+"$PROYECTO/.venv/bin/python" database/actualizar_texto_actividades.py --aplicar 2>&1 | tail -2 | sed 's/^/    /'
 
 paso "5/5 Reinicio y comprobación"
 systemctl restart simulador-contable
 sleep 6
 systemctl is-active simulador-contable | sed 's/^/    servicio: /'
+echo "    --- estado de las aulas ---"
+"$PROYECTO/.venv/bin/python" deploy/verificar_aulas.py --detalle 2>&1 | sed 's/^/    /'
 ESTADO="$(curl -s -o /dev/null -w '%{http_code}' -k "https://$DOMINIO/api/health" || echo fallo)"
 echo "    salud por HTTPS: $ESTADO"
 ALUMNOS="$("$PROYECTO/.venv/bin/python" - <<'PY'

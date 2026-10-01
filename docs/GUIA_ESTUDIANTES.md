@@ -2,7 +2,9 @@
 ## Simulador Integral de Sistema Contable
 
 Bienvenido(a). Este repositorio contiene el **Simulador Integral de Sistema Contable**
-(Comercial y Servicios Nueva Esperanza S.A.): un sistema contable completo con inventarios,
+(cada estudiante trabaja con **su propia empresa**: misma estructura, mismos 20 productos, mismas
+46 cuentas y mismas reglas tributarias, pero con su nombre, su RUC, sus clientes, sus proveedores
+y sus cuentas bancarias): un sistema contable completo con inventarios,
 tesorería, cartera, impuestos, estados financieros y un simulador de casos con evaluación automática.
 
 Hay **dos formas de abrirlo**: elija la que le resulte más cómoda.
@@ -199,4 +201,4 @@ Envíe esos archivos según lo indique el docente (campus virtual o correo del c
 ---
 
 *Simulador Integral de Sistema Contable · Servicios y Comercialización de Productos ·
-Comercial y Servicios Nueva Esperanza S.A. · Uso académico con datos de demostración.*
+Empresa propia de cada estudiante · Uso académico con datos ficticios.*
