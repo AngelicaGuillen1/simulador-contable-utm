@@ -52,6 +52,10 @@ amarillo(){ printf '\033[1;33m%s\033[0m\n' "$*"; }
 rojo()   { printf '\033[1;31m%s\033[0m\n' "$*"; }
 paso()   { azul "==> $*"; }
 
+# Intérprete del entorno virtual del proyecto (con `set -u`, usar una variable sin definir
+# aborta el script: por eso se define aquí, antes de cualquier uso).
+PY="$PROYECTO_DIR/.venv/bin/python"
+
 if [[ $EUID -ne 0 ]]; then
   rojo "Este instalador debe ejecutarse como root:  sudo bash instalar_vps.sh --dominio ..."
   exit 1
