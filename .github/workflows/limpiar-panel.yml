@@ -1,0 +1,41 @@
+name: Limpiar el panel de accesos
+
+# Borra el rastro de ingresos de los estudiantes en el panel docente (las sesiones que dejan
+# las verificaciones por HTTP, que la docente lee como trabajo real). Conserva las sesiones de
+# la docente y del administrador y no toca el trabajo contable.
+#
+#     gh workflow run limpiar-panel.yml
+
+on:
+  workflow_dispatch:
+    inputs:
+      estudiante:
+        description: "Solo este usuario (vacío = todos)"
+        required: false
+        default: ""
+
+jobs:
+  limpiar:
+    name: Limpiar el historial de accesos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar la llave del servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 2.25.173.123 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Ejecutar la limpieza
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "set -e
+            cd /opt/simulador
+            export DATABASE_PATH=/var/datos/simulator.db RUTA_AULAS=/var/datos/aulas RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db
+            .venv/bin/python database/limpiar_accesos.py ${{ inputs.estudiante != '' && format('--aula {0}', inputs.estudiante) || '' }} --si | tail -4"
+
+      - name: Comprobar el estado del panel
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "set -e
+            cd /opt/simulador
+            export DATABASE_PATH=/var/datos/simulator.db RUTA_AULAS=/var/datos/aulas RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db
+            .venv/bin/python database/limpiar_accesos.py | head -4"
