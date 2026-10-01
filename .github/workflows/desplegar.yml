@@ -1,0 +1,38 @@
+name: Desplegar en el VPS
+
+# Despliega el simulador en el servidor de Hostinger desde GitHub.
+# Se lanza a mano (Actions -> Desplegar en el VPS -> Run workflow) o con:
+#     gh workflow run desplegar.yml
+# La llave SSH del servidor vive cifrada en los secretos del repositorio
+# (Settings -> Secrets and variables -> Actions -> VPS_SSH_KEY); en los registros
+# solo aparece enmascarada.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  desplegar:
+    name: Actualizar el simulador en el VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar la llave del servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 2.25.173.123 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Comprobar la conexión
+        run: ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 'echo conectado; hostname; date'
+
+      - name: Desplegar (código + fechas + valores por estudiante)
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 'set -e
+            cd /tmp
+            rm -rf sim-despliegue
+            git clone --depth 1 https://github.com/AngelicaGuillen1/simulador-contable-utm.git sim-despliegue
+            bash sim-despliegue/deploy/hostinger/actualizar_desde_github.sh'
+
+      - name: Comprobación final
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 'curl -s -o /dev/null -w "salud: %{http_code}\n" -k https://simuladorcontablecaavgputm.tech/api/health'
