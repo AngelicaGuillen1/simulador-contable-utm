@@ -60,6 +60,21 @@ if [ ! -f "$RUTA_PLANTILLA" ]; then
     echo "    plantilla construida en $RUTA_PLANTILLA"
 else
     echo "    plantilla existente: $RUTA_PLANTILLA"
+    ls -l "$RUTA_PLANTILLA" 2>&1 | sed 's/^/      /'
+    "$PROYECTO/.venv/bin/python" -c "
+import os, sqlite3, sys
+sys.path.insert(0, os.environ.get('PROYECTO_DIR', '/opt/simulador'))
+from config import Config
+ruta = os.path.join(Config.RUTA_PLANTILLA, 'aula_base.db')
+print('      Config.RUTA_PLANTILLA =', Config.RUTA_PLANTILLA)
+print('      archivo =', ruta, '| existe:', os.path.exists(ruta))
+try:
+    c = sqlite3.connect(ruta)
+    print('      casos en la plantilla:', c.execute('SELECT COUNT(*) FROM casos_simulacion').fetchone()[0])
+    c.close()
+except Exception as error:
+    print('      [ERROR AL ABRIR]', type(error).__name__, error)
+" 2>&1 | sed 's/^/    /'
 fi
 "$PROYECTO/.venv/bin/python" database/seed_actividades.py --todos 2>&1 | tail -3 | sed 's/^/    /'
 
