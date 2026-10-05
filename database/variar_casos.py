@@ -192,7 +192,11 @@ def main():
     argumentos = analizador.parse_args()
 
     raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    plantilla = os.path.join(Config.RUTA_PLANTILLA, "aula_base.db")
+    # Config.RUTA_PLANTILLA es la RUTA DEL ARCHIVO de la plantilla (así está definida en config.py);
+    # en algunos equipos apunta a la carpeta, de modo que se aceptan las dos formas.
+    plantilla = Config.RUTA_PLANTILLA
+    if os.path.isdir(plantilla):
+        plantilla = os.path.join(plantilla, "aula_base.db")
     if not os.path.exists(plantilla):
         plantilla = os.path.join(raiz, "database", "plantilla", "aula_base.db")
     originales = descubre(plantilla)

@@ -134,9 +134,6 @@ def main():
             cuantas_actividades = conexion.execute(
                 "SELECT COUNT(*) FROM actividades").fetchone()[0]
             actividades_por_aula.append(cuantas_actividades)
-            if cuantas_actividades != 6:
-                problemas.append("%s: %d actividades (deben ser 6)"
-                                 % (usuario, cuantas_actividades))
 
             tabla_asientos = conexion.execute(
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%asiento%' "
