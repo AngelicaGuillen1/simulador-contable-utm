@@ -11,8 +11,8 @@ import tempfile
 import pytest
 
 from config import Config
-from database.alta_estudiante import (generar_clave, nombre_presentable, usuario_desde_correo,
-                                      usuario_desde_nombre)
+from database.alta_estudiante import (generar_clave, nombre_presentable, registrar_en_listas,
+                                      usuario_desde_correo, usuario_desde_nombre)
 
 
 def test_usuario_desde_correo_y_nombre():
@@ -34,6 +34,42 @@ def test_clave_con_el_formato_de_la_lista():
 def test_nombre_presentable():
     assert nombre_presentable("Perez Lopez Ana Maria") == "Ana Maria Perez Lopez"
     assert nombre_presentable("Ana Perez") == "Ana Perez"
+
+
+def test_registra_con_el_formato_de_la_lista():
+    """La lista del paralelo (8 columnas) y la de Moodle (3 campos) deben quedar bien escritas."""
+    import csv
+    import io
+
+    with tempfile.TemporaryDirectory() as temporal:
+        ruta_csv = os.path.join(temporal, "credenciales_paralelo_B.csv")
+        with io.open(ruta_csv, "w", encoding="utf-8", newline="") as archivo:
+            escritor = csv.writer(archivo)
+            escritor.writerow(["paralelo", "usuario", "nombre", "cedula", "correo",
+                               "password_inicial", "aula", "estado"])
+            escritor.writerow(["B", "ealcivar4002", "Alcivar Andrade Emily Alejandra",
+                               "1753494002", "ealcivar4002@utm.edu.ec", "AAAA-BBBB",
+                               "ealcivar4002.db", "vigente"])
+        ruta_moodle = os.path.join(temporal, "claves_para_moodle.txt")
+        with io.open(ruta_moodle, "w", encoding="utf-8", newline="") as archivo:
+            archivo.write("usuario\tclave\tnombre\n")
+
+        escritos = registrar_en_listas("kparrales9973@utm.edu.ec", "CLAV-EPRU",
+                                       "PARRALES RODRIGUEZ KEILA MARIA", "kparrales9973",
+                                       "1351729973", "B", ruta_csv, ruta_moodle)
+        assert len(escritos) == 2
+
+        filas = list(csv.reader(io.open(ruta_csv, encoding="utf-8")))
+        nueva = filas[-1]
+        assert len(nueva) == 8, nueva
+        assert nueva[:5] == ["B", "kparrales9973", "Parrales Rodriguez Keila Maria",
+                             "1351729973", "kparrales9973@utm.edu.ec"]
+        assert nueva[5] == "CLAV-EPRU"
+        assert nueva[6] == "kparrales9973.db" and nueva[7] == "vigente"
+
+        campos = io.open(ruta_moodle, encoding="utf-8").read().splitlines()[-1].split("\t")
+        assert campos == ["kparrales9973@utm.edu.ec", "CLAV-EPRU",
+                          "Parrales Rodriguez Keila Maria"], campos
 
 
 def test_borrar_no_falla_con_usuario_inexistente():

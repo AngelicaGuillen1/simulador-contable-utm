@@ -83,17 +83,41 @@ def rutas_de_listas():
                          "claves_para_moodle.txt"))
 
 
-def registrar_en_listas(correo, clave, nombre):
-    """Añade la clave a la lista del paralelo y al archivo para Moodle (si existen)."""
+def registrar_en_listas(correo, clave, nombre, usuario, cedula, paralelo="B",
+                        ruta_csv=None, ruta_moodle=None):
+    """Añade el estudiante a la lista del paralelo y al archivo para Moodle.
+
+    Respeta el formato real de los archivos: la lista del paralelo lleva ocho columnas
+    (paralelo, usuario, nombre, cédula, correo, clave, aula, estado) y el archivo de Moodle tres
+    campos separados por tabulador (usuario, clave, nombre).
+    """
     escritos = []
-    ruta_csv, ruta_moodle = rutas_de_listas()
+    ruta_csv_predeterminada, ruta_moodle_predeterminada = rutas_de_listas()
+    ruta_csv = ruta_csv or ruta_csv_predeterminada
+    ruta_moodle = ruta_moodle or ruta_moodle_predeterminada
+    nombre_lista = titulo(nombre)          # mismo estilo de la lista: Apellido Apellido Nombre
+
     if os.path.exists(ruta_csv):
+        with open(ruta_csv, encoding="utf-8") as archivo:
+            cabecera = next(csv.reader(archivo), None)
+        if not cabecera:
+            cabecera = ["paralelo", "usuario", "nombre", "cedula", "correo", "password_inicial",
+                        "aula", "estado"]
+        valores = {
+            "paralelo": paralelo, "usuario": usuario, "nombre": nombre_lista, "cedula": cedula,
+            "correo": correo, "password_inicial": clave, "clave": clave,
+            "aula": "%s.db" % usuario, "estado": "vigente",
+        }
         with open(ruta_csv, "a", encoding="utf-8", newline="") as archivo:
-            csv.writer(archivo).writerow([correo, clave, nombre_presentable(nombre)])
+            csv.writer(archivo).writerow([valores.get(c, "") for c in cabecera])
         escritos.append(os.path.basename(ruta_csv))
+
     if os.path.exists(ruta_moodle):
+        with open(ruta_moodle, encoding="utf-8") as archivo:
+            contenido = archivo.read().splitlines()
+        cabecera = contenido[0] if contenido else "usuario\tclave\tnombre"
         with open(ruta_moodle, "a", encoding="utf-8") as archivo:
-            archivo.write("%s\t%s\n" % (correo, clave))
+            archivo.write("%s\t%s\t%s\n" % (correo, clave, nombre_lista))
         escritos.append(os.path.basename(ruta_moodle))
     return escritos
 
@@ -201,7 +225,7 @@ def alta(nombre, cedula, correo, clave, paralelo, curso, servidor):
     print("      inventario : $%.2f" % datos["inventario"])
 
     if not servidor:
-        escritos = registrar_en_listas(correo, clave, nombre)
+        escritos = registrar_en_listas(correo, clave, nombre, usuario, cedula, paralelo)
         print()
         print("   Clave entregada al estudiante: guardada en %s"
               % (", ".join(escritos) if escritos else "(no encontré las listas locales)"))
