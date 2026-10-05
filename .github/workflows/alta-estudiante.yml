@@ -1,0 +1,64 @@
+name: Dar de alta a un estudiante
+
+# Crea la cuenta y el aula de un estudiante nuevo directamente en el servidor, con sus datos
+# propios (valores del catálogo, empresa, clientes, proveedores, cuentas bancarias y las cifras
+# de los 19 casos). Se usa cuando la coordinación agrega a alguien a la lista.
+#
+# No hace falta entrar por SSH desde la computadora: lo ejecuta GitHub.
+#
+# Si se llena "usuario_a_borrar", en lugar de dar de alta, elimina esa cuenta y su aula.
+on:
+  workflow_dispatch:
+    inputs:
+      nombre:
+        description: "Nombre completo (como en la lista)"
+        required: false
+      cedula:
+        description: "Cédula (10 dígitos)"
+        required: false
+      correo:
+        description: "Correo institucional (define el usuario)"
+        required: false
+      clave:
+        description: "Clave que se le entregará (formato ABCD-EFGH)"
+        required: false
+      usuario_a_borrar:
+        description: "Solo para dar de baja: usuario o correo a eliminar"
+        required: false
+
+jobs:
+  alta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar el acceso al servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 2.25.173.123 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Comprobar el acceso
+        run: ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 'echo conectado; hostname'
+
+      - name: Ejecutar el alta en el servidor
+        env:
+          NOMBRE: ${{ inputs.nombre }}
+          CEDULA: ${{ inputs.cedula }}
+          CORREO: ${{ inputs.correo }}
+          CLAVE: ${{ inputs.clave }}
+          BORRAR: ${{ inputs.usuario_a_borrar }}
+        run: |
+          # La clave no se imprime en los registros del flujo.
+          if [ -n "$CLAVE" ]; then echo "::add-mask::$CLAVE"; fi
+          COMUN='cd /opt/simulador && export DATABASE_PATH=/var/datos/simulator.db RUTA_AULAS=/var/datos/aulas RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db &&'
+          if [ -n "$BORRAR" ]; then
+            echo "== Dando de baja a $BORRAR =="
+            ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "$COMUN .venv/bin/python database/alta_estudiante.py --borrar '$BORRAR'"
+          else
+            echo "== Alta de estudiante =="
+            ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "$COMUN .venv/bin/python database/alta_estudiante.py --servidor --nombre '$NOMBRE' --cedula '$CEDULA' --correo '$CORREO' --clave '$CLAVE'"
+          fi
+
+      - name: Estado del simulador después del alta
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 'curl -s -o /dev/null -w "salud: %{http_code}\n" -k https://simuladorcontablecaavgputm.tech/api/health'
