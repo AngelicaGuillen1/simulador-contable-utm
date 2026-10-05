@@ -11,6 +11,7 @@ rastro en el panel de accesos de la docente.
 """
 import argparse
 import glob
+import json
 import os
 import sqlite3
 import sys
@@ -43,6 +44,23 @@ def valida_ruc(identificacion):
     return str(verificador) == identificacion[9]
 
 
+def _asientos_cuadran(objeto):
+    """True si todos los asientos del JSON (a cualquier profundidad) cuadran."""
+    if isinstance(objeto, dict):
+        if "debe" in objeto or "haber" in objeto:
+            return True
+        return all(_asientos_cuadran(v) for v in objeto.values())
+    if isinstance(objeto, list):
+        lineas = [l for l in objeto if isinstance(l, dict) and ("debe" in l or "haber" in l)]
+        if lineas:
+            debe = round(sum(float(l.get("debe") or 0) for l in lineas), 2)
+            haber = round(sum(float(l.get("haber") or 0) for l in lineas), 2)
+            if abs(debe - haber) >= 0.02:
+                return False
+        return all(_asientos_cuadran(v) for v in objeto)
+    return True
+
+
 def main():
     analizador = argparse.ArgumentParser(description="Verifica las aulas de los estudiantes.")
     analizador.add_argument("--detalle", action="store_true", help="muestra las primeras aulas")
@@ -53,8 +71,9 @@ def main():
         print("   [AVISO] No encontré aulas en %s" % Config.RUTA_AULAS)
         return 1
 
-    empresas, inventarios, problemas = {}, [], []
+    empresas, inventarios, problemas, huellas = {}, [], [], {}
     identificaciones_malas = textos_viejos = con_movimientos = 0
+    casos_totales = asientos_descuadrados = 0
     estructura = None
     for ruta in rutas:
         usuario = os.path.basename(ruta)[:-3]
@@ -97,16 +116,40 @@ def main():
                     "SELECT COUNT(*) FROM %s" % tabla_asientos[0]).fetchone()[0]
                 if asientos:
                     con_movimientos += 1
+
+            # Los 19 casos del simulador: cifras propias y asientos cuadrados.
+            casos = conexion.execute(
+                "SELECT solucion_esperada_json FROM casos_simulacion").fetchall()
+            casos_totales += len(casos)
+            huella = []
+            for fila_caso in casos:
+                try:
+                    datos_caso = json.loads(fila_caso["solucion_esperada_json"] or "{}")
+                except ValueError:
+                    continue
+                if not _asientos_cuadran(datos_caso):
+                    asientos_descuadrados += 1
+                    problemas.append("%s: un asiento de los casos no cuadra" % usuario)
+            for fila_caso in conexion.execute("SELECT datos_transaccion_json FROM casos_simulacion"):
+                try:
+                    huella.append(json.loads(fila_caso[0] or "{}").get("total"))
+                except ValueError:
+                    huella.append(None)
+            huellas.setdefault(tuple(huella), []).append(usuario)
         finally:
             conexion.close()
 
     repetidas = {n: u for n, u in empresas.items() if len(u) > 1}
+    repetidas_casos = {k: v for k, v in huellas.items() if len(v) > 1 and any(k)}
     print("   aulas: %d | empresas distintas: %d" % (len(rutas), len(empresas)))
     print("   estructura común (cuentas, productos, clientes, proveedores, bancos): %s"
           % (estructura,))
     print("   identificaciones fuera de la norma del SRI: %d" % identificaciones_malas)
     print("   actividades que aún nombran la empresa compartida: %d" % textos_viejos)
     print("   aulas con asientos registrados (deben estar en cero): %d" % con_movimientos)
+    print("   casos del simulador revisados: %d | asientos de los casos descuadrados: %d"
+          % (casos_totales, asientos_descuadrados))
+    print("   aulas con las mismas cifras en los 19 casos: %d" % len(repetidas_casos))
     if inventarios:
         print("   inventario inicial por aula: de %.2f a %.2f" % (min(inventarios), max(inventarios)))
     if repetidas:

@@ -57,6 +57,7 @@ paso "4/5 Valores propios por estudiante"
 "$PROYECTO/.venv/bin/python" database/variar_catalogos.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/variar_terceros.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/actualizar_texto_actividades.py --aplicar 2>&1 | tail -2 | sed 's/^/    /'
+"$PROYECTO/.venv/bin/python" database/variar_casos.py --aplicar 2>&1 | tail -2 | sed 's/^/    /'
 
 paso "5/5 Reinicio y comprobación"
 systemctl restart simulador-contable
