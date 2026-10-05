@@ -154,6 +154,9 @@ def main():
         print("   inventario inicial por aula: de %.2f a %.2f" % (min(inventarios), max(inventarios)))
     if repetidas:
         problemas.append("empresas repetidas: %s" % ", ".join(sorted(repetidas)))
+    for huella, aulas_iguales in repetidas_casos.items():
+        print("   [AVISO] estas aulas ven las mismas cifras en los 19 casos: %s"
+              % ", ".join(sorted(aulas_iguales)))
     for problema in problemas[:8]:
         print("   [PROBLEMA] %s" % problema)
 
