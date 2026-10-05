@@ -20,6 +20,7 @@ DOMINIO="${DOMINIO:-simuladorcontablecaavgputm.tech}"
 DESTINO="${DESTINO:-/tmp/simulador-actualizar}"
 PROYECTO="${PROYECTO_DIR:-/opt/simulador}"
 DATOS="${DATOS_DIR:-/var/datos}"
+RUTA_PLANTILLA="${RUTA_PLANTILLA:-$DATOS/plantilla/aula_base.db}"
 
 verde() { echo -e "\033[32m$*\033[0m"; }
 rojo()  { echo -e "\033[31m$*\033[0m"; }
@@ -48,18 +49,30 @@ if ! bash deploy/hostinger/instalar_vps.sh --dominio "$DOMINIO" >/tmp/actualizar
 fi
 tail -6 /tmp/actualizar-instalar.log | sed 's/^/    /'
 
-paso "3/5 Aplicando las fechas de las actividades"
+paso "3/6 Plantilla del curso y actividades de cada aula"
 cd "$PROYECTO" || exit 1
-export DATABASE_PATH="$DATOS/simulator.db" RUTA_AULAS="$DATOS/aulas" RUTA_PLANTILLA="$DATOS/plantilla/aula_base.db"
+export DATABASE_PATH="$DATOS/simulator.db" RUTA_AULAS="$DATOS/aulas" RUTA_PLANTILLA="$RUTA_PLANTILLA"
+# La plantilla es el molde de toda aula nueva: si falta, las aulas nacen sin las 6 actividades y el
+# variador de casos no puede partir de las cifras originales (falla al abrirla).
+if [ ! -f "$RUTA_PLANTILLA" ]; then
+    mkdir -p "$(dirname "$RUTA_PLANTILLA")"
+    "$PROYECTO/.venv/bin/python" database/crear_aula.py --plantilla 2>&1 | tail -2 | sed 's/^/    /'
+    echo "    plantilla construida en $RUTA_PLANTILLA"
+else
+    echo "    plantilla existente: $RUTA_PLANTILLA"
+fi
+"$PROYECTO/.venv/bin/python" database/seed_actividades.py --todos 2>&1 | tail -3 | sed 's/^/    /'
+
+paso "4/6 Fechas de las actividades"
 "$PROYECTO/.venv/bin/python" database/ajustar_fechas_actividades.py --unidades --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 
-paso "4/5 Valores propios por estudiante"
+paso "5/6 Valores propios por estudiante"
 "$PROYECTO/.venv/bin/python" database/variar_catalogos.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/variar_terceros.py --aplicar 2>&1 | tail -3 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/actualizar_texto_actividades.py --aplicar 2>&1 | tail -2 | sed 's/^/    /'
 "$PROYECTO/.venv/bin/python" database/variar_casos.py --aplicar 2>&1 | tail -2 | sed 's/^/    /'
 
-paso "5/5 Reinicio y comprobación"
+paso "6/6 Reinicio y comprobación"
 systemctl restart simulador-contable
 sleep 6
 systemctl is-active simulador-contable | sed 's/^/    servicio: /'

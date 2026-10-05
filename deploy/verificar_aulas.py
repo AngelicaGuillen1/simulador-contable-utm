@@ -44,6 +44,22 @@ def valida_ruc(identificacion):
     return str(verificador) == identificacion[9]
 
 
+def _huella_casos(ruta):
+    """Cifras que ve el estudiante en cada caso: sirve para comparar aulas entre sí."""
+    conexion = sqlite3.connect(ruta)
+    try:
+        huella = []
+        for fila in conexion.execute(
+                "SELECT datos_transaccion_json FROM casos_simulacion ORDER BY id"):
+            try:
+                huella.append(json.loads(fila[0] or "{}").get("total"))
+            except ValueError:
+                huella.append(None)
+        return tuple(huella)
+    finally:
+        conexion.close()
+
+
 def _asientos_cuadran(objeto):
     """True si todos los asientos del JSON (a cualquier profundidad) cuadran."""
     if isinstance(objeto, dict):
@@ -74,7 +90,14 @@ def main():
     empresas, inventarios, problemas, huellas = {}, [], [], {}
     identificaciones_malas = textos_viejos = con_movimientos = 0
     casos_totales = asientos_descuadrados = 0
+    actividades_por_aula = []
     estructura = None
+
+    # Cifras originales de la plantilla: si un aula las conserva, no se le aplicó la variación.
+    huella_plantilla = None
+    if os.path.exists(Config.RUTA_PLANTILLA):
+        huella_plantilla = _huella_casos(Config.RUTA_PLANTILLA)
+    sinon_variar = 0
     for ruta in rutas:
         usuario = os.path.basename(ruta)[:-3]
         conexion = sqlite3.connect(ruta)
@@ -108,6 +131,13 @@ def main():
                 if "Nueva Esperanza" in (fila[0] or ""):
                     textos_viejos += 1
 
+            cuantas_actividades = conexion.execute(
+                "SELECT COUNT(*) FROM actividades").fetchone()[0]
+            actividades_por_aula.append(cuantas_actividades)
+            if cuantas_actividades != 6:
+                problemas.append("%s: %d actividades (deben ser 6)"
+                                 % (usuario, cuantas_actividades))
+
             tabla_asientos = conexion.execute(
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%asiento%' "
                 "ORDER BY LENGTH(name) LIMIT 1").fetchone()
@@ -130,11 +160,10 @@ def main():
                 if not _asientos_cuadran(datos_caso):
                     asientos_descuadrados += 1
                     problemas.append("%s: un asiento de los casos no cuadra" % usuario)
-            for fila_caso in conexion.execute("SELECT datos_transaccion_json FROM casos_simulacion"):
-                try:
-                    huella.append(json.loads(fila_caso[0] or "{}").get("total"))
-                except ValueError:
-                    huella.append(None)
+            huella = _huella_casos(ruta)
+            if huella_plantilla and huella == huella_plantilla:
+                sinon_variar += 1
+                problemas.append("%s: conserva las cifras originales de los casos" % usuario)
             huellas.setdefault(tuple(huella), []).append(usuario)
         finally:
             conexion.close()
@@ -150,6 +179,13 @@ def main():
     print("   casos del simulador revisados: %d | asientos de los casos descuadrados: %d"
           % (casos_totales, asientos_descuadrados))
     print("   aulas con las mismas cifras en los 19 casos: %d" % len(repetidas_casos))
+    if actividades_por_aula:
+        if len(set(actividades_por_aula)) == 1:
+            print("   actividades por aula: %d en todas" % actividades_por_aula[0])
+        else:
+            print("   actividades por aula: de %d a %d"
+                  % (min(actividades_por_aula), max(actividades_por_aula)))
+        print("   aulas que conservan las cifras originales de los casos: %d" % sinon_variar)
     if inventarios:
         print("   inventario inicial por aula: de %.2f a %.2f" % (min(inventarios), max(inventarios)))
     if repetidas:
