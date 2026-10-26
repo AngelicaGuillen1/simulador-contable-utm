@@ -230,9 +230,8 @@ def index():
     return render_template("reports/index.html", grupos=grupos, reportes=REPORTES)
 
 
-@reports_bp.route("/exportar/csv/<tipo>")
-@login_required
-def export_csv(tipo):
+def _respuesta_csv(tipo):
+    """Arma la respuesta CSV de un reporte (sin depender de la vista de Flask)."""
     if tipo not in REPORTES:
         return Response(f"Reporte no reconocido: {tipo}", status=404, mimetype="text/plain")
     encabezados, filas = _filas_reporte(tipo)
@@ -247,6 +246,12 @@ def export_csv(tipo):
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f"attachment;filename={nombre}"}
     )
+
+
+@reports_bp.route("/exportar/csv/<tipo>")
+@login_required
+def export_csv(tipo):
+    return _respuesta_csv(tipo)
 
 
 @reports_bp.route("/exportar/excel/<tipo>")
@@ -321,19 +326,22 @@ def printable(tipo):
 
 
 # ---------------- Rutas de exportación heredadas (compatibilidad) ----------------
+# Ojo: antes llamaban a `export_csv(...)` directamente, pero esa función es una vista de Flask
+# envuelta por @login_required (que solo acepta kwargs), de modo que respondían 500. Ahora todas
+# usan el armador `_respuesta_csv`, que es una función normal.
 @reports_bp.route("/exportar/diario-csv")
 @login_required
 def export_journal_csv():
-    return export_csv("diario")
+    return _respuesta_csv("diario")
 
 
 @reports_bp.route("/exportar/balance-csv")
 @login_required
 def export_trial_balance_csv():
-    return export_csv("balance")
+    return _respuesta_csv("balance")
 
 
 @reports_bp.route("/exportar/inventario-csv")
 @login_required
 def export_inventory_csv():
-    return export_csv("inventario")
+    return _respuesta_csv("inventario")
