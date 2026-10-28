@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from routes.auth import login_required, roles_required
 from services.accounting_service import AccountingService
+from services.audit_service import AuditService
 from services.document_service import DocumentService
 from services.period_service import PeriodService
 from models import get_db_contable
@@ -43,14 +44,40 @@ def accounts():
 @accounting_bp.route("/cuentas/<int:account_id>/editar", methods=["POST"])
 @login_required
 def edit_account(account_id):
+    """Cambia el nombre de una cuenta del plan. El código y la naturaleza no se tocan.
+
+    Los estudiantes pueden renombrar sus cuentas para adaptarlas a su empresa (por ejemplo,
+    «Caja General» -> «Caja Matriz Quito»). Lo que NO cambia nunca es el código: el resto del
+    sistema (asientos, compras, ventas, retenciones, evidencias y casos) trabaja con el código.
+    """
+    actual = AccountingService.get_account_by_id(account_id)
+    if not actual:
+        flash("La cuenta no existe en su plan de cuentas.", "danger")
+        return redirect(url_for("accounting.accounts"))
+
     nombre = request.form.get("nombre", "").strip()
-    naturaleza = request.form.get("naturaleza", "DEUDORA")
-    clasificacion = request.form.get("clasificacion", "ACTIVO_CORRIENTE")
-    activo = int(request.form.get("activo", 1))
+    if not nombre:
+        flash("El nombre de la cuenta no puede quedar vacío.", "danger")
+        return redirect(url_for("accounting.accounts"))
+    if len(nombre) > 120:
+        flash("El nombre de la cuenta no puede pasar de 120 caracteres.", "danger")
+        return redirect(url_for("accounting.accounts"))
+
+    # Solo se actualiza lo que llega en el formulario: si un campo no viene, se conserva el actual.
+    naturaleza = (request.form.get("naturaleza") or actual["naturaleza"] or "DEUDORA").upper()
+    clasificacion = request.form.get("clasificacion") or actual["clasificacion"]
+    activo = int(request.form.get("activo", actual["activo"] or 1))
 
     try:
         AccountingService.update_account(account_id, nombre, naturaleza, clasificacion, activo)
-        flash("Cuenta contable actualizada correctamente.", "success")
+        usuario_id = g.user["id"] if g.user else 1
+        username = g.user.get("username") if g.user else "sistema"
+        AuditService.log(usuario_id, username, "RENOMBRAR_CUENTA", "CUENTAS", account_id,
+                         {"nombre": actual["nombre"]}, {"nombre": nombre})
+        if (actual["nombre"] or "").strip() == nombre:
+            flash("El nombre quedó igual: no hubo cambios.", "info")
+        else:
+            flash("Cuenta %s renombrada: «%s»." % (actual["codigo"], nombre), "success")
     except Exception as e:
         flash(f"Error al actualizar cuenta: {str(e)}", "danger")
     return redirect(url_for("accounting.accounts"))

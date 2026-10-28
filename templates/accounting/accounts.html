@@ -72,6 +72,13 @@
                 <i class="bi bi-book"></i>
               </a>
               {% endif %}
+              <button type="button" class="btn btn-outline-primary btn-sm p-1 px-2 btn-renombrar"
+                      title="Cambiar el nombre de la cuenta"
+                      data-url="{{ url_for('accounting.edit_account', account_id=c.id) }}"
+                      data-codigo="{{ c.codigo }}" data-nombre="{{ c.nombre }}"
+                      data-bs-toggle="modal" data-bs-target="#renameAccountModal">
+                <i class="bi bi-pencil"></i>
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -142,4 +149,40 @@
     </form>
   </div>
 </div>
+
+<!-- Modal Renombrar Cuenta: cambia solo el nombre; el código y la naturaleza no se tocan -->
+<div class="modal fade" id="renameAccountModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="#" id="renameAccountForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Cambiar el nombre de la cuenta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">
+          Cuenta <code id="renameAccountCode">—</code>. Se cambia <strong>solo el nombre</strong> que verá
+          en todo el sistema; el código, la naturaleza y los movimientos ya registrados quedan igual.
+        </p>
+        <label class="form-label small fw-bold">Nuevo nombre</label>
+        <input type="text" name="nombre" id="renameAccountName" class="form-control"
+               maxlength="120" required placeholder="Ej.: Caja Matriz Quito">
+        <div class="form-text">También puede adaptarlo a su empresa: «Banco Pichincha Cta Cte» → «Banco Pichincha · Cuenta principal».</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> Guardar nombre</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.btn-renombrar').forEach(function (boton) {
+    boton.addEventListener('click', function () {
+      document.getElementById('renameAccountCode').textContent = boton.dataset.codigo;
+      document.getElementById('renameAccountName').value = boton.dataset.nombre;
+      document.getElementById('renameAccountForm').action = boton.dataset.url;
+    });
+  });
+</script>
 {% endblock %}
