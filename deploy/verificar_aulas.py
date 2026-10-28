@@ -91,6 +91,7 @@ def main():
     identificaciones_malas = textos_viejos = con_movimientos = 0
     casos_totales = asientos_descuadrados = 0
     actividades_por_aula = []
+    con_cuentas_extra = 0
     estructura = None
 
     # Cifras originales de la plantilla: si un aula las conserva, no se le aplicó la variación.
@@ -120,8 +121,13 @@ def main():
             conteo = tuple(conexion.execute("SELECT COUNT(*) FROM %s" % tabla).fetchone()[0]
                            for tabla in ("cuentas", "productos", "clientes", "proveedores", "bancos"))
             estructura = estructura or conteo
-            if conteo != estructura:
-                problemas.append("%s: estructura distinta %s" % (usuario, conteo))
+            # Se admiten cuentas adicionales creadas por el estudiante; lo que no puede faltar es
+            # el mínimo del plan, los productos y los terceros.
+            minimos = (46, 20, 10, 8, 2)
+            if any(actual < minimo for actual, minimo in zip(conteo, minimos)):
+                problemas.append("%s: estructura incompleta %s" % (usuario, conteo))
+            elif conteo != minimos:
+                con_cuentas_extra += 1
 
             inventario = conexion.execute(
                 "SELECT COALESCE(SUM(stock_actual * costo_unitario), 0) FROM productos").fetchone()[0]
@@ -168,8 +174,9 @@ def main():
     repetidas = {n: u for n, u in empresas.items() if len(u) > 1}
     repetidas_casos = {k: v for k, v in huellas.items() if len(v) > 1 and any(k)}
     print("   aulas: %d | empresas distintas: %d" % (len(rutas), len(empresas)))
-    print("   estructura común (cuentas, productos, clientes, proveedores, bancos): %s"
-          % (estructura,))
+    print("   estructura base esperada (cuentas, productos, clientes, proveedores, bancos): "
+          "(46, 20, 10, 8, 2)")
+    print("   aulas con cuentas adicionales propias: %d" % con_cuentas_extra)
     print("   identificaciones fuera de la norma del SRI: %d" % identificaciones_malas)
     print("   actividades que aún nombran la empresa compartida: %d" % textos_viejos)
     print("   aulas con asientos registrados (deben estar en cero): %d" % con_movimientos)
