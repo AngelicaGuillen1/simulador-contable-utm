@@ -75,6 +75,10 @@ jobs:
             apt-get update -qq
             echo "== Actualizando (conservando configuraciones locales) =="
             apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade
+            # `apt upgrade` NO instala paquetes nuevos y el kernel nuevo llega como paquete nuevo
+            # (linux-image-6.8.0-149), por eso se queda "kept back": se instala el metapaquete.
+            echo "== Instalando el kernel actualizado =="
+            apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install linux-image-virtual
             apt-get -y autoremove
             apt-get -y clean
             echo "== Kernel instalado para el próximo arranque =="
