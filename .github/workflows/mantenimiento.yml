@@ -20,6 +20,7 @@ on:
         type: choice
         options:
           - diagnostico
+          - seguridad
           - actualizar
 
 jobs:
@@ -56,6 +57,32 @@ jobs:
             systemctl is-active simulador-contable
           '
 
+      - name: Revisión de seguridad (no cambia nada)
+        if: ${{ inputs.accion == 'seguridad' }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 '
+            echo "== Acceso SSH =="
+            sshd -T 2>/dev/null | grep -E "^(port|permitrootlogin|passwordauthentication|pubkeyauthentication|kbdinteractiveauthentication)" | sed "s/^/  /"
+            echo "== Cortafuegos =="
+            (ufw status 2>/dev/null || echo "  ufw no instalado") | sed "s/^/  /"
+            echo "== Puertos escuchando =="
+            ss -tlnp 2>/dev/null | awk "NR>1 {print \"  \" \$4}" | sort -u
+            echo "== Protección contra fuerza bruta =="
+            systemctl is-active fail2ban 2>/dev/null || echo "  fail2ban no instalado"
+            echo "== Intentos de acceso SSH fallidos (7 días) =="
+            journalctl -u ssh --since "7 days ago" --no-pager 2>/dev/null | grep -c "Failed password" || echo "  0"
+            echo "== Usuarios con shell =="
+            awk -F: "\$3>=1000 && \$7 !~ /nologin|false/ {print \"  \" \$1}" /etc/passwd
+            echo "== Sesiones activas =="
+            who | sed "s/^/  /"
+            echo "== Sitios publicados por nginx =="
+            ls /etc/nginx/sites-enabled/ | sed "s/^/  /"
+            echo "== Actualizaciones de seguridad pendientes =="
+            apt-get update -qq >/dev/null 2>&1
+            apt list --upgradable 2>/dev/null | grep -ci security || echo "  0"
+            echo "== Permisos de los secretos =="
+            ls -l /etc/simulador/ 2>/dev/null | sed "s/^/  /"
+          '
       - name: Aplicar las actualizaciones y reiniciar
         if: ${{ inputs.accion == 'actualizar' }}
         run: |
