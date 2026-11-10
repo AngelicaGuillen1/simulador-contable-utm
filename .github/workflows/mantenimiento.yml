@@ -1,0 +1,103 @@
+name: Mantenimiento del VPS
+
+# Dos acciones, sin depender del SSH desde la computadora (la red de la universidad bloquea el
+# puerto 22, así que lo ejecuta GitHub):
+#
+#   diagnostico -> muestra la versión del kernel, si hay actualizaciones pendientes y si hace
+#                  falta reiniciar. No cambia nada.
+#   actualizar  -> aplica las actualizaciones del sistema (conservando los archivos de
+#                  configuración locales, como nginx), reinicia el VPS y comprueba que el
+#                  simulador vuelve a responder.
+#
+# Antes de "actualizar", cree un snapshot en hPanel (VPS -> Snapshots) y espere a que termine.
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: "diagnostico o actualizar"
+        required: true
+        default: diagnostico
+        type: choice
+        options:
+          - diagnostico
+          - actualizar
+
+jobs:
+  mantenimiento:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar el acceso al servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 2.25.173.123 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Diagnóstico (no cambia nada)
+        if: ${{ inputs.accion == 'diagnostico' }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 '
+            echo "== Sistema =="
+            . /etc/os-release && echo "$PRETTY_NAME"
+            echo "== Kernel en uso =="
+            uname -r
+            echo "== Encendido desde =="
+            uptime -p
+            echo "== ¿Requiere reinicio? =="
+            if [ -f /var/run/reboot-required ]; then cat /var/run/reboot-required; else echo "no"; fi
+            echo "== Actualizaciones pendientes =="
+            apt-get update -qq >/dev/null 2>&1
+            apt list --upgradable 2>/dev/null | tail -n +2 | sed "s/^/  /"
+            echo "== Paquetes del kernel instalados =="
+            dpkg -l | grep -E "^ii  linux-(image|headers|generic)" | awk "{print \"  \" \$2 \" \" \$3}"
+            echo "== Disco =="
+            df -h / | tail -1
+            echo "== Servicio del simulador =="
+            systemctl is-active simulador-contable
+          '
+
+      - name: Aplicar las actualizaciones y reiniciar
+        if: ${{ inputs.accion == 'actualizar' }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 '
+            set -e
+            echo "== Kernel antes =="; uname -r
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            echo "== Actualizando (conservando configuraciones locales) =="
+            apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade
+            apt-get -y autoremove
+            apt-get -y clean
+            echo "== Kernel instalado para el próximo arranque =="
+            ls /boot/vmlinuz-* | sed "s/^/  /" | tail -3
+            echo "== Reiniciando en 10 segundos =="
+            nohup sh -c "sleep 10; systemctl reboot" >/dev/null 2>&1 &
+          '
+
+      - name: Esperar a que vuelva el servidor
+        if: ${{ inputs.accion == 'actualizar' }}
+        run: |
+          sleep 90
+          for intento in 1 2 3 4 5 6 7 8; do
+            if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 root@2.25.173.123 'true' 2>/dev/null; then
+              echo "servidor en línea (intento $intento)"
+              break
+            fi
+            echo "esperando... (intento $intento)"
+            sleep 20
+          done
+
+      - name: Comprobar el resultado
+        if: ${{ inputs.accion == 'actualizar' }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 '
+            echo "== Kernel después =="; uname -r
+            echo "== Servicio =="; systemctl is-active simulador-contable
+            echo "== Salud por HTTPS =="
+            for i in 1 2 3 4 5 6; do
+              ESTADO=$(curl -s -o /dev/null -w "%{http_code}" -k https://simuladorcontablecaavgputm.tech/api/health || true)
+              if [ "$ESTADO" = "200" ]; then echo "salud: 200"; exit 0; fi
+              sleep 15
+            done
+            echo "salud: $ESTADO"
+          '
