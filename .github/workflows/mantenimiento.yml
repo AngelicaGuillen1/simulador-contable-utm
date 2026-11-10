@@ -61,6 +61,15 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 '
             set -e
+            RESPALDO=/root/respaldo-$(date +%Y%m%d-%H%M)
+            mkdir -p "$RESPALDO"
+            echo "== Respaldo previo en $RESPALDO =="
+            cp -a /etc/nginx/sites-enabled "$RESPALDO/nginx-sites-enabled"
+            cp -a /etc/nginx/nginx.conf "$RESPALDO/" 2>/dev/null || true
+            cp -a /etc/systemd/system/simulador-contable.service "$RESPALDO/" 2>/dev/null || true
+            cp -a /etc/simulador "$RESPALDO/etc-simulador" 2>/dev/null || true
+            tar -czf "$RESPALDO/datos.tar.gz" -C /var/datos . 2>/dev/null || true
+            du -sh "$RESPALDO"
             echo "== Kernel antes =="; uname -r
             export DEBIAN_FRONTEND=noninteractive
             apt-get update -qq
