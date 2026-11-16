@@ -133,6 +133,70 @@ TRANSACCIONES = [
 ]
 
 
+# ------------------------------------------------------------------------ cuadro de análisis
+# Para cada transacción: qué se recibe (cuentas deudoras) y qué se entrega (cuentas acreedoras),
+# con el importe. Una transacción puede tener dos partes (por ejemplo, la venta y su costo).
+ANALISIS = {
+    1: [{
+        "recibe": [("Dinero en efectivo", "1.1.01", 5000.00)],
+        "entrega": [("El aporte de capital de los socios", "3.1.01", 5000.00)],
+    }],
+    2: [{
+        "recibe": [("Mercadería: 10 unidades", "1.1.06", 200.00),
+                   ("El IVA pagado al proveedor (crédito tributario)", "1.1.07", 30.00)],
+        "entrega": [("El dinero de la transferencia bancaria", "1.1.02", 230.00)],
+    }],
+    3: [{
+        "titulo": "La venta",
+        "recibe": [("Dinero en efectivo del cliente", "1.1.01", 161.00)],
+        "entrega": [("Las mercaderías vendidas (ingreso)", "4.1.01", 140.00),
+                    ("El IVA cobrado al cliente", "2.1.02", 21.00)],
+    }, {
+        "titulo": "El costo de la venta",
+        "recibe": [("El costo de la mercadería entregada (gasto)", "5.1.01", 80.00)],
+        "entrega": [("Las mercaderías que salen del inventario", "1.1.06", 80.00)],
+    }],
+    4: [{
+        "recibe": [("Mercadería: 15 unidades", "1.1.06", 300.00),
+                   ("El IVA pagado al proveedor (crédito tributario)", "1.1.07", 45.00)],
+        "entrega": [("La promesa de pago a 30 días", "2.1.01", 345.00)],
+    }],
+    5: [{
+        "titulo": "La venta",
+        "recibe": [("El derecho a cobrar al cliente", "1.1.04", 402.50)],
+        "entrega": [("Las mercaderías vendidas (ingreso)", "4.1.01", 350.00),
+                    ("El IVA cobrado al cliente", "2.1.02", 52.50)],
+    }, {
+        "titulo": "El costo de la venta",
+        "recibe": [("El costo de la mercadería entregada (gasto)", "5.1.01", 200.00)],
+        "entrega": [("Las mercaderías que salen del inventario", "1.1.06", 200.00)],
+    }],
+    6: [{
+        "recibe": [("Dinero en la cuenta bancaria", "1.1.02", 200.00)],
+        "entrega": [("Parte del derecho a cobrar al cliente", "1.1.04", 200.00)],
+    }],
+    7: [{
+        "recibe": [("La cancelación de parte de la deuda", "2.1.01", 200.00)],
+        "entrega": [("El dinero del cheque", "1.1.02", 200.00)],
+    }],
+    8: [{
+        "recibe": [("El servicio de energía eléctrica (gasto del mes)", "6.1.03", 120.00),
+                   ("El IVA pagado (crédito tributario)", "1.1.07", 18.00)],
+        "entrega": [("El dinero de la transferencia", "1.1.02", 138.00)],
+    }],
+    9: [{
+        "recibe": [("Dinero acreditado en la cuenta bancaria", "1.1.02", 2000.00)],
+        "entrega": [("La obligación de devolverlo en 12 meses", "2.1.05", 2000.00)],
+    }],
+    10: [{
+        "recibe": [("Equipos de cómputo para uso (activo fijo)", "1.2.03", 1000.00),
+                   ("El IVA pagado (crédito tributario)", "1.1.07", 150.00)],
+        "entrega": [("La deuda pendiente con el proveedor", "2.1.01", 1000.00),
+                    ("El cheque con que se paga el IVA", "1.1.02", 150.00)],
+    }],
+}
+
+
 # --------------------------------------------------------------------------------- verificación
 def verificar(transacciones=None):
     transacciones = transacciones or TRANSACCIONES
@@ -265,7 +329,7 @@ def _tabla_enunciados(documento, transacciones, con_espacio=True):
     return tabla
 
 
-def _tabla_asiento(documento, t, numero):
+def _tabla_entry(documento, t):
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml import OxmlElement
@@ -273,21 +337,6 @@ def _tabla_asiento(documento, t, numero):
     from docx.shared import Cm, Pt
 
     plan = {c["codigo"]: c for c in leer_cuentas()}
-    p = documento.add_paragraph()
-    p.paragraph_format.space_before = Pt(8)
-    p.paragraph_format.space_after = Pt(2)
-    corrida = p.add_run("%d. %s" % (numero, t["fecha"]))
-    corrida.bold = True
-    corrida.font.size = Pt(10)
-    corrida.font.name = "Times New Roman"
-
-    # El enunciado completo, para que el asiento se lea junto a la transacción que lo origina.
-    enunciado = documento.add_paragraph()
-    enunciado.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    enunciado.paragraph_format.space_after = Pt(4)
-    corrida = enunciado.add_run(t["enunciado"])
-    corrida.font.size = Pt(10)
-    corrida.font.name = "Times New Roman"
 
     tabla = documento.add_table(rows=1, cols=4)
     tabla.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -347,6 +396,165 @@ def _tabla_asiento(documento, t, numero):
     corrida.italic = True
     corrida.font.size = Pt(9)
     corrida.font.name = "Times New Roman"
+
+
+def _titulo_transaccion(documento, numero, t):
+    """Encabezado de la transacción: número, fecha y el enunciado completo."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    p = documento.add_paragraph()
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(2)
+    corrida = p.add_run("%d. %s" % (numero, t["fecha"]))
+    corrida.bold = True
+    corrida.font.size = Pt(10)
+    corrida.font.name = "Times New Roman"
+
+    enunciado = documento.add_paragraph()
+    enunciado.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    enunciado.paragraph_format.space_after = Pt(4)
+    corrida = enunciado.add_run(t["enunciado"])
+    corrida.font.size = Pt(10)
+    corrida.font.name = "Times New Roman"
+
+
+def _tabla_asiento(documento, t, numero):
+    _titulo_transaccion(documento, numero, t)
+    _tabla_entry(documento, t)
+
+
+def _cuadro_analisis(documento, parte):
+    """Cuadro de análisis: qué se recibe (deudoras) y qué se entrega (acreedoras)."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Cm, Pt, RGBColor
+
+    plan = {c["codigo"]: c for c in leer_cuentas()}
+
+    def sombrear(celda, color):
+        sombreado = OxmlElement("w:shd")
+        sombreado.set(qn("w:fill"), color)
+        celda._tc.get_or_add_tcPr().append(sombreado)
+
+    def escribir(celda, pregunta, respuestas, centrado=False):
+        celda.text = ""
+        p = celda.paragraphs[0]
+        p.paragraph_format.space_after = Pt(2)
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if centrado else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(pregunta)
+        run.bold = True
+        run.font.size = Pt(8.5)
+        run.font.name = "Times New Roman"
+        for texto in respuestas:
+            p2 = celda.add_paragraph()
+            p2.paragraph_format.space_before = Pt(2)
+            p2.paragraph_format.space_after = Pt(0)
+            p2.alignment = WD_ALIGN_PARAGRAPH.CENTER if centrado else WD_ALIGN_PARAGRAPH.LEFT
+            run2 = p2.add_run(texto)
+            run2.font.size = Pt(9.5)
+            run2.font.name = "Times New Roman"
+
+    if parte.get("titulo"):
+        titulo = documento.add_paragraph()
+        titulo.paragraph_format.space_before = Pt(2)
+        titulo.paragraph_format.space_after = Pt(2)
+        run = titulo.add_run(parte["titulo"])
+        run.bold = True
+        run.italic = True
+        run.font.size = Pt(9.5)
+        run.font.name = "Times New Roman"
+
+    tabla = documento.add_table(rows=3, cols=3)
+    tabla.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tabla.style = "Table Grid"
+
+    # fila 0: los títulos de las tres preguntas
+    for indice, texto in enumerate(["Primera pregunta", "Segunda pregunta", "Tercer pregunta"]):
+        celda = tabla.rows[0].cells[indice]
+        celda.text = ""
+        p = celda.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run(texto)
+        run.font.size = Pt(9)
+        run.font.name = "Times New Roman"
+        sombrear(celda, "E7E6E6")
+
+    filas = [
+        (1, "FFF2CC", "¿Qué se recibe?", "¿Cuáles son las cuentas deudoras que intervienen?",
+         "¿Por cuánto recibe?", "recibe"),
+        (2, "DEEBF7", "¿Qué se entrega?", "¿Cuáles son las cuentas acreedoras que intervienen?",
+         "¿Por cuánto entrega?", "entrega"),
+    ]
+    for fila, color, p1, p2, p3, clave in filas:
+        movimientos = parte[clave]
+        cuentas = ["%s %s" % (codigo, plan[codigo]["nombre"]) for _, codigo, _ in movimientos]
+        total = round(sum(monto for _, _, monto in movimientos), 2)
+        importe = "USD %s" % ("{:,.2f}".format(total)).replace(",", "X").replace(".", ",").replace("X", ".")
+        celdas = tabla.rows[fila].cells
+        escribir(celdas[0], p1, [texto for texto, _, _ in movimientos])
+        escribir(celdas[1], p2, cuentas)
+        escribir(celdas[2], p3, [importe], centrado=True)
+        for celda in celdas:
+            sombrear(celda, color)
+
+    for fila in tabla.rows:
+        for indice, celda in enumerate(fila.cells):
+            celda.width = [Cm(4.6), Cm(7.8), Cm(4.0)][indice]
+
+
+def verificar_cuadros():
+    """Cada cuadro debe sumar lo mismo que su asiento (deudoras = debe, acreedoras = haber)."""
+    problemas = []
+    for numero, t in enumerate(TRANSACCIONES, start=1):
+        partes = ANALISIS.get(numero, [])
+        if not partes:
+            problemas.append("Transacción %d: no tiene cuadro de análisis" % numero)
+            continue
+        recibe = round(sum(m for parte in partes for _, _, m in parte["recibe"]), 2)
+        entrega = round(sum(m for parte in partes for _, _, m in parte["entrega"]), 2)
+        debe = round(sum(l[1] for l in t["lineas"]), 2)
+        haber = round(sum(l[2] for l in t["lineas"]), 2)
+        if abs(recibe - debe) >= 0.01 or abs(entrega - haber) >= 0.01:
+            problemas.append("Transacción %d: el cuadro no coincide con el asiento (%.2f/%.2f vs %.2f/%.2f)"
+                             % (numero, recibe, entrega, debe, haber))
+        cuentas_cuadro = {c for parte in partes for _, c, _ in parte["recibe"] + parte["entrega"]}
+        cuentas_asiento = {l[0] for l in t["lineas"]}
+        if cuentas_cuadro != cuentas_asiento:
+            problemas.append("Transacción %d: cuentas distintas entre cuadro y asiento (%s)"
+                             % (numero, cuentas_cuadro ^ cuentas_asiento))
+    return problemas
+
+
+def escribir_cuadro(destino):
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    documento = Document()
+    _estilos(documento)
+    _encabezado(documento, "Práctica de jornalización básica: solucionario con análisis",
+                "Cuadro de qué se recibe y qué se entrega, y asiento de cada transacción")
+    intro = documento.add_paragraph()
+    intro.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    intro.paragraph_format.space_after = Pt(6)
+    corrida = intro.add_run(
+        "En cada transacción se responde primero el cuadro de análisis: lo que la empresa recibe "
+        "son las cuentas deudoras (debe) y lo que entrega son las cuentas acreedoras (haber). "
+        "Después se presenta el asiento completo.")
+    corrida.font.size = Pt(10)
+    corrida.font.name = "Times New Roman"
+
+    for numero, t in enumerate(TRANSACCIONES, start=1):
+        _titulo_transaccion(documento, numero, t)
+        for parte in ANALISIS.get(numero, []):
+            _cuadro_analisis(documento, parte)
+        _tabla_entry(documento, t)
+
+    documento.save(destino)
+    return destino
 
 
 def escribir_estudiante(destino, transacciones=None):
@@ -445,6 +653,11 @@ def main():
           % (len(TRANSACCIONES), "todas cuadran y usan cuentas válidas" if not problemas else "CON PROBLEMAS"))
     for problema in problemas:
         print("   [PROBLEMA] %s" % problema)
+    problemas_cuadro = verificar_cuadros()
+    print("Cuadros de análisis: %d | %s"
+          % (len(TRANSACCIONES), "todos coinciden con su asiento" if not problemas_cuadro else "CON PROBLEMAS"))
+    for problema in problemas_cuadro:
+        print("   [PROBLEMA] %s" % problema)
 
     if argumentos.solo_probar:
         saldos, debe, haber = probar_registro()
@@ -459,12 +672,19 @@ def main():
     ruta_estudiante = os.path.join(argumentos.salida, "Practica_10_transacciones_basicas.docx")
     ruta_solucion = os.path.join(argumentos.salida, "Practica_10_transacciones_solucionario.docx")
     ruta_excel = os.path.join(argumentos.salida, "Practica_10_transacciones_solucionario.xlsx")
-    escribir_estudiante(ruta_estudiante)
-    escribir_solucionario(ruta_solucion)
-    escribir_excel(ruta_excel)
-    print("Estudiante: %s" % ruta_estudiante)
-    print("Solucionario: %s" % ruta_solucion)
-    print("Excel: %s" % ruta_excel)
+    ruta_cuadro = os.path.join(argumentos.salida, "Practica_10_transacciones_solucion_cuadro.docx")
+    tareas = [
+        ("Enunciado del estudiante", escribir_estudiante, ruta_estudiante),
+        ("Solucionario", escribir_solucionario, ruta_solucion),
+        ("Excel del solucionario", escribir_excel, ruta_excel),
+        ("Solucionario con cuadro de análisis", escribir_cuadro, ruta_cuadro),
+    ]
+    for nombre, funcion, ruta in tareas:
+        try:
+            funcion(ruta)
+            print("%-34s %s" % (nombre + ":", ruta))
+        except PermissionError:
+            print("%-34s [ABIERTO EN WORD: ciérrelo y vuelva a ejecutar] %s" % (nombre + ":", ruta))
 
     if argumentos.probar:
         saldos, debe, haber = probar_registro()
