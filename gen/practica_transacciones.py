@@ -31,12 +31,16 @@ DOCENTE = "Ing. Angélica Victoria Guillén Pinargote, Mg."
 TRANSACCIONES = [
     {
         "fecha": "01/10/2026",
-        "enunciado": "Los socios de Comercial Aula aportan USD 5.000,00 en efectivo para iniciar "
-                     "las operaciones de la empresa.",
-        "lineas": [("1.1.01", 5000.00, 0, "Aporte de los socios"),
-                   ("3.1.01", 0, 5000.00, "Capital suscrito y pagado")],
-        "por_que": "Ingresa dinero a la caja (activo) y nace el capital aportado por los socios "
-                   "(patrimonio).",
+        "enunciado": "Asiento de apertura. Los socios aportan la mercadería que la empresa ya tiene "
+                     "en bodega (el valor que muestra su dashboard, en «Catálogo de Productos») y "
+                     "USD 5.000,00 en efectivo. Todo el aporte forma el capital de la empresa. "
+                     "En el ejemplo se usa un inventario de USD 7.500,00; cada empresa tiene el suyo.",
+        "lineas": [("1.1.06", 7500.00, 0, "Inventario aportado (ejemplo: el de su empresa)"),
+                   ("1.1.01", 5000.00, 0, "Efectivo aportado por los socios"),
+                   ("3.1.01", 0, 12500.00, "Capital: inventario + 5.000,00")],
+        "por_que": "Es el primer registro de la empresa: recibe la mercadería y el efectivo de los "
+                   "socios (cuentas deudoras) y entrega a cambio su participación en el capital "
+                   "(cuenta acreedora). El capital es la suma de los dos aportes.",
     },
     {
         "fecha": "03/10/2026",
@@ -138,8 +142,9 @@ TRANSACCIONES = [
 # con el importe. Una transacción puede tener dos partes (por ejemplo, la venta y su costo).
 ANALISIS = {
     1: [{
-        "recibe": [("Dinero en efectivo", "1.1.01", 5000.00)],
-        "entrega": [("El aporte de capital de los socios", "3.1.01", 5000.00)],
+        "recibe": [("La mercadería que ya está en bodega (su valor del dashboard)", "1.1.06", 7500.00),
+                   ("El efectivo aportado por los socios", "1.1.01", 5000.00)],
+        "entrega": [("La participación de los socios en el capital", "3.1.01", 12500.00)],
     }],
     2: [{
         "recibe": [("Mercadería: 10 unidades", "1.1.06", 200.00),
@@ -669,10 +674,10 @@ def main():
         return
 
     os.makedirs(argumentos.salida, exist_ok=True)
-    ruta_estudiante = os.path.join(argumentos.salida, "Practica_10_transacciones_basicas.docx")
-    ruta_solucion = os.path.join(argumentos.salida, "Practica_10_transacciones_solucionario.docx")
-    ruta_excel = os.path.join(argumentos.salida, "Practica_10_transacciones_solucionario.xlsx")
-    ruta_cuadro = os.path.join(argumentos.salida, "Practica_10_transacciones_solucion_cuadro.docx")
+    ruta_estudiante = os.path.join(argumentos.salida, "Practica_10_transacciones_con_apertura.docx")
+    ruta_solucion = os.path.join(argumentos.salida, "Practica_10_transacciones_con_apertura_solucionario.docx")
+    ruta_excel = os.path.join(argumentos.salida, "Practica_10_transacciones_con_apertura_solucionario.xlsx")
+    ruta_cuadro = os.path.join(argumentos.salida, "Practica_10_transacciones_con_apertura_cuadro.docx")
     tareas = [
         ("Enunciado del estudiante", escribir_estudiante, ruta_estudiante),
         ("Solucionario", escribir_solucionario, ruta_solucion),
