@@ -31,16 +31,23 @@ DOCENTE = "Ing. Angélica Victoria Guillén Pinargote, Mg."
 TRANSACCIONES = [
     {
         "fecha": "01/10/2026",
-        "enunciado": "Asiento de apertura. Los socios aportan la mercadería que la empresa ya tiene "
-                     "en bodega (el valor que muestra su dashboard, en «Catálogo de Productos») y "
-                     "USD 5.000,00 en efectivo. Todo el aporte forma el capital de la empresa. "
-                     "En el ejemplo se usa un inventario de USD 7.500,00; cada empresa tiene el suyo.",
+        "enunciado": "Asiento de apertura (constitución de la empresa). Los socios aportan la "
+                     "mercadería que ya está en bodega (el valor que muestra su dashboard, en "
+                     "«Catálogo de Productos»), USD 5.000,00 en efectivo, muebles por USD 3.000,00, "
+                     "equipo de cómputo por USD 2.500,00 y un vehículo de reparto por USD 15.000,00; "
+                     "la empresa asume un préstamo de USD 4.000,00. El capital es la diferencia "
+                     "(activo − pasivo). En el ejemplo se usa un inventario de USD 7.500,00; cada "
+                     "empresa tiene el suyo.",
         "lineas": [("1.1.06", 7500.00, 0, "Inventario aportado (ejemplo: el de su empresa)"),
                    ("1.1.01", 5000.00, 0, "Efectivo aportado por los socios"),
-                   ("3.1.01", 0, 12500.00, "Capital: inventario + 5.000,00")],
-        "por_que": "Es el primer registro de la empresa: recibe la mercadería y el efectivo de los "
-                   "socios (cuentas deudoras) y entrega a cambio su participación en el capital "
-                   "(cuenta acreedora). El capital es la suma de los dos aportes.",
+                   ("1.2.01", 3000.00, 0, "Muebles aportados"),
+                   ("1.2.03", 2500.00, 0, "Equipo de cómputo aportado"),
+                   ("1.2.05", 15000.00, 0, "Vehículo de reparto aportado"),
+                   ("2.1.05", 0, 4000.00, "Préstamo que asume la empresa"),
+                   ("3.1.01", 0, 29000.00, "Capital = activo 33.000,00 − pasivo 4.000,00")],
+        "por_que": "Primer registro de la empresa: recibe cinco bienes de los socios (inventario, "
+                   "caja, muebles, equipo y vehículo) y entrega dos compromisos (el préstamo que "
+                   "asume y el capital). El capital no se suma: es el activo menos el pasivo.",
     },
     {
         "fecha": "03/10/2026",
@@ -143,8 +150,12 @@ TRANSACCIONES = [
 ANALISIS = {
     1: [{
         "recibe": [("La mercadería que ya está en bodega (su valor del dashboard)", "1.1.06", 7500.00),
-                   ("El efectivo aportado por los socios", "1.1.01", 5000.00)],
-        "entrega": [("La participación de los socios en el capital", "3.1.01", 12500.00)],
+                   ("El efectivo aportado por los socios", "1.1.01", 5000.00),
+                   ("Los muebles aportados", "1.2.01", 3000.00),
+                   ("El equipo de cómputo aportado", "1.2.03", 2500.00),
+                   ("El vehículo de reparto aportado", "1.2.05", 15000.00)],
+        "entrega": [("El préstamo que asume la empresa", "2.1.05", 4000.00),
+                    ("La participación de los socios en el capital", "3.1.01", 29000.00)],
     }],
     2: [{
         "recibe": [("Mercadería: 10 unidades", "1.1.06", 200.00),

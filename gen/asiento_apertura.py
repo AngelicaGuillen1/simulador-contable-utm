@@ -1,9 +1,9 @@
-"""Asiento de apertura del simulador: guía para la docente y hoja de trabajo del estudiante.
+"""Asiento de apertura completo del simulador: guía, hoja de trabajo y ejemplo resuelto.
 
-El aula de cada estudiante arranca con la mercadería cargada (20 productos al costo) y sin ningún
-asiento. El primer registro que hacen es el aporte inicial de los socios: inventario + efectivo
-contra capital. El valor del inventario es distinto en cada empresa, así que los documentos
-enseñan a usar el valor propio (el que muestra el aviso del dashboard), no una cifra única.
+La empresa de cada estudiante se constituye con aportes de los socios (la mercadería que ya está
+en bodega, efectivo, muebles, equipo de cómputo y un vehículo) y asume un préstamo. El capital no
+se suma: se calcula como activo menos pasivo, de modo que cambia en cada empresa porque el
+inventario es distinto.
 
     python gen/asiento_apertura.py
 """
@@ -16,8 +16,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CARRERA = "Universidad Técnica de Manabí · Carrera de Contabilidad y Auditoría"
 ASIGNATURA = "Contabilidad I (AUD ONLINE) · Periodo 2026-P2"
 DOCENTE = "Ing. Angélica Victoria Guillén Pinargote, Mg."
+
+# Valores fijos del ejercicio (los dicta la docente en clase).
 EFECTIVO = 5000.00
+MUEBLES = 3000.00
+EQUIPO = 2500.00
+VEHICULO = 15000.00
+PRESTAMO = 4000.00
 EJEMPLO_INVENTARIO = 7500.00
+
+# El capital es la diferencia: activo menos pasivo.
+CAPITAL_SOBRE_INVENTARIO = EFECTIVO + MUEBLES + EQUIPO + VEHICULO - PRESTAMO   # 21.500,00
+EJEMPLO_CAPITAL = EJEMPLO_INVENTARIO + CAPITAL_SOBRE_INVENTARIO                 # 29.000,00
+EJEMPLO_TOTAL = EJEMPLO_INVENTARIO + EFECTIVO + MUEBLES + EQUIPO + VEHICULO     # 33.000,00
 
 
 def _preparar():
@@ -74,6 +85,10 @@ def _parrafo(documento, texto, tamano=10.5, negrita=False, cursiva=False,
     return p
 
 
+def _formato(valor):
+    return ("{:,.2f}".format(valor)).replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def _tabla_asiento(documento, filas, total_debe, total_haber):
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -126,88 +141,142 @@ def _tabla_asiento(documento, filas, total_debe, total_haber):
     return tabla
 
 
-def _formato(valor):
-    return ("{:,.2f}".format(valor)).replace(",", "X").replace(".", ",").replace("X", ".")
+def _tabla_datos(documento, filas):
+    """Cuadro de los datos del ejercicio: concepto, cuenta y valor."""
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Cm, Pt, RGBColor
+
+    tabla = documento.add_table(rows=1, cols=3)
+    tabla.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tabla.style = "Table Grid"
+    for indice, texto in enumerate(["Concepto", "Cuenta", "Valor"]):
+        celda = tabla.rows[0].cells[indice]
+        celda.text = ""
+        p = celda.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        corrida = p.add_run(texto)
+        corrida.bold = True
+        corrida.font.size = Pt(9)
+        corrida.font.name = "Times New Roman"
+        corrida.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        sombreado = OxmlElement("w:shd")
+        sombreado.set(qn("w:fill"), "1F3864")
+        celda._tc.get_or_add_tcPr().append(sombreado)
+
+    for concepto, cuenta, valor in filas:
+        celdas = tabla.add_row().cells
+        for indice, texto in enumerate([concepto, cuenta, valor]):
+            celdas[indice].text = ""
+            p = celdas[indice].paragraphs[0]
+            p.paragraph_format.space_after = Pt(0)
+            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT if indice == 2 else WD_ALIGN_PARAGRAPH.LEFT
+            corrida = p.add_run(texto)
+            corrida.font.size = Pt(9.5)
+            corrida.font.name = "Times New Roman"
+
+    for fila in tabla.rows:
+        for indice, celda in enumerate(fila.cells):
+            celda.width = [Cm(6.4), Cm(3.0), Cm(5.6)][indice]
+    return tabla
 
 
 def escribir_guia(destino):
-    """Guía para la docente: qué explicar, el orden de los pasos y qué revisar."""
+    """Guía para la docente: qué dictar, cómo se arma y qué revisar."""
     documento = _preparar()
-    _encabezado(documento, "Asiento de apertura: guía para acompañar el primer registro",
-                "Aporte inicial de los socios en el Simulador Integral de Sistema Contable")
+    _encabezado(documento, "Asiento de apertura completo: guía para la clase",
+                "Constitución de la empresa: aportes de los socios y un préstamo asumido")
 
     _parrafo(documento,
-             "Cada empresa del curso nace con la mercadería cargada en bodega y sin ninguna "
-             "operación registrada. El primer asiento que hace el estudiante es el aporte inicial "
-             "de los socios: la mercadería y el efectivo que aportan forman el capital de la "
-             "empresa. Las tres cuentas ya existen en su plan de cuentas.", 10.5)
+             "La empresa se constituye con bienes que aportan los socios (la mercadería que ya está "
+             "en bodega, efectivo, muebles, equipo de cómputo y un vehículo) y con un préstamo que "
+             "la empresa asume. El asiento de apertura refleja esas tres masas: activo, pasivo y "
+             "patrimonio. El capital NO se suma: se calcula como activo menos pasivo.", 10.5)
 
-    _parrafo(documento, "1. Qué debe explicar antes de que registren", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "1. Los datos del ejercicio (los dicta la docente)", 11.5, negrita=True,
+             espacio=3)
+    _tabla_datos(documento, [
+        ("Inventario que ya está en bodega", "1.1.06", "el valor de su Dashboard"),
+        ("Efectivo aportado por los socios", "1.1.01", _formato(EFECTIVO)),
+        ("Muebles y enseres aportados", "1.2.01", _formato(MUEBLES)),
+        ("Equipo de cómputo aportado", "1.2.03", _formato(EQUIPO)),
+        ("Vehículo de reparto aportado", "1.2.05", _formato(VEHICULO)),
+        ("Préstamo que asume la empresa", "2.1.05", _formato(PRESTAMO)),
+        ("Capital (activo − pasivo)", "3.1.01", "inventario + " + _formato(CAPITAL_SOBRE_INVENTARIO)),
+    ])
+
+    _parrafo(documento, "2. Qué explicar antes de que registren", 11.5, negrita=True, espacio=3)
     for texto in (
         "El inventario ya está en bodega, pero todavía no está en los libros: por eso se registra.",
-        "La mercadería entra por su costo (sin IVA), porque es una compra de inventario, no un gasto.",
-        "El efectivo que aportan los socios entra a Caja General.",
-        "El capital es la suma de las dos cosas: es lo que los socios pusieron en la empresa.",
-        "El Debe y el Haber deben dar exactamente lo mismo.",
+        "La mercadería y los bienes entran por su costo, sin IVA: son aportes de los socios.",
+        "El préstamo es un pasivo: la empresa lo debe, aunque no haya recibido dinero en efectivo.",
+        "El capital es la diferencia: lo que vale la empresa (activo) menos lo que debe (pasivo).",
+        "Si el capital se calculara sumando solo los activos, el asiento no cuadraría con el pasivo.",
     ):
         _parrafo(documento, "• " + texto, 10, sangria=0.5, espacio=3)
 
-    _parrafo(documento, "2. La estructura del asiento", 11.5, negrita=True, espacio=3)
-    _parrafo(documento,
-             "El valor del inventario es distinto en cada empresa: cada estudiante debe tomar el "
-             "que aparece en su propio aviso del dashboard, en «Catálogo de Productos» o en la "
-             "pantalla de Inventario. El efectivo es el mismo para todo el curso: USD %s." % _formato(EFECTIVO), 10)
-    _tabla_asiento(documento,
-                   [("1.1.06", "Inventario de Mercaderías", "su valor de inventario", ""),
-                    ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
-                    ("3.1.01", "Capital Social Suscrito y Pagado", "",
-                     "inventario + " + _formato(EFECTIVO))],
-                   "suma de los dos", "suma de los dos")
+    _parrafo(documento, "3. La estructura del asiento", 11.5, negrita=True, espacio=3)
+    _tabla_asiento(documento, [
+        ("1.1.06", "Inventario de Mercaderías", "su inventario", ""),
+        ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
+        ("1.2.01", "Muebles y Enseres de Oficina", _formato(MUEBLES), ""),
+        ("1.2.03", "Equipo de Cómputo y Software", _formato(EQUIPO), ""),
+        ("1.2.05", "Vehículo de Reparto", _formato(VEHICULO), ""),
+        ("2.1.05", "Préstamo Bancario por Pagar CP", "", _formato(PRESTAMO)),
+        ("3.1.01", "Capital Social Suscrito y Pagado", "",
+         "inventario + " + _formato(CAPITAL_SOBRE_INVENTARIO)),
+    ], "inventario + 25.500,00", "inventario + 25.500,00")
 
-    _parrafo(documento, "3. Ejemplo con cifras redondas", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "4. Ejemplo resuelto", 11.5, negrita=True, espacio=3)
     _parrafo(documento,
-             "Si el inventario de esa empresa fuera de USD %s y el efectivo de USD %s, el asiento "
-             "quedaría así:" % (_formato(EJEMPLO_INVENTARIO), _formato(EFECTIVO)), 10)
-    _tabla_asiento(documento,
-                   [("1.1.06", "Inventario de Mercaderías", _formato(EJEMPLO_INVENTARIO), ""),
-                    ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
-                    ("3.1.01", "Capital Social Suscrito y Pagado", "",
-                     _formato(EJEMPLO_INVENTARIO + EFECTIVO))],
-                   _formato(EJEMPLO_INVENTARIO + EFECTIVO),
-                   _formato(EJEMPLO_INVENTARIO + EFECTIVO))
+             "Con un inventario de USD %s, el asiento queda así (cada estudiante cambia ese valor "
+             "y el capital; lo demás es igual):" % _formato(EJEMPLO_INVENTARIO), 10)
+    _tabla_asiento(documento, [
+        ("1.1.06", "Inventario de Mercaderías", _formato(EJEMPLO_INVENTARIO), ""),
+        ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
+        ("1.2.01", "Muebles y Enseres de Oficina", _formato(MUEBLES), ""),
+        ("1.2.03", "Equipo de Cómputo y Software", _formato(EQUIPO), ""),
+        ("1.2.05", "Vehículo de Reparto", _formato(VEHICULO), ""),
+        ("2.1.05", "Préstamo Bancario por Pagar CP", "", _formato(PRESTAMO)),
+        ("3.1.01", "Capital Social Suscrito y Pagado", "", _formato(EJEMPLO_CAPITAL)),
+    ], _formato(EJEMPLO_TOTAL), _formato(EJEMPLO_TOTAL))
+    _parrafo(documento,
+             "Comprobación: activo %s − pasivo %s = capital %s."
+             % (_formato(EJEMPLO_TOTAL), _formato(PRESTAMO), _formato(EJEMPLO_CAPITAL)), 10,
+             cursiva=True)
 
-    _parrafo(documento, "4. Los pasos en el simulador", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "5. Los pasos en el simulador", 11.5, negrita=True, espacio=3)
     for numero, texto in enumerate((
-        "Entrar con el correo institucional y abrir el Dashboard: aparece el aviso amarillo con su "
-        "valor de inventario.",
+        "Abrir el Dashboard: el aviso amarillo muestra el valor de su inventario.",
         "Pulsar «Registrar el aporte inicial en el Libro Diario».",
-        "Escribir la fecha (dentro del período: 21/09/2026 al 16/01/2027) y la glosa: «Aporte "
-        "inicial de los socios».",
-        "Cargar las tres líneas: 1.1.06 con el inventario en el Debe; 1.1.01 con %s en el " % _formato(EFECTIVO) +
-        "Debe; 3.1.01 con la suma en el Haber.",
-        "Verificar que el aviso de la parte superior se ponga verde («Asiento Cuadrado») y pulsar "
-        "«Contabilizar Asiento».",
-        "Volver al Dashboard: el aviso amarillo desaparece y el capital aparece en el patrimonio.",
+        "Fecha dentro del período (21/09/2026 al 16/01/2027) y glosa: «Asiento de apertura».",
+        "Cargar las cinco líneas del Debe: inventario (su valor), caja, muebles, equipo y vehículo.",
+        "Cargar las dos líneas del Haber: préstamo por pagar y capital (inventario + %s)."
+        % _formato(CAPITAL_SOBRE_INVENTARIO),
+        "Verificar que el aviso se ponga verde («Asiento Cuadrado») y contabilizar.",
     ), start=1):
         _parrafo(documento, "%d. %s" % (numero, texto), 10, sangria=0.5, espacio=3)
 
-    _parrafo(documento, "5. Qué revisar después", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "6. Qué revisar después", 11.5, negrita=True, espacio=3)
     for texto in (
-        "En el Libro Diario: un asiento con tres líneas y el Debe igual al Haber.",
-        "En el Balance de Comprobación: Caja %s; Inventario por el valor de su empresa; " % _formato(EFECTIVO) +
-        "Capital por la suma, en el saldo acreedor. Las dos tarjetas de control en verde.",
-        "En el Estado de Situación Financiera: el capital en el patrimonio y el inventario en el "
-        "activo corriente.",
+        "Libro Diario: un asiento de siete líneas con el Debe igual al Haber.",
+        "Balance de Comprobación: inventario, caja, muebles, equipo y vehículo en el debe; "
+        "préstamo y capital en el haber; las dos tarjetas en verde.",
+        "Estado de Situación Financiera: activo total = pasivo + patrimonio.",
+        "El aviso amarillo del Dashboard desaparece.",
     ):
         _parrafo(documento, "• " + texto, 10, sangria=0.5, espacio=3)
 
-    _parrafo(documento, "6. Errores frecuentes", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "7. Errores frecuentes", 11.5, negrita=True, espacio=3)
     for texto in (
-        "Registrar el capital sin el inventario (el asiento queda descuadrado).",
-        "Poner el inventario con IVA: aquí no hay IVA, es el aporte de los socios.",
-        "Cargar el inventario en el Haber y el capital en el Debe (se invierte la partida).",
-        "Usar el valor de otro compañero: cada empresa tiene su propio inventario.",
-        "Elegir una cuenta agrupadora (1.1 o 1) en lugar de las de detalle.",
+        "Calcular el capital sumando solo los activos: se olvidan del préstamo y el asiento no cuadra.",
+        "Poner el inventario con IVA: son aportes, no compras.",
+        "Registrar el préstamo en el Debe: es un pasivo, va en el Haber.",
+        "Poner un saldo en el banco: no hay ningún depósito que lo respalde.",
+        "Usar el inventario de otro compañero: cada empresa tiene el suyo.",
+        "Elegir cuentas agrupadoras (1.2, 1.1) en lugar de las de detalle.",
     ):
         _parrafo(documento, "• " + texto, 10, sangria=0.5, espacio=3)
 
@@ -216,24 +285,39 @@ def escribir_guia(destino):
 
 
 def escribir_hoja(destino):
-    """Hoja de trabajo del estudiante: lee su valor y arma el asiento."""
-    documento = _preparar()
-    _encabezado(documento, "Hoja de trabajo: asiento de apertura",
-                "Aporte inicial de los socios · primer registro en el simulador")
-
-    _parrafo(documento, "Nombre: ______________________________________   "
-                        "Paralelo: ______   Fecha: ______________", 10.5, espacio=12)
-
-    _parrafo(documento, "Paso 1. Busca tus datos", 11.5, negrita=True, espacio=3)
-    _parrafo(documento,
-             "En tu Dashboard, el aviso amarillo dice cuánto vale tu mercadería. Ese valor es el "
-             "de tu empresa; no lo cambies por el de un compañero.", 10)
-
-    _parrafo(documento, "Paso 2. Completa el cuadro de análisis", 11.5, negrita=True, espacio=3)
+    """Hoja de trabajo del estudiante: sus datos, el cuadro de análisis y el asiento."""
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Cm, Pt
 
+    documento = _preparar()
+    _encabezado(documento, "Hoja de trabajo: asiento de apertura completo",
+                "Constitución de la empresa · primer registro en el simulador")
+
+    _parrafo(documento, "Nombre: ______________________________________   "
+                        "Paralelo: ______   Fecha: ______________", 10.5, espacio=10)
+
+    _parrafo(documento, "Paso 1. Tus datos", 11.5, negrita=True, espacio=3)
+    _parrafo(documento,
+             "El único valor que cambia en tu empresa es el del inventario: lo encuentras en el "
+             "aviso de tu Dashboard. Los demás son los que dictó la docente.", 10)
+    _tabla_datos(documento, [
+        ("Inventario en bodega", "1.1.06", "____________"),
+        ("Efectivo de los socios", "1.1.01", _formato(EFECTIVO)),
+        ("Muebles y enseres", "1.2.01", _formato(MUEBLES)),
+        ("Equipo de cómputo", "1.2.03", _formato(EQUIPO)),
+        ("Vehículo de reparto", "1.2.05", _formato(VEHICULO)),
+        ("Préstamo asumido", "2.1.05", _formato(PRESTAMO)),
+    ])
+
+    _parrafo(documento, "Paso 2. Calcula tu capital", 11.5, negrita=True, espacio=3)
+    _parrafo(documento,
+             "Capital = activo − pasivo = (inventario + %s + %s + %s + %s) − %s"
+             % (_formato(EFECTIVO), _formato(MUEBLES), _formato(EQUIPO), _formato(VEHICULO),
+                _formato(PRESTAMO)), 10)
+    _parrafo(documento, "Mi capital es:  ______________________", 11, negrita=True, espacio=8)
+
+    _parrafo(documento, "Paso 3. Completa el cuadro de análisis", 11.5, negrita=True, espacio=3)
     cuadro = documento.add_table(rows=3, cols=3)
     cuadro.alignment = WD_TABLE_ALIGNMENT.CENTER
     cuadro.style = "Table Grid"
@@ -241,8 +325,7 @@ def escribir_hoja(destino):
                   "¿Por cuánto recibe?"),
                  ("¿Qué se entrega?", "¿Cuáles son las cuentas acreedoras que intervienen?",
                   "¿Por cuánto entrega?")]
-    encabezados = ["Primera pregunta", "Segunda pregunta", "Tercer pregunta"]
-    for indice, texto in enumerate(encabezados):
+    for indice, texto in enumerate(["Primera pregunta", "Segunda pregunta", "Tercer pregunta"]):
         celda = cuadro.rows[0].cells[indice]
         celda.text = ""
         p = celda.paragraphs[0]
@@ -256,31 +339,33 @@ def escribir_hoja(destino):
             celda = cuadro.rows[fila].cells[indice]
             celda.text = ""
             p = celda.paragraphs[0]
-            p.paragraph_format.space_after = Pt(10)
-            corrida = p.add_run(texto + "\n")
+            p.paragraph_format.space_after = Pt(14)
+            corrida = p.add_run(texto)
             corrida.bold = True
             corrida.font.size = Pt(8.5)
             corrida.font.name = "Times New Roman"
-            corrida2 = p.add_run(" " * 3)
-            corrida2.font.size = Pt(9.5)
     for fila in cuadro.rows:
         for indice, celda in enumerate(fila.cells):
             celda.width = [Cm(4.6), Cm(7.6), Cm(4.2)][indice]
 
-    _parrafo(documento, "Paso 3. Registra el asiento en el Libro Diario", 11.5, negrita=True, espacio=3)
-    _parrafo(documento,
-             "Con los datos de tu empresa, completa tu asiento (recuerda: Debe = Haber):", 10)
-    _tabla_asiento(documento,
-                   [("1.1.06", "Inventario de Mercaderías", "", ""),
-                    ("1.1.01", "Caja General", "", ""),
-                    ("3.1.01", "Capital Social Suscrito y Pagado", "", "")],
-                   "", "")
+    _parrafo(documento, "Paso 4. Registra el asiento en el Libro Diario", 11.5, negrita=True,
+             espacio=3)
+    _tabla_asiento(documento, [
+        ("1.1.06", "Inventario de Mercaderías", "", ""),
+        ("1.1.01", "Caja General", "", ""),
+        ("1.2.01", "Muebles y Enseres de Oficina", "", ""),
+        ("1.2.03", "Equipo de Cómputo y Software", "", ""),
+        ("1.2.05", "Vehículo de Reparto", "", ""),
+        ("2.1.05", "Préstamo Bancario por Pagar CP", "", ""),
+        ("3.1.01", "Capital Social Suscrito y Pagado", "", ""),
+    ], "", "")
 
-    _parrafo(documento, "Paso 4. Comprueba", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "Paso 5. Comprueba", 11.5, negrita=True, espacio=3)
     for texto in (
-        "El aviso del formulario se puso verde (asiento cuadrado) y pudiste contabilizar.",
+        "El aviso del formulario se puso verde y pudiste contabilizar.",
         "El aviso amarillo del Dashboard desapareció.",
         "En el Balance de Comprobación las dos tarjetas están en verde.",
+        "El activo total es igual al pasivo más el patrimonio.",
     ):
         _parrafo(documento, "☐  " + texto, 10, sangria=0.5, espacio=4)
 
@@ -289,64 +374,72 @@ def escribir_hoja(destino):
 
 
 def escribir_solucionario(destino):
-    """Ejemplo resuelto del asiento de apertura, con las cifras del ejemplo."""
+    """Ejemplo resuelto con un inventario de 7.500,00."""
     documento = _preparar()
-    _encabezado(documento, "Asiento de apertura: ejemplo resuelto",
+    _encabezado(documento, "Asiento de apertura completo: ejemplo resuelto",
                 "Modelo para revisar el primer registro de los estudiantes")
 
     _parrafo(documento,
-             "Este ejemplo usa cifras redondas para que sirva de modelo. Cada empresa tiene su "
-             "propio valor de inventario, así que el capital de cada estudiante será distinto: "
-             "lo único que cambia son dos números (inventario y capital).", 10.5)
+             "Los socios aportan la mercadería que ya está en bodega, %s en efectivo, muebles por "
+             "%s, equipo de cómputo por %s y un vehículo por %s; la empresa asume un préstamo de "
+             "%s. El ejemplo usa un inventario de %s; cada empresa tiene el suyo."
+             % (_formato(EFECTIVO), _formato(MUEBLES), _formato(EQUIPO), _formato(VEHICULO),
+                _formato(PRESTAMO), _formato(EJEMPLO_INVENTARIO)), 10.5)
 
-    _parrafo(documento, "Aporte inicial de los socios", 11.5, negrita=True, espacio=3)
-    _parrafo(documento,
-             "Los socios aportan la mercadería que ya está en bodega (inventario) y USD %s en "
-             "efectivo. El total forma el capital de la empresa." % _formato(EFECTIVO), 10)
-    _tabla_asiento(documento,
-                   [("1.1.06", "Inventario de Mercaderías", _formato(EJEMPLO_INVENTARIO), ""),
-                    ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
-                    ("3.1.01", "Capital Social Suscrito y Pagado", "",
-                     _formato(EJEMPLO_INVENTARIO + EFECTIVO))],
-                   _formato(EJEMPLO_INVENTARIO + EFECTIVO),
-                   _formato(EJEMPLO_INVENTARIO + EFECTIVO))
+    _tabla_asiento(documento, [
+        ("1.1.06", "Inventario de Mercaderías", _formato(EJEMPLO_INVENTARIO), ""),
+        ("1.1.01", "Caja General", _formato(EFECTIVO), ""),
+        ("1.2.01", "Muebles y Enseres de Oficina", _formato(MUEBLES), ""),
+        ("1.2.03", "Equipo de Cómputo y Software", _formato(EQUIPO), ""),
+        ("1.2.05", "Vehículo de Reparto", _formato(VEHICULO), ""),
+        ("2.1.05", "Préstamo Bancario por Pagar CP", "", _formato(PRESTAMO)),
+        ("3.1.01", "Capital Social Suscrito y Pagado", "", _formato(EJEMPLO_CAPITAL)),
+    ], _formato(EJEMPLO_TOTAL), _formato(EJEMPLO_TOTAL))
 
     _parrafo(documento, "Cómo se lee", 11.5, negrita=True, espacio=3)
     for texto in (
-        "La empresa recibe la mercadería (inventario) y el efectivo: son cuentas deudoras.",
-        "Entrega a cambio la participación de los socios: es una cuenta acreedora (capital).",
-        "El asiento cuadra porque el Debe (inventario + caja) es igual al Haber (capital).",
+        "Recibe cinco bienes: mercadería, efectivo, muebles, equipo de cómputo y vehículo "
+        "(cuentas deudoras).",
+        "Entrega dos compromisos: el préstamo que asume y la participación de los socios en el "
+        "capital (cuentas acreedoras).",
+        "El capital es la diferencia: %s de activo menos %s de pasivo = %s."
+        % (_formato(EJEMPLO_TOTAL), _formato(PRESTAMO), _formato(EJEMPLO_CAPITAL)),
+        "La ecuación contable se cumple: activo %s = pasivo %s + patrimonio %s."
+        % (_formato(EJEMPLO_TOTAL), _formato(PRESTAMO), _formato(EJEMPLO_CAPITAL)),
     ):
         _parrafo(documento, "• " + texto, 10, sangria=0.5, espacio=3)
 
-    _parrafo(documento, "Qué debe salir en el balance de comprobación", 11.5, negrita=True, espacio=3)
+    _parrafo(documento, "Qué debe salir en el balance de comprobación", 11.5, negrita=True,
+             espacio=3)
     _parrafo(documento,
-             "Caja %s · Inventario %s · Capital %s, con las sumas y los saldos en verde. En el "
-             "Estado de Situación Financiera, el inventario y la caja en el activo corriente, y el "
-             "capital en el patrimonio."
-             % (_formato(EFECTIVO), _formato(EJEMPLO_INVENTARIO),
-                _formato(EJEMPLO_INVENTARIO + EFECTIVO)), 10)
+             "En el debe: inventario %s, caja %s, muebles %s, equipo %s, vehículo %s. En el haber: "
+             "préstamo %s y capital %s. Total %s en cada lado, con las dos tarjetas en verde."
+             % (_formato(EJEMPLO_INVENTARIO), _formato(EFECTIVO), _formato(MUEBLES),
+                _formato(EQUIPO), _formato(VEHICULO), _formato(PRESTAMO), _formato(EJEMPLO_CAPITAL),
+                _formato(EJEMPLO_TOTAL)), 10)
 
     _parrafo(documento, "Cómo cambia para cada estudiante", 11.5, negrita=True, espacio=3)
     _parrafo(documento,
-             "Solo dos cifras: el inventario (el valor que muestra su dashboard) y el capital "
-             "(ese mismo valor más %s). La caja siempre es %s y las cuentas son las mismas."
-             % (_formato(EFECTIVO), _formato(EFECTIVO)), 10)
+             "Solo dos cifras: el inventario (el valor de su dashboard) y el capital (ese valor más "
+             "%s). Los bienes aportados y el préstamo son iguales para todo el curso, así que los "
+             "resultados siguen siendo distintos en cada empresa." % _formato(CAPITAL_SOBRE_INVENTARIO),
+             10)
 
     documento.save(destino)
     return destino
 
 
 def main():
-    analizador = argparse.ArgumentParser(description="Asiento de apertura: guía y hoja de trabajo.")
+    analizador = argparse.ArgumentParser(
+        description="Asiento de apertura completo: guía, hoja de trabajo y ejemplo resuelto.")
     analizador.add_argument("--salida", default=os.path.join(
         os.path.expanduser("~"), "Desktop", "2026", "S2", "Clases", "Contabilidad 1"))
     argumentos = analizador.parse_args()
 
     os.makedirs(argumentos.salida, exist_ok=True)
-    ruta_guia = os.path.join(argumentos.salida, "Asiento_de_apertura_guia.docx")
-    ruta_hoja = os.path.join(argumentos.salida, "Asiento_de_apertura_hoja_de_trabajo.docx")
-    ruta_solucion = os.path.join(argumentos.salida, "Asiento_de_apertura_ejemplo_resuelto.docx")
+    ruta_guia = os.path.join(argumentos.salida, "Apertura_completa_guia.docx")
+    ruta_hoja = os.path.join(argumentos.salida, "Apertura_completa_hoja_de_trabajo.docx")
+    ruta_solucion = os.path.join(argumentos.salida, "Apertura_completa_ejemplo_resuelto.docx")
     for nombre, funcion, ruta in (("Guía de la docente", escribir_guia, ruta_guia),
                                   ("Hoja de trabajo", escribir_hoja, ruta_hoja),
                                   ("Ejemplo resuelto", escribir_solucionario, ruta_solucion)):
@@ -355,7 +448,12 @@ def main():
             print("%-22s %s" % (nombre + ":", ruta))
         except PermissionError:
             print("%-22s [ABIERTO EN WORD] %s" % (nombre + ":", ruta))
-    print("Efectivo de referencia: USD %s" % _formato(EFECTIVO))
+    print("Datos del ejercicio: caja %s | muebles %s | equipo %s | vehículo %s | préstamo %s"
+          % (_formato(EFECTIVO), _formato(MUEBLES), _formato(EQUIPO), _formato(VEHICULO),
+             _formato(PRESTAMO)))
+    print("Capital = inventario + %s | ejemplo con inventario %s: capital %s, total %s"
+          % (_formato(CAPITAL_SOBRE_INVENTARIO), _formato(EJEMPLO_INVENTARIO),
+             _formato(EJEMPLO_CAPITAL), _formato(EJEMPLO_TOTAL)))
 
 
 if __name__ == "__main__":
