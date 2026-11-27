@@ -22,6 +22,10 @@ on:
       clave:
         description: "Clave que se le entregará (formato ABCD-EFGH)"
         required: false
+      demo:
+        description: "¿Es una cuenta de prueba? (si/no). No entra en los paneles ni en las listas"
+        required: false
+        default: "no"
       usuario_a_borrar:
         description: "Solo para dar de baja: usuario o correo a eliminar"
         required: false
@@ -47,16 +51,19 @@ jobs:
           CORREO: ${{ inputs.correo }}
           CLAVE: ${{ inputs.clave }}
           BORRAR: ${{ inputs.usuario_a_borrar }}
+          DEMO: ${{ inputs.demo }}
         run: |
           # La clave no se imprime en los registros del flujo.
           if [ -n "$CLAVE" ]; then echo "::add-mask::$CLAVE"; fi
           COMUN='cd /opt/simulador && export DATABASE_PATH=/var/datos/simulator.db RUTA_AULAS=/var/datos/aulas RUTA_PLANTILLA=/var/datos/plantilla/aula_base.db &&'
+          EXTRA=""
+          if [ "$DEMO" = "si" ]; then EXTRA="--demo"; fi
           if [ -n "$BORRAR" ]; then
             echo "== Dando de baja a $BORRAR =="
             ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "$COMUN .venv/bin/python database/alta_estudiante.py --borrar '$BORRAR'"
           else
             echo "== Alta de estudiante =="
-            ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "$COMUN .venv/bin/python database/alta_estudiante.py --servidor --nombre '$NOMBRE' --cedula '$CEDULA' --correo '$CORREO' --clave '$CLAVE'"
+            ssh -i ~/.ssh/id_ed25519 root@2.25.173.123 "$COMUN .venv/bin/python database/alta_estudiante.py --servidor $EXTRA --nombre '$NOMBRE' --cedula '$CEDULA' --correo '$CORREO' --clave '$CLAVE'"
           fi
 
       - name: Estado del simulador después del alta

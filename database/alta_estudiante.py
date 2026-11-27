@@ -15,6 +15,7 @@ En el servidor se usa con --servidor: crea la cuenta y el aula, sin tocar listas
 import argparse
 import csv
 import glob
+import io
 import os
 import random
 import secrets
@@ -173,7 +174,21 @@ def aplicar_datos_propios(usuario):
             print("      %s" % (proceso.stdout or proceso.stderr or "")[-400:])
 
 
-def alta(nombre, cedula, correo, clave, paralelo, curso, servidor):
+def marcar_como_demo(usuario):
+    """Marca la cuenta como demostración: no cuenta en los paneles ni en las listas."""
+    conexion = sqlite3.connect(Config.DATABASE_PATH)
+    try:
+        columnas = [f[1] for f in conexion.execute("PRAGMA table_info(usuarios)")]
+        if "es_demo" in columnas:
+            conexion.execute("UPDATE usuarios SET es_demo = 1 WHERE username = ?", (usuario,))
+            conexion.commit()
+            return True
+        return False
+    finally:
+        conexion.close()
+
+
+def alta(nombre, cedula, correo, clave, paralelo, curso, servidor, demo=False):
     from database.importar_nomina import importar
     from database.crear_aula import crear_aula
 
@@ -203,6 +218,9 @@ def alta(nombre, cedula, correo, clave, paralelo, curso, servidor):
 
     fila = existe_usuario(usuario)
     estudiante_id = fila["id"] if fila else None
+    if demo:
+        marcado = marcar_como_demo(usuario)
+        print("   Cuenta de demostración: %s" % ("sí" if marcado else "no se pudo marcar"))
 
     print("   2/4 aula propia del estudiante")
     crear_aula(usuario, paralelo=paralelo, estudiante_id=estudiante_id)
@@ -224,15 +242,30 @@ def alta(nombre, cedula, correo, clave, paralelo, curso, servidor):
              datos["casos"]))
     print("      inventario : $%.2f" % datos["inventario"])
 
-    if not servidor:
+    if not servidor and not demo:
         escritos = registrar_en_listas(correo, clave, nombre, usuario, cedula, paralelo)
         print()
         print("   Clave entregada al estudiante: guardada en %s"
               % (", ".join(escritos) if escritos else "(no encontré las listas locales)"))
         print("   La clave no se muestra aquí a propósito: está en su lista.")
-    else:
+    elif servidor:
         print()
         print("   Cuenta creada en el servidor con la clave indicada.")
+
+    if demo:
+        carpeta = os.path.join(os.path.expanduser("~"), "Desktop", "2026", "S2", "Clases",
+                               "Contabilidad 1", "Claves simulador")
+        if os.path.isdir(carpeta):
+            ruta = os.path.join(carpeta, "ACCESO_PRUEBA_grabacion.txt")
+            with io.open(ruta, "w", encoding="utf-8") as archivo:
+                archivo.write("CUENTA DE PRUEBA (DEMOSTRACIÓN) - para grabar la práctica\n")
+                archivo.write("=" * 62 + "\n\n")
+                archivo.write("Usuario: %s\n" % correo)
+                archivo.write("Clave:   %s\n\n" % clave)
+                archivo.write("Enlace:  https://simuladorcontablecaavgputm.tech\n\n")
+                archivo.write("No aparece en los paneles docentes ni en las listas oficiales.\n")
+                archivo.write("Su aula está en cero: sirve para grabar el ejercicio completo.\n")
+            print("   Clave guardada (no se muestra aquí) en: %s" % ruta)
     return 0
 
 
@@ -272,6 +305,8 @@ def main():
                             help="código del curso en la base de control")
     analizador.add_argument("--servidor", action="store_true",
                             help="alta en el servidor: no toca las listas locales")
+    analizador.add_argument("--demo", action="store_true",
+                            help="cuenta de prueba: se marca como demostración y no entra en las listas")
     analizador.add_argument("--borrar", metavar="USUARIO", help="elimina la cuenta y el aula")
     argumentos = analizador.parse_args()
 
@@ -291,7 +326,7 @@ def main():
         raise SystemExit("Falta la cédula: define el usuario (inicial + apellido + 4 dígitos).")
     return alta(argumentos.nombre or usuario, argumentos.cedula or "", argumentos.correo or "",
                 argumentos.clave, argumentos.paralelo.upper(), argumentos.curso,
-                argumentos.servidor)
+                argumentos.servidor, demo=argumentos.demo)
 
 
 if __name__ == "__main__":
