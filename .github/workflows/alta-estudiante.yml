@@ -49,7 +49,7 @@ jobs:
           NOMBRE: ${{ inputs.nombre }}
           CEDULA: ${{ inputs.cedula }}
           CORREO: ${{ inputs.correo }}
-          CLAVE: ${{ inputs.clave }}
+          CLAVE: ${{ inputs.clave || secrets.DEMO_CLAVE }}
           BORRAR: ${{ inputs.usuario_a_borrar }}
           DEMO: ${{ inputs.demo }}
         run: |
